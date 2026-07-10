@@ -235,9 +235,30 @@ export default function PinConfigurationSimulator() {
   const selectedPin = pinDefs.find(p => p.num === selectedPinNum);
   const currentTheme = modeThemes[mode];
 
+  const isPinInFilteredCategory = (pin: PinDefinition, filter: string) => {
+    if (filter === 'all') return true;
+    if (filter === 'status') {
+      // Status bits: S0, S1, S2 (Pins 26-28), S3-S6 (Pins 35-38), S7 (Pin 34), QS0-QS1 (Pins 25, 24)
+      return [24, 25, 26, 27, 28, 34, 35, 36, 37, 38].includes(pin.num);
+    }
+    if (filter === 'address-data') {
+      // AD Bus bits: AD0-AD15 (2-16, 39), A16-A19 (35-38), BHE/S7 (34)
+      return pin.category === 'address-data' || [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 34, 35, 36, 37, 38, 39].includes(pin.num);
+    }
+    if (filter === 'control') {
+      // Control: Pins that are categorized as control (which contains ALE, WR, RD, DEN, DT/R, M/IO, READY, RESET, etc)
+      return pin.category === 'control';
+    }
+    if (filter === 'power-clock') {
+      // Power & Clock: Vcc (40), GND (1, 20), CLK (19), MN/MX (33)
+      return pin.category === 'power-clock' || [1, 19, 20, 33, 40].includes(pin.num);
+    }
+    return pin.category === filter;
+  };
+
   const getPinColor = (p: PinDefinition) => {
     const isDual = p.minName !== p.maxName;
-    const isFiltered = categoryFilter === 'all' || p.category === categoryFilter;
+    const isFiltered = isPinInFilteredCategory(p, categoryFilter);
 
     if (p.num === selectedPinNum) {
       if (mode === 'minimum') return 'bg-amber-600 text-white font-bold scale-[1.03] shadow-md border-amber-700 ring-2 ring-amber-300/30 z-10';
@@ -474,7 +495,7 @@ export default function PinConfigurationSimulator() {
             <div className="flex flex-col justify-between py-2 space-y-1.5 w-1/3">
               {pinsLeft.map(p => {
                 const name = mode === 'minimum' ? p.minName : p.maxName;
-                const isFiltered = categoryFilter === 'all' || p.category === categoryFilter;
+                const isFiltered = isPinInFilteredCategory(p, categoryFilter);
                 return (
                   <button
                     key={p.num}
@@ -529,7 +550,7 @@ export default function PinConfigurationSimulator() {
             <div className="flex flex-col justify-between py-2 space-y-1.5 w-1/3">
               {pinsRight.map(p => {
                 const name = mode === 'minimum' ? p.minName : p.maxName;
-                const isFiltered = categoryFilter === 'all' || p.category === categoryFilter;
+                const isFiltered = isPinInFilteredCategory(p, categoryFilter);
                 const isDual = p.minName !== p.maxName;
 
                 return (
@@ -588,7 +609,7 @@ export default function PinConfigurationSimulator() {
                       : 'border-transparent text-slate-400 hover:text-slate-600'
                   }`}
                 >
-                  📚 Divisions Guide
+                  📚 Signal Groups
                 </button>
                 <button
                   onClick={() => setPanelTab('maxmode')}
@@ -617,7 +638,15 @@ export default function PinConfigurationSimulator() {
                       ].map(cat => (
                         <button
                           key={cat.id}
-                          onClick={() => setCategoryFilter(cat.id)}
+                          onClick={() => {
+                            setCategoryFilter(cat.id);
+                            if (cat.id !== 'all') {
+                              const firstMatchingPin = pinDefs.find(p => isPinInFilteredCategory(p, cat.id));
+                              if (firstMatchingPin) {
+                                setSelectedPinNum(firstMatchingPin.num);
+                              }
+                            }
+                          }}
                           className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all text-left border cursor-pointer ${
                             categoryFilter === cat.id
                               ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
@@ -629,6 +658,38 @@ export default function PinConfigurationSimulator() {
                       ))}
                     </div>
                   </div>
+
+                  {categoryFilter !== 'all' && (
+                    <div className="mb-4 p-3 bg-slate-50 rounded-xl border border-slate-150/80 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <span className="text-xs font-bold text-slate-700 block mb-2">
+                        {categoryFilter === 'address-data' ? '📬 Address/Data Bus Pins' :
+                         categoryFilter === 'control' ? '⚙️ Control Signal Pins' :
+                         categoryFilter === 'status' ? '📊 Status Signal Pins' :
+                         '⚡ Power & Clock Pins'} ({pinDefs.filter(p => isPinInFilteredCategory(p, categoryFilter)).length} Pins):
+                      </span>
+                      <div className="flex flex-wrap gap-1.5 max-h-[130px] overflow-y-auto pr-1">
+                        {pinDefs.filter(p => isPinInFilteredCategory(p, categoryFilter)).map(p => {
+                          const isSelected = p.num === selectedPinNum;
+                          const pinName = mode === 'minimum' ? p.minName : p.maxName;
+                          return (
+                            <button
+                              key={p.num}
+                              onClick={() => setSelectedPinNum(p.num)}
+                              onMouseEnter={() => setSelectedPinNum(p.num)}
+                              className={`px-2 py-1 text-xs font-mono rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 ${
+                                isSelected
+                                  ? 'bg-indigo-600 text-white border-indigo-700 font-bold shadow-xs'
+                                  : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+                              }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-indigo-500'}`}></span>
+                              <span>Pin {p.num}: <strong className={isSelected ? 'text-white' : 'text-slate-900 font-semibold'}>{pinName}</strong></span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="border-t border-slate-100 pt-4">
                     <AnimatePresence mode="wait">
@@ -711,57 +772,57 @@ export default function PinConfigurationSimulator() {
               ) : panelTab === 'divisions' ? (
                 /* Signal Divisions Guide Tab Content */
                 <div className="space-y-5 animate-in fade-in duration-150 overflow-y-auto max-h-[460px] pr-1">
-                  <div className="text-sm text-slate-700 font-medium leading-relaxed mb-2 pb-2.5 border-b border-slate-150">
-                    The 8086 pins are functional signal lines grouped into five key hardware divisions to manage processor operations:
+                  <div className="text-sm text-slate-900 font-bold leading-relaxed mb-2 pb-2.5 border-b border-slate-250">
+                    The 8086 pins are functional signal lines grouped into five key hardware signal groups to manage processor operations:
                   </div>
 
                   {/* 1. AD Bus */}
-                  <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-4 space-y-3 transition-all duration-300 hover:shadow-xs shadow-2xs">
-                    <div className="flex flex-row items-center justify-between gap-3 border-b border-blue-100/60 pb-2 flex-wrap sm:flex-nowrap">
+                  <div className="bg-blue-50/80 border border-blue-300 rounded-xl p-4 space-y-3 transition-all duration-300 hover:shadow-xs shadow-2xs">
+                    <div className="flex flex-row items-center justify-between gap-3 border-b border-blue-200 pb-2 flex-wrap sm:flex-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-blue-500 text-white rounded-lg shadow-sm">
+                        <div className="p-1.5 bg-blue-600 text-white rounded-lg shadow-sm">
                           <Layers className="w-4 h-4 shrink-0" />
                         </div>
                         <span className="text-sm sm:text-base font-black text-blue-950 tracking-tight">
                           1. Address / Data Bus (AD Bus)
                         </span>
                       </div>
-                      <span className="text-[11px] bg-blue-100 text-blue-900 px-2.5 py-0.5 rounded-full font-mono font-extrabold uppercase tracking-wide shrink-0">
+                      <span className="text-[11px] bg-blue-100 text-blue-950 px-2.5 py-0.5 rounded-full font-mono font-extrabold uppercase tracking-wide shrink-0">
                         Multiplexed
                       </span>
                     </div>
-                    <p className="text-sm text-slate-800 leading-relaxed font-semibold">
+                    <p className="text-sm text-slate-950 leading-relaxed font-bold">
                       To minimize pin count, the 8086 uses <strong>time multiplexing</strong>. High-speed lines share both addresses and data.
                     </p>
-                    <ul className="text-sm text-slate-700 space-y-2 pl-1">
+                    <ul className="text-sm text-slate-900 space-y-2 pl-1 font-semibold">
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2 shrink-0"></span>
                         <span><strong>T1 State:</strong> Carries 20-bit memory address (AD0-AD15, A16-A19).</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2 shrink-0"></span>
                         <span><strong>T2 - T4 States:</strong> Carries 16-bit physical data (D0-D15) or Status bits (S3-S7).</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0"></span>
-                        <span><strong>Key Pins:</strong> <code className="font-mono bg-blue-100/80 px-1.5 py-0.5 rounded text-xs text-blue-900 font-extrabold">AD0 - AD15 (Pins 2-16, 39)</code>, <code className="font-mono bg-blue-100/80 px-1.5 py-0.5 rounded text-xs text-blue-900 font-extrabold">A16/S3 - A19/S6 (Pins 35-38)</code>.</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2 shrink-0"></span>
+                        <span><strong>Key Pins:</strong> <code className="font-mono bg-blue-100/90 px-1.5 py-0.5 rounded text-xs text-blue-950 font-extrabold">AD0 - AD15 (Pins 2-16, 39)</code>, <code className="font-mono bg-blue-100/90 px-1.5 py-0.5 rounded text-xs text-blue-950 font-extrabold">A16/S3 - A19/S6 (Pins 35-38)</code>.</span>
                       </li>
                     </ul>
 
                     {/* Interactive diagram card link */}
-                    <div className="mt-3 bg-white border border-blue-150 rounded-xl p-3.5 space-y-3 shadow-sm">
+                    <div className="mt-3 bg-white border border-blue-200 rounded-xl p-3.5 space-y-3 shadow-sm">
                       <div className="flex items-center gap-2.5">
-                        <div className="p-2 bg-blue-50 rounded-lg text-blue-600 shrink-0">
+                        <div className="p-2 bg-blue-50 rounded-lg text-blue-700 shrink-0">
                           <Activity className="w-4 h-4 animate-pulse" />
                         </div>
                         <div>
-                          <span className="text-xs font-bold text-slate-900 block">External Interconnect Diagram</span>
-                          <span className="text-[11px] text-slate-600 font-semibold block leading-normal">Interactive signal flow diagram showing how CPU communicates with Memory & I/O.</span>
+                          <span className="text-xs font-bold text-slate-950 block">External Interconnect Diagram</span>
+                          <span className="text-[11px] text-slate-900 font-semibold block leading-normal">Interactive signal flow diagram showing how CPU communicates with Memory & I/O.</span>
                         </div>
                       </div>
                       <button
                         onClick={() => setShowInterconnectModal(true)}
-                        className="w-full text-center py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                        className="w-full text-center py-2 px-3 bg-blue-700 hover:bg-blue-850 text-white rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
                       >
                         <BookOpen className="w-3.5 h-3.5" />
                         <span>Launch Hardware Interconnect Visualizer</span>
@@ -770,144 +831,144 @@ export default function PinConfigurationSimulator() {
                   </div>
 
                   {/* 2. Control Signals */}
-                  <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-4 space-y-3 transition-all duration-300 hover:shadow-xs shadow-2xs">
-                    <div className="flex flex-row items-center justify-between gap-3 border-b border-amber-100/60 pb-2 flex-wrap sm:flex-nowrap">
+                  <div className="bg-amber-50/80 border border-amber-300 rounded-xl p-4 space-y-3 transition-all duration-300 hover:shadow-xs shadow-2xs">
+                    <div className="flex flex-row items-center justify-between gap-3 border-b border-amber-200 pb-2 flex-wrap sm:flex-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-amber-500 text-white rounded-lg shadow-sm">
+                        <div className="p-1.5 bg-amber-600 text-white rounded-lg shadow-sm">
                           <Settings className="w-4 h-4 shrink-0" />
                         </div>
                         <span className="text-sm sm:text-base font-black text-amber-950 tracking-tight">
                           2. Control Signals
                         </span>
                       </div>
-                      <span className="text-[10px] sm:text-xs bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full font-mono font-extrabold uppercase tracking-wide shrink-0">
+                      <span className="text-[10px] sm:text-xs bg-amber-100 text-amber-955 px-2.5 py-0.5 rounded-full font-mono font-extrabold uppercase tracking-wide shrink-0">
                         Coordination
                       </span>
                     </div>
-                    <p className="text-sm text-slate-800 leading-relaxed font-semibold">
+                    <p className="text-sm text-slate-950 leading-relaxed font-bold">
                       These signals synchronize and dictate the direction of data transfers, external wait requests, and reset.
                     </p>
-                    <ul className="text-sm text-slate-700 space-y-2 pl-1">
+                    <ul className="text-sm text-slate-900 space-y-2 pl-1 font-semibold">
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-600 mt-2 shrink-0"></span>
                         <span><strong>RD / WR:</strong> Active-low controls determining if data is being read or written.</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-600 mt-2 shrink-0"></span>
                         <span><strong>ALE (Address Latch Enable):</strong> Triggers external latches to lock in the 20-bit address during T1.</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-600 mt-2 shrink-0"></span>
                         <span><strong>DEN & DT/R:</strong> Activates external transceivers and sets direction (Transmitting vs Receiving).</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-600 mt-2 shrink-0"></span>
                         <span><strong>M/IO:</strong> High selects Main Memory; Low selects I/O Ports.</span>
                       </li>
                     </ul>
                   </div>
 
                   {/* 3. Status Signals */}
-                  <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-4 space-y-3 transition-all duration-300 hover:shadow-xs shadow-2xs">
-                    <div className="flex flex-row items-center justify-between gap-3 border-b border-purple-100/60 pb-2 flex-wrap sm:flex-nowrap">
+                  <div className="bg-purple-50/80 border border-purple-300 rounded-xl p-4 space-y-3 transition-all duration-300 hover:shadow-xs shadow-2xs">
+                    <div className="flex flex-row items-center justify-between gap-3 border-b border-purple-200 pb-2 flex-wrap sm:flex-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-purple-500 text-white rounded-lg shadow-sm">
+                        <div className="p-1.5 bg-purple-600 text-white rounded-lg shadow-sm">
                           <Activity className="w-4 h-4 shrink-0" />
                         </div>
                         <span className="text-sm sm:text-base font-black text-purple-950 tracking-tight">
                           3. Status Signals
                         </span>
                       </div>
-                      <span className="text-[10px] sm:text-xs bg-purple-100 text-purple-900 px-2.5 py-0.5 rounded-full font-mono font-extrabold uppercase tracking-wide shrink-0">
+                      <span className="text-[10px] sm:text-xs bg-purple-100 text-purple-950 px-2.5 py-0.5 rounded-full font-mono font-extrabold uppercase tracking-wide shrink-0">
                         CPU State
                       </span>
                     </div>
-                    <p className="text-sm text-slate-800 leading-relaxed font-semibold">
+                    <p className="text-sm text-slate-950 leading-relaxed font-bold">
                       These bits represent internal CPU settings, current segment register access, or system status in real time.
                     </p>
-                    <ul className="text-sm text-slate-700 space-y-2 pl-1">
+                    <ul className="text-sm text-slate-900 space-y-2 pl-1 font-semibold">
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-2 shrink-0"></span>
                         <span><strong>S0, S1, S2 (Max Mode):</strong> Encodes the type of bus cycle (Read, Write, Halt, Code Fetch).</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-2 shrink-0"></span>
                         <span><strong>S3 & S4:</strong> Identifies which segment register is in use: 00 Extra, 01 Stack, 10 Code/None, 11 Data.</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-2 shrink-0"></span>
                         <span><strong>S5:</strong> Shows status of Interrupt Enable Flag (IF).</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-2 shrink-0"></span>
                         <span><strong>QS0 & QS1:</strong> Tells the system the instruction queue state (e.g. Empty, 1st byte).</span>
                       </li>
                     </ul>
                   </div>
 
                   {/* 4. Power & Clock Signals */}
-                  <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 space-y-3 transition-all duration-300 hover:shadow-xs shadow-2xs">
-                    <div className="flex flex-row items-center justify-between gap-3 border-b border-emerald-100/60 pb-2 flex-wrap sm:flex-nowrap">
+                  <div className="bg-emerald-50/80 border border-emerald-300 rounded-xl p-4 space-y-3 transition-all duration-300 hover:shadow-xs shadow-2xs">
+                    <div className="flex flex-row items-center justify-between gap-3 border-b border-emerald-200 pb-2 flex-wrap sm:flex-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-emerald-500 text-white rounded-lg shadow-sm">
+                        <div className="p-1.5 bg-emerald-600 text-white rounded-lg shadow-sm">
                           <Zap className="w-4 h-4 shrink-0" />
                         </div>
                         <span className="text-sm sm:text-base font-black text-emerald-950 tracking-tight">
                           4. Power &amp; Clock (Power/Clk)
                         </span>
                       </div>
-                      <span className="text-[10px] sm:text-xs bg-emerald-100 text-emerald-900 px-2.5 py-0.5 rounded-full font-mono font-extrabold uppercase tracking-wide shrink-0">
+                      <span className="text-[10px] sm:text-xs bg-emerald-100 text-emerald-950 px-2.5 py-0.5 rounded-full font-mono font-extrabold uppercase tracking-wide shrink-0">
                         Hardware
                       </span>
                     </div>
-                    <p className="text-sm text-slate-800 leading-relaxed font-semibold">
-                      Provides essential electricity, core reference clock timings, and primary mode straphanger configuration.
+                    <p className="text-sm text-slate-950 leading-relaxed font-bold">
+                      Provides essential electricity, core reference clock timings, and primary mode strapping configuration.
                     </p>
-                    <ul className="text-sm text-slate-700 space-y-2 pl-1">
+                    <ul className="text-sm text-slate-900 space-y-2 pl-1 font-semibold">
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-2 shrink-0"></span>
                         <span><strong>Vcc / GND:</strong> Power (+5V regulated DC) and grounding references.</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-2 shrink-0"></span>
                         <span><strong>CLK:</strong> Square wave input synchronizing internal registers and ALU cycles.</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-2 shrink-0"></span>
                         <span><strong>MN/MX:</strong> Selects Minimum Mode (+5V, standalone CPU) or Maximum Mode (GND, multiprocessor with 8087).</span>
                       </li>
                     </ul>
                   </div>
 
                   {/* 5. Interrupts, DMA & Bus Arbitration */}
-                  <div className="bg-rose-50/70 border border-rose-200 rounded-xl p-4 space-y-3 transition-all duration-300 hover:shadow-xs shadow-2xs">
-                    <div className="flex flex-row items-center justify-between gap-3 border-b border-rose-100/60 pb-2 flex-wrap sm:flex-nowrap">
+                  <div className="bg-rose-50/80 border border-rose-300 rounded-xl p-4 space-y-3 transition-all duration-300 hover:shadow-xs shadow-2xs">
+                    <div className="flex flex-row items-center justify-between gap-3 border-b border-rose-200 pb-2 flex-wrap sm:flex-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-rose-500 text-white rounded-lg shadow-sm">
+                        <div className="p-1.5 bg-rose-600 text-white rounded-lg shadow-sm">
                           <ShieldAlert className="w-4 h-4 shrink-0" />
                         </div>
                         <span className="text-sm sm:text-base font-black text-rose-950 tracking-tight">
                           5. Interrupts, DMA &amp; Bus Arbitration
                         </span>
                       </div>
-                      <span className="text-[10px] sm:text-xs bg-rose-100 text-rose-900 px-2.5 py-0.5 rounded-full font-mono font-extrabold uppercase tracking-wide shrink-0">
+                      <span className="text-[10px] sm:text-xs bg-rose-100 text-rose-950 px-2.5 py-0.5 rounded-full font-mono font-extrabold uppercase tracking-wide shrink-0">
                         External Async
                       </span>
                     </div>
-                    <p className="text-sm text-slate-800 leading-relaxed font-semibold">
+                    <p className="text-sm text-slate-950 leading-relaxed font-bold">
                       Handles asynchronous real-time events, direct memory access handshakes, and multi-master bus request/grant arbitration.
                     </p>
-                    <ul className="text-sm text-slate-700 space-y-2 pl-1">
+                    <ul className="text-sm text-slate-900 space-y-2 pl-1 font-semibold">
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600 mt-2 shrink-0"></span>
                         <span><strong>INTR / NMI:</strong> External hardware interrupts. NMI is non-maskable (highest priority), while INTR can be ignored by clearing IF.</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600 mt-2 shrink-0"></span>
                         <span><strong>HOLD / HLDA (Min Mode):</strong> Direct Memory Access pins where external controllers request bus control.</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-2 shrink-0"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600 mt-2 shrink-0"></span>
                         <span><strong>RQ/GT0 / RQ/GT1 (Max Mode):</strong> Bidirectional request/grant lines used by other processors to share buses.</span>
                       </li>
                     </ul>
@@ -1479,41 +1540,41 @@ export default function PinConfigurationSimulator() {
 
                       {/* Bus Pipelines - Thicker background conduits */}
                       {/* AD Bus branch */}
-                      <path d="M 140 75 L 185 75" stroke="#cbd5e1" strokeWidth="8" strokeLinecap="round" />
-                      <path d="M 185 75 L 240 75" stroke="#cbd5e1" strokeWidth="8" strokeLinecap="round" />
-                      <path d="M 185 75 L 185 230 L 240 230" stroke="#cbd5e1" strokeWidth="8" strokeLinejoin="round" />
+                      <path d="M 140 75 L 185 75" stroke="#94a3b8" strokeWidth="8" strokeLinecap="round" />
+                      <path d="M 185 75 L 240 75" stroke="#94a3b8" strokeWidth="8" strokeLinecap="round" />
+                      <path d="M 185 75 L 185 230 L 240 230" stroke="#94a3b8" strokeWidth="8" strokeLinejoin="round" />
                       
                       {/* Address bus (Latch output) */}
-                      <path d="M 340 75 L 430 75 L 430 90 L 500 90" stroke="#cbd5e1" strokeWidth="8" strokeLinejoin="round" />
+                      <path d="M 340 75 L 430 75 L 430 90 L 500 90" stroke="#94a3b8" strokeWidth="8" strokeLinejoin="round" />
 
                       {/* Data bus (Transceiver output) */}
-                      <path d="M 340 230 L 430 230 L 430 250 L 500 250" stroke="#cbd5e1" strokeWidth="8" strokeLinejoin="round" />
+                      <path d="M 340 230 L 430 230 L 430 250 L 500 250" stroke="#94a3b8" strokeWidth="8" strokeLinejoin="round" />
 
                       {/* Control lines background conduits */}
                       {interconnectMode === 'MIN' ? (
                         <>
-                          <path d="M 140 120 L 500 120" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
-                          <path d="M 140 150 L 195 150 L 195 110 L 240 110" stroke="#e2e8f0" strokeWidth="4" strokeLinejoin="round" />
-                          <path d="M 140 190 L 450 190 L 450 150 L 500 150" stroke="#e2e8f0" strokeWidth="4" strokeLinejoin="round" />
-                          <path d="M 140 220 L 460 220 L 460 195 L 500 195" stroke="#e2e8f0" strokeWidth="4" strokeLinejoin="round" />
-                          <path d="M 140 260 L 170 260 L 170 290 L 240 290" stroke="#e2e8f0" strokeWidth="4" strokeLinejoin="round" />
-                          <path d="M 140 295 L 210 295 L 210 260 L 240 260" stroke="#e2e8f0" strokeWidth="4" strokeLinejoin="round" />
+                          <path d="M 140 120 L 500 120" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+                          <path d="M 140 150 L 195 150 L 195 110 L 240 110" stroke="#94a3b8" strokeWidth="4" strokeLinejoin="round" />
+                          <path d="M 140 190 L 450 190 L 450 150 L 500 150" stroke="#94a3b8" strokeWidth="4" strokeLinejoin="round" />
+                          <path d="M 140 220 L 460 220 L 460 195 L 500 195" stroke="#94a3b8" strokeWidth="4" strokeLinejoin="round" />
+                          <path d="M 140 260 L 170 260 L 170 290 L 240 290" stroke="#94a3b8" strokeWidth="4" strokeLinejoin="round" />
+                          <path d="M 140 295 L 210 295 L 210 260 L 240 260" stroke="#94a3b8" strokeWidth="4" strokeLinejoin="round" />
                         </>
                       ) : (
                         <>
                           {/* S2, S1, S0 Status Inputs from CPU to 8288 */}
-                          <path d="M 140 120 L 165 120" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
-                          <path d="M 140 190 L 165 190" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
-                          <path d="M 140 260 L 155 260 L 155 210 L 165 210" stroke="#e2e8f0" strokeWidth="4" strokeLinejoin="round" />
+                          <path d="M 140 120 L 165 120" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+                          <path d="M 140 190 L 165 190" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
+                          <path d="M 140 260 L 155 260 L 155 210 L 165 210" stroke="#94a3b8" strokeWidth="4" strokeLinejoin="round" />
 
                           {/* Outputs from 8288 to Latch and Transceiver */}
-                          <path d="M 225 125 L 225 110 L 240 110" stroke="#e2e8f0" strokeWidth="4" strokeLinejoin="round" />
-                          <path d="M 210 225 L 210 290 L 240 290" stroke="#e2e8f0" strokeWidth="4" strokeLinejoin="round" />
-                          <path d="M 225 225 L 225 260 L 240 260" stroke="#e2e8f0" strokeWidth="4" strokeLinejoin="round" />
+                          <path d="M 225 125 L 225 110 L 240 110" stroke="#94a3b8" strokeWidth="4" strokeLinejoin="round" />
+                          <path d="M 210 225 L 210 290 L 240 290" stroke="#94a3b8" strokeWidth="4" strokeLinejoin="round" />
+                          <path d="M 225 225 L 225 260 L 240 260" stroke="#94a3b8" strokeWidth="4" strokeLinejoin="round" />
 
                           {/* Control Commands outputs from 8288 directly to Memory / IO device */}
-                          <path d="M 250 145 L 450 145 L 450 150 L 500 150" stroke="#e2e8f0" strokeWidth="4" strokeLinejoin="round" />
-                          <path d="M 250 175 L 460 175 L 460 195 L 500 195" stroke="#e2e8f0" strokeWidth="4" strokeLinejoin="round" />
+                          <path d="M 250 145 L 450 145 L 450 150 L 500 150" stroke="#94a3b8" strokeWidth="4" strokeLinejoin="round" />
+                          <path d="M 250 175 L 460 175 L 460 195 L 500 195" stroke="#94a3b8" strokeWidth="4" strokeLinejoin="round" />
                         </>
                       )}
 
@@ -1523,13 +1584,13 @@ export default function PinConfigurationSimulator() {
                         <>
                           {/* Flows from CPU to Latch */}
                           <path d="M 140 75 L 185 75 L 240 75" stroke="#3b82f6" strokeWidth="3" className="flow-forward" strokeLinecap="round" />
-                          <path d="M 185 75 L 185 230 L 240 230" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" /> {/* Transceiver isolated */}
+                          <path d="M 185 75 L 185 230 L 240 230" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" /> {/* Transceiver isolated */}
                         </>
                       ) : (
                         <>
                           {/* Isolated from latch, active with Transceiver */}
                           <path d="M 140 75 L 185 75" stroke="#0d9488" strokeWidth="3" className={interconnectAction === 'WRITE' ? "flow-forward" : "flow-backward"} strokeLinecap="round" />
-                          <path d="M 185 75 L 240 75" stroke="#cbd5e1" strokeWidth="2" /> {/* Latch input isolated */}
+                          <path d="M 185 75 L 240 75" stroke="#94a3b8" strokeWidth="2" /> {/* Latch input isolated */}
                           <path d="M 185 75 L 185 230 L 240 230" stroke="#0d9488" strokeWidth="3" className={interconnectAction === 'WRITE' ? "flow-forward" : "flow-backward"} strokeLinejoin="round" />
                         </>
                       )}
@@ -1549,7 +1610,7 @@ export default function PinConfigurationSimulator() {
                           {/* ALE Pin flow */}
                           <path
                             d="M 140 150 L 195 150 L 195 110 L 240 110"
-                            stroke={modalStep === 'T1_ADDRESS' ? "#f59e0b" : "#cbd5e1"}
+                            stroke={modalStep === 'T1_ADDRESS' ? "#f59e0b" : "#94a3b8"}
                             strokeWidth="2.5"
                             strokeLinejoin="round"
                             className={modalStep === 'T1_ADDRESS' ? "flow-forward" : ""}
@@ -1558,7 +1619,7 @@ export default function PinConfigurationSimulator() {
                           {/* DEN Pin flow */}
                           <path
                             d="M 140 260 L 170 260 L 170 290 L 240 290"
-                            stroke={modalStep === 'T2_T4_DATA' ? "#10b981" : "#cbd5e1"}
+                            stroke={modalStep === 'T2_T4_DATA' ? "#10b981" : "#94a3b8"}
                             strokeWidth="2.5"
                             strokeLinejoin="round"
                             className={modalStep === 'T2_T4_DATA' ? "flow-forward" : ""}
@@ -1567,7 +1628,7 @@ export default function PinConfigurationSimulator() {
                           {/* DT/R Pin flow */}
                           <path
                             d="M 140 295 L 210 295 L 210 260 L 240 260"
-                            stroke={modalStep === 'T2_T4_DATA' ? (interconnectAction === 'WRITE' ? "#f59e0b" : "#94a3b8") : "#cbd5e1"}
+                            stroke={modalStep === 'T2_T4_DATA' ? (interconnectAction === 'WRITE' ? "#f59e0b" : "#94a3b8") : "#94a3b8"}
                             strokeWidth="2"
                             strokeLinejoin="round"
                             className={modalStep === 'T2_T4_DATA' ? "flow-forward" : ""}
@@ -1576,7 +1637,7 @@ export default function PinConfigurationSimulator() {
                           {/* RD Pin direct line to Memory */}
                           <path
                             d="M 140 190 L 450 190 L 450 150 L 500 150"
-                            stroke={modalStep === 'T2_T4_DATA' && interconnectAction === 'READ' ? "#10b981" : "#cbd5e1"}
+                            stroke={modalStep === 'T2_T4_DATA' && interconnectAction === 'READ' ? "#10b981" : "#94a3b8"}
                             strokeWidth="2"
                             strokeLinejoin="round"
                             className={modalStep === 'T2_T4_DATA' && interconnectAction === 'READ' ? "flow-forward" : ""}
@@ -1585,7 +1646,7 @@ export default function PinConfigurationSimulator() {
                           {/* WR Pin direct line to Memory */}
                           <path
                             d="M 140 220 L 460 220 L 460 195 L 500 195"
-                            stroke={modalStep === 'T2_T4_DATA' && interconnectAction === 'WRITE' ? "#10b981" : "#cbd5e1"}
+                            stroke={modalStep === 'T2_T4_DATA' && interconnectAction === 'WRITE' ? "#10b981" : "#94a3b8"}
                             strokeWidth="2"
                             strokeLinejoin="round"
                             className={modalStep === 'T2_T4_DATA' && interconnectAction === 'WRITE' ? "flow-forward" : ""}
@@ -1623,7 +1684,7 @@ export default function PinConfigurationSimulator() {
                           {/* Latch ALE from 8288 */}
                           <path
                             d="M 225 125 L 225 110 L 240 110"
-                            stroke={modalStep === 'T1_ADDRESS' ? "#f59e0b" : "#cbd5e1"}
+                            stroke={modalStep === 'T1_ADDRESS' ? "#f59e0b" : "#94a3b8"}
                             strokeWidth="2.5"
                             strokeLinejoin="round"
                             className={modalStep === 'T1_ADDRESS' ? "flow-forward" : ""}
@@ -1632,7 +1693,7 @@ export default function PinConfigurationSimulator() {
                           {/* Transceiver DEN from 8288 */}
                           <path
                             d="M 210 225 L 210 290 L 240 290"
-                            stroke={modalStep === 'T2_T4_DATA' ? "#10b981" : "#cbd5e1"}
+                            stroke={modalStep === 'T2_T4_DATA' ? "#10b981" : "#94a3b8"}
                             strokeWidth="2.5"
                             strokeLinejoin="round"
                             className={modalStep === 'T2_T4_DATA' ? "flow-forward" : ""}
@@ -1641,7 +1702,7 @@ export default function PinConfigurationSimulator() {
                           {/* Transceiver DT/R from 8288 */}
                           <path
                             d="M 225 225 L 225 260 L 240 260"
-                            stroke={modalStep === 'T2_T4_DATA' ? (interconnectAction === 'WRITE' ? "#f59e0b" : "#94a3b8") : "#cbd5e1"}
+                            stroke={modalStep === 'T2_T4_DATA' ? (interconnectAction === 'WRITE' ? "#f59e0b" : "#94a3b8") : "#94a3b8"}
                             strokeWidth="2"
                             strokeLinejoin="round"
                             className={modalStep === 'T2_T4_DATA' ? "flow-forward" : ""}
@@ -1650,7 +1711,7 @@ export default function PinConfigurationSimulator() {
                           {/* Command MRDC or IORC from 8288 */}
                           <path
                             d="M 250 145 L 450 145 L 450 150 L 500 150"
-                            stroke={modalStep === 'T2_T4_DATA' && interconnectAction === 'READ' ? "#10b981" : "#cbd5e1"}
+                            stroke={modalStep === 'T2_T4_DATA' && interconnectAction === 'READ' ? "#10b981" : "#94a3b8"}
                             strokeWidth="2"
                             strokeLinejoin="round"
                             className={modalStep === 'T2_T4_DATA' && interconnectAction === 'READ' ? "flow-forward" : ""}
@@ -1659,7 +1720,7 @@ export default function PinConfigurationSimulator() {
                           {/* Command MWTC or IOWC from 8288 */}
                           <path
                             d="M 250 175 L 460 175 L 460 195 L 500 195"
-                            stroke={modalStep === 'T2_T4_DATA' && interconnectAction === 'WRITE' ? "#10b981" : "#cbd5e1"}
+                            stroke={modalStep === 'T2_T4_DATA' && interconnectAction === 'WRITE' ? "#10b981" : "#94a3b8"}
                             strokeWidth="2"
                             strokeLinejoin="round"
                             className={modalStep === 'T2_T4_DATA' && interconnectAction === 'WRITE' ? "flow-forward" : ""}
@@ -1685,7 +1746,7 @@ export default function PinConfigurationSimulator() {
                           strokeLinejoin="round"
                         />
                       ) : (
-                        <path d="M 340 230 L 430 230 L 430 250 L 500 250" stroke="#cbd5e1" strokeWidth="2" strokeLinejoin="round" />
+                        <path d="M 340 230 L 430 230 L 430 250 L 500 250" stroke="#94a3b8" strokeWidth="2" strokeLinejoin="round" />
                       )}
 
 
@@ -1706,19 +1767,19 @@ export default function PinConfigurationSimulator() {
                             <circle cx="140" cy="120" r="3" fill={interconnectDevice === 'MEMORY' ? "#059669" : "#7c3aed"} />
                             <text x="132" y="123" textAnchor="end">M/IO (Pin 28)</text>
 
-                            <circle cx="140" cy="150" r="3" fill={modalStep === 'T1_ADDRESS' ? "#f59e0b" : "#cbd5e1"} />
+                            <circle cx="140" cy="150" r="3" fill={modalStep === 'T1_ADDRESS' ? "#f59e0b" : "#94a3b8"} />
                             <text x="132" y="153" textAnchor="end">ALE (Pin 25)</text>
 
-                            <circle cx="140" cy="190" r="3" fill={modalStep === 'T2_T4_DATA' && interconnectAction === 'READ' ? "#10b981" : "#cbd5e1"} />
+                            <circle cx="140" cy="190" r="3" fill={modalStep === 'T2_T4_DATA' && interconnectAction === 'READ' ? "#10b981" : "#94a3b8"} />
                             <text x="132" y="193" textAnchor="end">RD (Pin 32)</text>
 
-                            <circle cx="140" cy="220" r="3" fill={modalStep === 'T2_T4_DATA' && interconnectAction === 'WRITE' ? "#10b981" : "#cbd5e1"} />
+                            <circle cx="140" cy="220" r="3" fill={modalStep === 'T2_T4_DATA' && interconnectAction === 'WRITE' ? "#10b981" : "#94a3b8"} />
                             <text x="132" y="223" textAnchor="end">WR (Pin 29)</text>
 
-                            <circle cx="140" cy="260" r="3" fill={modalStep === 'T2_T4_DATA' ? "#10b981" : "#cbd5e1"} />
+                            <circle cx="140" cy="260" r="3" fill={modalStep === 'T2_T4_DATA' ? "#10b981" : "#94a3b8"} />
                             <text x="132" y="263" textAnchor="end">DEN (Pin 26)</text>
 
-                            <circle cx="140" cy="295" r="3" fill={modalStep === 'T2_T4_DATA' ? "#475569" : "#cbd5e1"} />
+                            <circle cx="140" cy="295" r="3" fill={modalStep === 'T2_T4_DATA' ? "#475569" : "#94a3b8"} />
                             <text x="132" y="298" textAnchor="end">DT/R (Pin 27)</text>
                           </>
                         ) : (
@@ -1729,13 +1790,13 @@ export default function PinConfigurationSimulator() {
                             <circle cx="140" cy="150" r="3" fill="#64748b" />
                             <text x="132" y="153" textAnchor="end">QS0 (Pin 25)</text>
 
-                            <circle cx="140" cy="190" r="3" fill={modalStep === 'T2_T4_DATA' ? "#7c3aed" : "#cbd5e1"} />
+                            <circle cx="140" cy="190" r="3" fill={modalStep === 'T2_T4_DATA' ? "#7c3aed" : "#94a3b8"} />
                             <text x="132" y="193" textAnchor="end">/S1 (Pin 27)</text>
 
                             <circle cx="140" cy="220" r="3" fill="#64748b" />
                             <text x="132" y="223" textAnchor="end">LOCK (Pin 29)</text>
 
-                            <circle cx="140" cy="260" r="3" fill={modalStep === 'T2_T4_DATA' ? "#7c3aed" : "#cbd5e1"} />
+                            <circle cx="140" cy="260" r="3" fill={modalStep === 'T2_T4_DATA' ? "#7c3aed" : "#94a3b8"} />
                             <text x="132" y="263" textAnchor="end" className="font-bold">/S0 (Pin 26)</text>
 
                             <circle cx="140" cy="295" r="3" fill="#64748b" />
@@ -1769,22 +1830,22 @@ export default function PinConfigurationSimulator() {
                           <text x="171" y="213" fill="#6d28d9" fontSize="7" fontFamily="monospace">S0</text>
                           
                           {/* Signal outputs */}
-                          <circle cx="225" cy="125" r="2.5" fill={modalStep === 'T1_ADDRESS' ? "#f59e0b" : "#cbd5e1"} />
+                          <circle cx="225" cy="125" r="2.5" fill={modalStep === 'T1_ADDRESS' ? "#f59e0b" : "#94a3b8"} />
                           <text x="221" y="131" fill="#64748b" fontSize="6.5" fontFamily="monospace" textAnchor="end">ALE</text>
                           
-                          <circle cx="210" cy="225" r="2.5" fill={modalStep === 'T2_T4_DATA' ? "#10b981" : "#cbd5e1"} />
+                          <circle cx="210" cy="225" r="2.5" fill={modalStep === 'T2_T4_DATA' ? "#10b981" : "#94a3b8"} />
                           <text x="206" y="221" fill="#64748b" fontSize="6.5" fontFamily="monospace" textAnchor="end">DEN</text>
                           
-                          <circle cx="225" cy="225" r="2.5" fill={modalStep === 'T2_T4_DATA' ? "#cbd5e1" : "#cbd5e1"} />
+                          <circle cx="225" cy="225" r="2.5" fill={modalStep === 'T2_T4_DATA' ? "#475569" : "#94a3b8"} />
                           <text x="228" y="221" fill="#64748b" fontSize="6.5" fontFamily="monospace">DT/R</text>
 
                           {/* Control lines outputs */}
-                          <circle cx="240" cy="145" r="2.5" fill={modalStep === 'T2_T4_DATA' && interconnectAction === 'READ' ? "#10b981" : "#cbd5e1"} />
+                          <circle cx="240" cy="145" r="2.5" fill={modalStep === 'T2_T4_DATA' && interconnectAction === 'READ' ? "#10b981" : "#94a3b8"} />
                           <text x="236" y="151" fill="#4b5563" fontSize="6" fontFamily="monospace" textAnchor="end">
                             {interconnectDevice === 'MEMORY' ? "MRDC" : "IORC"}
                           </text>
 
-                          <circle cx="240" cy="175" r="2.5" fill={modalStep === 'T2_T4_DATA' && interconnectAction === 'WRITE' ? "#10b981" : "#cbd5e1"} />
+                          <circle cx="240" cy="175" r="2.5" fill={modalStep === 'T2_T4_DATA' && interconnectAction === 'WRITE' ? "#10b981" : "#94a3b8"} />
                           <text x="236" y="181" fill="#4b5563" fontSize="6" fontFamily="monospace" textAnchor="end">
                             {interconnectDevice === 'MEMORY' ? "MWTC" : "IOWC"}
                           </text>
@@ -1802,7 +1863,7 @@ export default function PinConfigurationSimulator() {
                       <circle cx="340" cy="75" r="2.5" fill="#f59e0b" />
                       <text x="334" y="78" fill="#b45309" fontSize="7" fontFamily="monospace" textAnchor="end">DO</text>
                       
-                      <circle cx="240" cy="110" r="2.5" fill={modalStep === 'T1_ADDRESS' ? "#f59e0b" : "#cbd5e1"} />
+                      <circle cx="240" cy="110" r="2.5" fill={modalStep === 'T1_ADDRESS' ? "#f59e0b" : "#94a3b8"} />
                       <text x="246" y="113" fill={modalStep === 'T1_ADDRESS' ? "#b45309" : "#64748b"} fontSize="7" fontFamily="monospace">STB</text>
                       <text x="290" y="120" fill={modalStep === 'T1_ADDRESS' ? "#d97706" : "#4b5563"} fontSize="8.5" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
                         {modalStep === 'T1_ADDRESS' ? "🔓 PASSING" : "🔒 LATCHED"}
@@ -1819,10 +1880,10 @@ export default function PinConfigurationSimulator() {
                       <circle cx="340" cy="230" r="2.5" fill="#0d9488" />
                       <text x="334" y="233" fill="#0f766e" fontSize="7" fontFamily="monospace" textAnchor="end">B</text>
 
-                      <circle cx="240" cy="260" r="2.5" fill={modalStep === 'T2_T4_DATA' ? "#475569" : "#cbd5e1"} />
+                      <circle cx="240" cy="260" r="2.5" fill={modalStep === 'T2_T4_DATA' ? "#475569" : "#94a3b8"} />
                       <text x="246" y="263" fill="#64748b" fontSize="7" fontFamily="monospace">T/R</text>
 
-                      <circle cx="240" cy="290" r="2.5" fill={modalStep === 'T2_T4_DATA' ? "#10b981" : "#cbd5e1"} />
+                      <circle cx="240" cy="290" r="2.5" fill={modalStep === 'T2_T4_DATA' ? "#10b981" : "#94a3b8"} />
                       <text x="246" y="293" fill="#64748b" fontSize="7" fontFamily="monospace">OE</text>
                       
                       <text x="290" y="292" fill={modalStep === 'T2_T4_DATA' ? "#0f766e" : "#64748b"} fontSize="8" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
@@ -1877,13 +1938,13 @@ export default function PinConfigurationSimulator() {
                           {interconnectMode === 'MIN' ? (interconnectDevice === 'MEMORY' ? "M/IO (High=Mem)" : "M/IO (Low=I/O)") : "CS (Decoder Select)"}
                         </text>
 
-                        <circle cx="500" cy="150" r="3" fill={modalStep === 'T2_T4_DATA' && interconnectAction === 'READ' ? "#10b981" : "#cbd5e1"} />
+                        <circle cx="500" cy="150" r="3" fill={modalStep === 'T2_T4_DATA' && interconnectAction === 'READ' ? "#10b981" : "#94a3b8"} />
                         <text x="508" y="153">{interconnectDevice === 'MEMORY' ? "OE (Read En)" : "IOR (I/O Read)"}</text>
 
-                        <circle cx="500" cy="195" r="3" fill={modalStep === 'T2_T4_DATA' && interconnectAction === 'WRITE' ? "#10b981" : "#cbd5e1"} />
+                        <circle cx="500" cy="195" r="3" fill={modalStep === 'T2_T4_DATA' && interconnectAction === 'WRITE' ? "#10b981" : "#94a3b8"} />
                         <text x="508" y="198">{interconnectDevice === 'MEMORY' ? "WE (Write En)" : "IOW (I/O Write)"}</text>
 
-                        <circle cx="500" cy="250" r="3" fill={modalStep === 'T2_T4_DATA' ? "#0d9488" : "#cbd5e1"} />
+                        <circle cx="500" cy="250" r="3" fill={modalStep === 'T2_T4_DATA' ? "#0d9488" : "#94a3b8"} />
                         <text x="508" y="253">D0 - D15 (Data)</text>
                       </g>
 

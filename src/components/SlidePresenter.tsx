@@ -136,7 +136,7 @@ export default function SlidePresenter({
         <div className="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-6 min-h-0 items-stretch overflow-hidden">
           {/* Text points (Standard Presentation Layout in a Bento Box) */}
           {!slide.interactiveType ? (
-            <div className="xl:col-span-12 max-w-4xl mx-auto w-full bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xs">
+            <div className="xl:col-span-12 w-full max-w-none bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xs">
               <div className="space-y-6">
                 <div>
                   <motion.h2
@@ -177,11 +177,7 @@ export default function SlidePresenter({
           {slide.interactiveType && (
             <div 
               id="interactive-bento-card"
-              className={`min-h-0 flex flex-col transition-all duration-300 text-slate-900 ${
-                slide.interactiveType === 'quiz' 
-                  ? 'xl:col-span-12 max-w-3xl mx-auto w-full' 
-                  : 'xl:col-span-12 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs relative'
-              }`}
+              className="min-h-0 flex flex-col transition-all duration-300 text-slate-900 xl:col-span-12 w-full max-w-none relative"
             >
               <AnimatePresence mode="wait">
                 <motion.div

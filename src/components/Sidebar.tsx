@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Module, Slide } from '../types';
-import { Cpu, ChevronRight, ChevronDown, CheckCircle2, GraduationCap, Layout } from 'lucide-react';
+import { Cpu, ChevronRight, CheckCircle2, GraduationCap, Layout, Search, X } from 'lucide-react';
 
 interface SidebarProps {
   modules: Module[];
@@ -20,22 +21,85 @@ export default function Sidebar({
   isOpen,
   setIsOpen
 }: SidebarProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Compute progress percent
   const totalSlides = modules.reduce((acc, m) => acc + m.slides.length, 0);
   const completedCount = completedSlides.length;
   const progressPercent = Math.min(100, Math.round((completedCount / totalSlides) * 100));
 
+  const hasSearch = searchQuery.trim().length > 0;
+  const query = searchQuery.toLowerCase().trim();
+
+  interface SearchResult {
+    slide: Slide;
+    moduleId: string;
+    moduleTitle: string;
+    matchReason?: string;
+  }
+
+  const searchResults: SearchResult[] = [];
+
+  if (hasSearch) {
+    modules.forEach(m => {
+      m.slides.forEach(s => {
+        let isMatch = false;
+        let reason = '';
+
+        if (s.title.toLowerCase().includes(query)) {
+          isMatch = true;
+          reason = 'Slide Title';
+        } else if (m.title.toLowerCase().includes(query)) {
+          isMatch = true;
+          reason = 'Module Topic';
+        } else if (s.points?.some(pt => pt.toLowerCase().includes(query))) {
+          isMatch = true;
+          reason = 'Theory Content';
+        } else if (s.interactiveType) {
+          // Smart keyword mapping for interactive labs
+          const typeKeywords: Record<string, string[]> = {
+            evolution: ["evolution", "history", "timeline", "intel", "4004", "8008", "8080", "8085", "8086", "development"],
+            pins: ["pin", "pins", "signals", "configuration", "dip-40", "hardware", "interconnect", "multiplexing"],
+            architecture: ["architecture", "block diagram", "biu", "eu", "execution unit", "bus interface unit", "registers", "segment registers"],
+            flags: ["flags", "flag register", "status register", "psw", "carry", "zero", "sign", "parity", "status"],
+            'memory-calc': ["memory calculation", "physical address", "segmentation", "offset", "addressing", "segment", "stack"],
+            interrupts: ["interrupts", "ivt", "vector", "interrupt vector table", "hardware interrupts", "software interrupts"],
+            timing: ["timing diagram", "machine cycle", "read cycle", "write cycle", "t-state", "clock"],
+            modes: ["modes", "minimum mode", "maximum mode", "operating modes", "multiprocessor", "strapping"],
+            'min-mode-hardware': ["hardware", "minimum mode", "demultiplexing", "latching", "transceivers", "bus cycle", "ale", "den", "circuit"],
+            quiz: ["quiz", "assessment", "mcq", "gate", "exam", "question"]
+          };
+          const keywords = typeKeywords[s.interactiveType] || [];
+          if (keywords.some(k => k.includes(query) || query.includes(k))) {
+            isMatch = true;
+            reason = s.interactiveType === 'quiz' ? 'GATE MCQ Quiz' : 'Interactive Lab';
+          }
+        }
+
+        if (isMatch) {
+          searchResults.push({
+            slide: s,
+            moduleId: m.id,
+            moduleTitle: m.title,
+            matchReason: reason
+          });
+        }
+      });
+    });
+  }
+
   return (
     <div
-      className={`fixed inset-y-0 left-0 z-40 bg-white text-slate-800 flex flex-col justify-between border-slate-200 transition-all duration-300 ease-in-out h-full shrink-0 overflow-hidden ${
+      className={`fixed inset-y-0 left-0 z-40 bg-white text-slate-800 flex flex-col border-slate-200 transition-all duration-300 ease-in-out h-full shrink-0 overflow-hidden ${
         isOpen
           ? 'w-72 opacity-100 translate-x-0 border-r'
           : 'w-0 opacity-0 -translate-x-full md:translate-x-0 border-r-0'
       } md:static`}
     >
       <div className="w-72 h-full flex flex-col justify-between shrink-0">
-        {/* Sidebar Header */}
-        <div>
+        {/* Top Scrollable/Flex Area */}
+        <div className="flex flex-col flex-1 min-h-0">
+          {/* Sidebar Header */}
           <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between h-16 shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="p-1.5 bg-indigo-600 rounded-lg text-white shadow-xs">
@@ -50,14 +114,14 @@ export default function Sidebar({
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="md:hidden text-slate-500 hover:text-slate-900 cursor-pointer"
+              className="md:hidden text-slate-500 hover:text-slate-900 cursor-pointer text-xl font-bold p-1"
             >
               &times;
             </button>
           </div>
 
           {/* Progress summary */}
-          <div className="p-4 border-b border-slate-200 bg-slate-50/50">
+          <div className="p-4 border-b border-slate-200 bg-slate-50/50 shrink-0">
             <div className="flex justify-between items-center mb-1.5">
               <span className="text-[10px] font-bold text-slate-400 font-mono uppercase tracking-wider">Learning Progress</span>
               <span className="text-xs font-bold text-indigo-600 font-mono">{progressPercent}% Completed</span>
@@ -77,77 +141,194 @@ export default function Sidebar({
             </div>
           </div>
 
-          {/* Course Navigation items */}
-          <div className="p-4 overflow-y-auto max-h-[calc(100vh-180px)] space-y-3">
-            <div className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest px-1">
-              Learning Modules
+          {/* Search box */}
+          <div className="p-4 pb-3 border-b border-slate-200 bg-slate-50/30 shrink-0">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search topics, labs, quizzes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-8 text-xs font-medium placeholder-slate-400 focus:outline-none focus:border-indigo-450 focus:ring-1 focus:ring-indigo-400 transition-all text-slate-800"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-650 cursor-pointer p-0.5 rounded-full hover:bg-slate-100 flex items-center justify-center"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
+          </div>
 
-            <div className="space-y-2">
-              {modules.map((m, mIdx) => {
-                const isCurrentModule = m.id === currentModuleId;
-                const moduleCompletedCount = m.slides.filter(s => completedSlides.includes(s.id)).length;
-                const isModuleFullyStudied = moduleCompletedCount === m.slides.length;
-                const displayIdx = (mIdx + 1).toString().padStart(2, '0');
+          {/* Course Navigation items (or Search Results) */}
+          <div className="p-4 overflow-y-auto flex-1 space-y-3">
+            {hasSearch ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest px-1">
+                  <span>Search Results ({searchResults.length})</span>
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="text-indigo-600 hover:text-indigo-805 font-extrabold normal-case font-sans hover:underline cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
 
-                return (
-                  <div key={m.id} className="space-y-1">
-                    <button
-                      onClick={() => onSelectSlide(m.id, m.slides[0].id)}
-                      className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-xs font-medium cursor-pointer text-left ${
-                        isCurrentModule
-                          ? 'border-indigo-200 bg-indigo-50 text-indigo-800 font-semibold shadow-xs'
-                          : 'border-slate-100 bg-slate-50/30 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="truncate flex items-center gap-2.5">
-                        <span className={`font-mono text-[10px] ${isCurrentModule ? 'text-indigo-600' : 'text-slate-400'}`}>
-                          {displayIdx}
-                        </span>
-                        {isModuleFullyStudied ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        ) : (
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCurrentModule ? 'bg-indigo-500' : 'bg-slate-300'}`}></span>
-                        )}
-                        <span className={`truncate ${isCurrentModule ? 'font-bold text-slate-900' : ''}`}>
-                          {m.title.replace('Module ', '')}
-                        </span>
-                      </span>
-                      <span className="text-[9px] font-mono text-slate-500 shrink-0 bg-white px-1.5 py-0.5 rounded border border-slate-200">
-                        {moduleCompletedCount}/{m.slides.length}
-                      </span>
-                    </button>
+                {searchResults.length > 0 ? (
+                  <div className="space-y-1.5 pt-1">
+                    {searchResults.map(({ slide, moduleId, moduleTitle, matchReason }) => {
+                      const isCurrentSlide = slide.id === currentSlideId;
+                      const isSlideCompleted = completedSlides.includes(slide.id);
 
-                    {/* List of slides within the current selected module */}
-                    {isCurrentModule && (
-                      <div className="pl-4 pr-1 border-l border-slate-200 space-y-1 py-1 ml-3 mt-1">
-                        {m.slides.map((slide) => {
-                          const isCurrentSlide = slide.id === currentSlideId;
-                          const isSlideCompleted = completedSlides.includes(slide.id);
+                      return (
+                        <button
+                          key={slide.id}
+                          onClick={() => onSelectSlide(moduleId, slide.id)}
+                          className={`w-full text-left p-2.5 rounded-xl text-xs font-medium transition-all flex flex-col gap-1 border border-transparent ${
+                            isCurrentSlide
+                              ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                              : 'bg-slate-50/50 hover:bg-indigo-50/50 text-slate-700 hover:text-slate-900 border-slate-100 hover:border-indigo-150'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between w-full gap-2">
+                            <span className={`font-bold leading-tight ${isCurrentSlide ? 'text-white' : 'text-slate-900'}`}>
+                              {slide.title}
+                            </span>
+                            {isSlideCompleted && (
+                              <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${isCurrentSlide ? 'text-indigo-200' : 'text-emerald-600'}`} />
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-wrap items-center gap-1.5 text-[9px] font-mono mt-0.5">
+                            <span className={`px-1.5 py-0.5 rounded uppercase font-semibold border ${
+                              isCurrentSlide 
+                                ? 'bg-indigo-700/55 border-indigo-500/50 text-indigo-100' 
+                                : 'bg-slate-100 border-slate-200 text-slate-500'
+                            }`}>
+                              {moduleTitle.replace('Module ', 'M')}
+                            </span>
+                            
+                            {slide.interactiveType && (
+                              <span className={`px-1.5 py-0.5 rounded uppercase font-bold flex items-center gap-0.5 border ${
+                                isCurrentSlide 
+                                  ? 'bg-amber-600/60 border-amber-500/50 text-amber-100' 
+                                  : 'bg-amber-50 border-amber-200 text-amber-800'
+                              }`}>
+                                {slide.interactiveType === 'quiz' ? (
+                                  <>
+                                    <GraduationCap className="w-2.5 h-2.5 shrink-0" />
+                                    <span>Quiz</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Cpu className="w-2.5 h-2.5 shrink-0" />
+                                    <span>Lab</span>
+                                  </>
+                                )}
+                              </span>
+                            )}
 
-                          return (
-                            <button
-                              key={slide.id}
-                              onClick={() => onSelectSlide(m.id, slide.id)}
-                              className={`w-full text-left py-1.5 px-2.5 rounded-lg text-[11px] font-medium transition-all flex items-center justify-between group border-l-2 ${
-                                isCurrentSlide
-                                  ? 'bg-indigo-600 text-white font-semibold shadow-xs border-indigo-400 pl-2'
-                                  : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50 border-transparent'
-                              }`}
-                            >
-                              <span className="truncate pr-1 group-hover:translate-x-0.5 transition-transform duration-150">{slide.title}</span>
-                              {isSlideCompleted && !isCurrentSlide && (
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
+                            {matchReason && matchReason !== 'Slide Title' && (
+                              <span className={`italic px-1 ${isCurrentSlide ? 'text-indigo-200' : 'text-slate-400'}`}>
+                                Matched: {matchReason}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
+                ) : (
+                  <div className="text-center py-8 px-2 space-y-2">
+                    <Search className="w-8 h-8 text-slate-300 mx-auto" />
+                    <p className="text-xs text-slate-500 leading-normal">
+                      No topics found matching <strong className="text-slate-700 font-bold">&ldquo;{searchQuery}&rdquo;</strong>.
+                    </p>
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 font-bold underline cursor-pointer"
+                    >
+                      Browse all modules
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest px-1">
+                  Learning Modules
+                </div>
+
+                <div className="space-y-2">
+                  {modules.map((m, mIdx) => {
+                    const isCurrentModule = m.id === currentModuleId;
+                    const moduleCompletedCount = m.slides.filter(s => completedSlides.includes(s.id)).length;
+                    const isModuleFullyStudied = moduleCompletedCount === m.slides.length;
+                    const displayIdx = (mIdx + 1).toString().padStart(2, '0');
+
+                    return (
+                      <div key={m.id} className="space-y-1">
+                        <button
+                          onClick={() => onSelectSlide(m.id, m.slides[0].id)}
+                          className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-xs font-medium cursor-pointer text-left ${
+                            isCurrentModule
+                              ? 'border-indigo-200 bg-indigo-50 text-indigo-800 font-semibold shadow-xs'
+                              : 'border-slate-100 bg-slate-50/30 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="truncate flex items-center gap-2.5">
+                            <span className={`font-mono text-[10px] ${isCurrentModule ? 'text-indigo-600' : 'text-slate-400'}`}>
+                              {displayIdx}
+                            </span>
+                            {isModuleFullyStudied ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            ) : (
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCurrentModule ? 'bg-indigo-500' : 'bg-slate-300'}`}></span>
+                            )}
+                            <span className={`truncate ${isCurrentModule ? 'font-bold text-slate-900' : ''}`}>
+                              {m.title.replace('Module ', '')}
+                            </span>
+                          </span>
+                          <span className="text-[9px] font-mono text-slate-500 shrink-0 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                            {moduleCompletedCount}/{m.slides.length}
+                          </span>
+                        </button>
+
+                        {/* List of slides within the current selected module */}
+                        {isCurrentModule && (
+                          <div className="pl-4 pr-1 border-l border-slate-200 space-y-1 py-1 ml-3 mt-1">
+                            {m.slides.map((slide) => {
+                              const isCurrentSlide = slide.id === currentSlideId;
+                              const isSlideCompleted = completedSlides.includes(slide.id);
+
+                              return (
+                                <button
+                                  key={slide.id}
+                                  onClick={() => onSelectSlide(m.id, slide.id)}
+                                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-[11px] font-medium transition-all flex items-center justify-between group border-l-2 ${
+                                    isCurrentSlide
+                                      ? 'bg-indigo-600 text-white font-semibold shadow-xs border-indigo-400 pl-2'
+                                      : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50 border-transparent'
+                                  }`}
+                                >
+                                  <span className="truncate pr-1 group-hover:translate-x-0.5 transition-transform duration-150">{slide.title}</span>
+                                  {isSlideCompleted && !isCurrentSlide && (
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
