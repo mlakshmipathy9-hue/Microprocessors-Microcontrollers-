@@ -1,0 +1,6 @@
+{
+  "name": "8086 Microprocessor and Microcontroller Course",
+  "description": "An interactive, presentation-style educational website for B.Tech students to learn 8086 microprocessor architecture, pin configuration, memory address calculation, registers, timing, and interrupts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
