@@ -893,5 +893,411 @@ export const courseData: Module[] = [
         ]
       }
     ]
+  },
+  {
+    id: 'm11',
+    title: 'Module 11: Program Development Steps & Tools',
+    slides: [
+      {
+        id: 'm11-s1',
+        title: '8086 Program Development Steps',
+        moduleTitle: 'Module 11: Program Development Steps & Tools',
+        moduleId: 'm11',
+        points: [
+          '1. Specification & Design: Define the problem statement, write down inputs/outputs, and outline the core algorithm and flowchart.',
+          '2. Assembly Coding: Translate the flowchart blocks into 8086 assembly instructions using a plain text editor (resulting in a file like program.asm).',
+          '3. Assembling: Pass the .ASM source code through an assembler (MASM or TASM). It reads instructions, checks syntax, and produces an Object file (program.obj) along with a Listing file (program.lst) showing addresses and machine codes.',
+          '4. Linking: Run a linker (LINK or TLINK) to merge multiple object files and resolve library dependencies, generating a final relocatable executable (program.exe).',
+          '5. Execution & Debugging: Load the program into physical RAM or run it inside an emulator (DEBUG, emu8086) to monitor registers, flags, and memory to trace and fix any logical bugs.'
+        ]
+      },
+      {
+        id: 'm11-s2',
+        title: 'Interactive 8086 Development Steps Lab',
+        moduleTitle: 'Module 11: Program Development Steps & Tools',
+        moduleId: 'm11',
+        points: [
+          'Visualise the complete compilation, linking, and execution pipeline of an 8086 assembly program.',
+          'Step through the pipeline: Text Editor -> Assembler (MASM) -> Linker (LINK) -> Debugger/Emulator.',
+          'Learn the intermediate file formats: see how .ASM generates .OBJ & .LST, which then link into .EXE.',
+          'Use the Interactive Pipeline Simulator on the right to understand how each software tool prepares code for the CPU.'
+        ],
+        interactiveType: 'dev-pipeline'
+      },
+      {
+        id: 'm11-s3',
+        title: 'One-Pass vs Two-Pass Assemblers',
+        moduleTitle: 'Module 11: Program Development Steps & Tools',
+        moduleId: 'm11',
+        points: [
+          'Two-Pass Assembler: The standard design for assemblers like MASM or TASM. It scans the source code exactly twice to resolve forward references.',
+          'Pass 1 (Symbol Table construction): The assembler scans the source file to build a "Symbol Table". It identifies all user-defined labels (like START, LOOP, NUM1) and assigns them relative offset addresses based on instruction sizes.',
+          'Pass 2 (Machine Code Translation): The assembler re-scans the file from the top. Using the Symbol Table, it substitutes mnemonics with binary opcodes, translates labels into numeric offsets, and creates the Object file (.OBJ) and Listing file (.LST).',
+          'One-Pass Assembler: Scans code once and translates directly. If it encounters a "forward reference" (a jump to a label defined later in the file), it must leave a blank placeholder and patch it later, making it less elegant for complex structures.'
+        ],
+        interactiveType: 'assembler-passes'
+      },
+      {
+        id: 'm11-s3b',
+        title: 'Assembler Outputs: .OBJ vs .LST Files',
+        moduleTitle: 'Module 11: Program Development Steps & Tools',
+        moduleId: 'm11',
+        interactiveType: 'assembler-outputs',
+        points: [
+          'Object (.OBJ) File - Machine-Readable Output: The main binary file produced by the assembler containing translated machine instructions. It is NOT directly executable yet.',
+          'What .OBJ Contains: (1) Translated binary machine code and constants. (2) Relocation Information (for segment linking). (3) Symbol Names (lists of external and public variables/labels to be resolved by the Linker). (4) Segment structures and sizing records.',
+          'Listing (.LST) File - Human-Readable Log: An optional, highly detailed plain-text document created during assembly. It is extremely useful for debugging logical errors and verifying offset calculations.',
+          'What .LST Contains: (1) Full Source Code printed side-by-side with computed offset addresses and translated Hex codes. (2) Symbol Table listing every variable, segment, label, and macro with its offset. (3) Warnings and syntax error messages with exact line numbers.'
+        ]
+      },
+      {
+        id: 'm11-s4',
+        title: 'The Linker and Loader Roles',
+        moduleTitle: 'Module 11: Program Development Steps & Tools',
+        moduleId: 'm11',
+        points: [
+          'The Linker (LINK.EXE / TLINK.EXE): Merges separate Object (.OBJ) files into a single, relocatable Executable (.EXE). It resolves cross-module references and links library files (.LIB) containing pre-written subroutines.',
+          'Relocation Dictionary: The Linker builds an EXE header containing a "Relocation Table". Because the starting address in RAM is unknown at link-time, addresses are kept relocatable.',
+          'The Loader: A component of the Operating System (or DOS) that active-loads programs from disk into physical memory before run time.',
+          'Loading & Relocation: The Loader finds free space in RAM, copies the program, and uses the Relocation Table to patch all segment-dependent addresses (CS, DS, SS) to map to their actual, physical memory positions.'
+        ]
+      },
+      {
+        id: 'm11-s5',
+        title: 'DOS DEBUG Utility & Commands',
+        moduleTitle: 'Module 11: Program Development Steps & Tools',
+        moduleId: 'm11',
+        points: [
+          'DEBUG.EXE: The classic 8086 interactive software test utility used to execute, trace, and troubleshoot compiled executable and COM files directly on the processor.',
+          'Core Inspection Commands: Use R (Registers) to dump or edit current general and segment registers, and D (Dump) / E (Enter) to view or write raw hex values in memory segments.',
+          'Execution Commands: Use T (Trace) to single-step execution instruction-by-instruction (inspecting register updates after every step), and G (Go) to run code to a specific breakpoint or till completion.',
+          'Utility Commands: Use A (Assemble) to write inline assembly instructions directly into memory, and U (Unassemble) to disassemble hex machine code back to readable assembly mnemonics.'
+        ]
+      },
+      {
+        id: 'm11-quiz',
+        title: 'Module 11 Recap Quiz',
+        moduleTitle: 'Module 11: Program Development Steps & Tools',
+        moduleId: 'm11',
+        interactiveType: 'quiz',
+        quizQuestions: [
+          {
+            question: 'Which of the following files is produced by the assembler and contains the translated binary code, but is not yet fully linked or directly executable?',
+            options: ['program.asm', 'program.lst', 'program.obj', 'program.exe'],
+            correctAnswer: 2,
+            explanation: 'The assembler (MASM/TASM) translates source code into machine language and stores it in an Object file (.OBJ). However, this file is not yet executable because external references and starting memory offsets have not been resolved by the linker.'
+          },
+          {
+            question: 'What is the primary function of a Linker (LINK / TLINK) in the 8086 software development process?',
+            options: ['To compile plain text assembly instructions into binary codes', 'To combine multiple object (.OBJ) files and libraries into a single executable (.EXE) file', 'To execute the program and display error warnings', 'To format and print the source code listing'],
+            correctAnswer: 1,
+            explanation: 'The Linker takes one or more object files (.OBJ) and merges them, resolving memory starting points and subroutines, to produce a final, executable binary program (.EXE).'
+          },
+          {
+            question: 'Which development file contains a complete side-by-side view of the original assembly code, translated hexadecimal machine codes, and memory offsets?',
+            options: ['.ASM file', '.EXE file', '.OBJ file', '.LST (Listing) file'],
+            correctAnswer: 3,
+            explanation: 'The Listing file (.LST) is optionally created by the assembler to assist programmers. It shows the source code lines alongside their generated binary codes and memory segment offsets.'
+          },
+          {
+            question: 'In the 8086 development workflow, which software tool is used to execute the code instruction-by-instruction, inspect register values, and modify memory content live for troubleshooting?',
+            options: ['Text Editor', 'Assembler', 'Linker', 'Debugger / Emulator (like DEBUG or emu8086)'],
+            correctAnswer: 3,
+            explanation: 'The Debugger or Emulator allows developers to step through program execution one instruction at a time, checking register states (AX, BX, IP) and memory segments to track down logical bugs.'
+          },
+          {
+            question: 'During the assembling phase using MASM, what is the primary objective of "Pass 1" of a Two-Pass Assembler?',
+            options: [
+              'To translate mnemonics into hexadecimal machine codes',
+              'To build the Symbol Table by resolving the offsets of all user-defined variables and labels',
+              'To link external library subroutines into the object file',
+              'To load the relocatable binary directly into physical RAM'
+            ],
+            correctAnswer: 1,
+            explanation: 'In a Two-Pass Assembler, Pass 1 is dedicated to scanning the source file to build the Symbol Table, identifying the size of each instruction, and determining the relative offset address of every label and variable.'
+          },
+          {
+            question: 'Which software component is responsible for reading the relocation table header of a .EXE file, copying the code into free physical RAM, and updating the CS, DS, and SS segments dynamically?',
+            options: ['The Text Editor', 'The Linker', 'The Loader', 'The Assembler'],
+            correctAnswer: 2,
+            explanation: 'The Loader (part of the OS runtime) is responsible for loading the relocatable executable from disk into a free region of physical RAM and dynamically adjusting segment register references (relocation) to point to actual memory bases.'
+          },
+          {
+            question: 'In the classic DOS DEBUG interactive program, which command is used to single-step execution instruction-by-instruction to inspect registers and status flags live?',
+            options: ['D (Dump)', 'T (Trace)', 'A (Assemble)', 'G (Go)'],
+            correctAnswer: 1,
+            explanation: 'The T (Trace) command in the DEBUG utility performs single-step execution, executing exactly one instruction, updating the Instruction Pointer (IP), and outputting the exact state of all MPU registers and status flags.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'm12',
+    title: 'Module 12: 8086 Addressing Modes',
+    slides: [
+      {
+        id: 'm12-s1',
+        title: 'Understanding 8086 Addressing Modes',
+        moduleTitle: 'Module 12: 8086 Addressing Modes',
+        moduleId: 'm12',
+        points: [
+          'Addressing Mode: The method by which an instruction specifies where its operand(s) are located (registers, memory, or immediate constants).',
+          'Immediate Addressing: The operand is a constant value embedded directly inside the instruction byte stream (e.g., MOV AX, 1234H). Highly efficient.',
+          'Register Addressing: Operands reside entirely in 16-bit or 8-bit general registers (e.g., MOV AX, BX). No memory bus access is required.',
+          'Memory Addressing Modes: Accesses physical RAM by computing a 16-bit offset called Effective Address (EA). Examples include Direct, Indirect, Based, Indexed, Based-Indexed, and Relative Based-Indexed.',
+          'Dynamic Memory Access: Combining base (BX, BP) and index (SI, DI) registers with constant displacements is critical for traversing arrays, matrices, and parameters on the stack.'
+        ]
+      },
+      {
+        id: 'm12-s2',
+        title: 'Effective Address Calculation Lab',
+        moduleTitle: 'Module 12: 8086 Addressing Modes',
+        moduleId: 'm12',
+        points: [
+          'Effective Address (EA): The net 16-bit logical offset generated inside the instruction (EA = Base + Index + Displacement).',
+          'Default Segment Selection: Memory calculations using base registers BX, SI, or DI target the Data Segment (DS) by default. References using BP target the Stack Segment (SS) by default.',
+          'Segment Override Prefix: Forces the processor to use a specified segment rather than the default (e.g., MOV AL, ES:[BX] overrides DS with ES).',
+          'Physical Address Translation: The BIU takes the selected 16-bit segment base, shifts it by 4 bits, and adds the computed 16-bit EA.',
+          'Use the Interactive Addressing Mode Lab on the right to simulate calculations and see the physical mapping of memory addresses.'
+        ],
+        interactiveType: 'addressing-modes'
+      },
+      {
+        id: 'm12-quiz',
+        title: 'Module 12 Recap Quiz',
+        moduleTitle: 'Module 12: 8086 Addressing Modes',
+        moduleId: 'm12',
+        interactiveType: 'quiz',
+        quizQuestions: [
+          {
+            question: 'By default, which segment register is used to calculate the 20-bit physical address for the memory operand in the instruction "MOV AL, [BP + SI + 05H]"?',
+            options: ['Code Segment (CS)', 'Data Segment (DS)', 'Stack Segment (SS)', 'Extra Segment (ES)'],
+            correctAnswer: 2,
+            isGateQuestion: true,
+            gateYear: 'GATE 2009',
+            explanation: 'Any instruction referencing the Base Pointer (BP) as part of its memory offset calculation targets the Stack Segment (SS) by default. In contrast, memory offsets using BX, SI, or DI target the Data Segment (DS) by default.'
+          },
+          {
+            question: 'What is the Addressing Mode of the source operand in the instruction "MOV DX, [SI]"?',
+            options: ['Direct Addressing', 'Register Addressing', 'Register Indirect Addressing', 'Indexed Addressing'],
+            correctAnswer: 2,
+            explanation: 'In "MOV DX, [SI]", the operand is in memory, and its 16-bit offset is contained inside the index register SI. This is called Register Indirect addressing.'
+          },
+          {
+            question: 'What is the Effective Address (EA) of the memory operand in the instruction "MOV AX, [BX + DI + 2000H]" if BX = 1000H, DI = 0500H, and DS = 3000H?',
+            options: ['1500H', '3500H', '33500H', '3500H (with DS override)'],
+            correctAnswer: 1,
+            explanation: 'The Effective Address (EA) is the 16-bit logical offset. EA = BX + DI + Displacement = 1000H + 0500H + 2000H = 3500H. Note that the segment register DS is used for the Physical Address calculation, but is not part of the logical EA.'
+          },
+          {
+            question: 'In the instruction "MOV CL, ES:[BX]", what is the purpose of "ES:"?',
+            options: ['It is an immediate operand', 'It represents an Extra Segment override prefix, directing the CPU to read from ES instead of the default DS segment', 'It is a register indirect operand pointing to the stack segment', 'It triggers a software interrupt vector'],
+            correctAnswer: 1,
+            explanation: 'By default, references to memory using BX target the Data Segment (DS). The "ES:" syntax is a Segment Override Prefix which explicitly directs the processor to calculate the physical address using the Extra Segment (ES) register instead.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'm13',
+    title: 'Module 13: 8086 Instruction Set',
+    slides: [
+      {
+        id: 'm13-s1',
+        title: 'Classification of 8086 Instructions',
+        moduleTitle: 'Module 13: 8086 Instruction Set',
+        moduleId: 'm13',
+        points: [
+          'Data Transfer: Copy data between registers, memory, and ports (e.g., MOV, PUSH, POP, XCHG, IN, OUT, LEA). Crucially, these do NOT affect the flag register.',
+          'Arithmetic: ADD, SUB, INC, DEC, CMP, MUL, DIV, and decimal BCD adjustments (AAA, DAA). These directly modify ALU status flags.',
+          'Bit Manipulation: Perform logical operations (AND, OR, XOR, NOT, TEST) or bit shifts and rotations (SHL, SHR, SAR, ROL, ROR, RCL, RCR) to isolate or change bits.',
+          'String Operations: Process sequential bytes/words extremely fast (MOVSB/MOVSW, CMPS, SCAS, LODS, STOS) using direction flag DF and repeat prefix REP.',
+          'Program Flow & Control: Control branches and subroutines via jumps (unconditional JMP, conditional JZ/JNZ/JC), loops (LOOP), call/ret (CALL, RET), and interrupts.'
+        ]
+      },
+      {
+        id: 'm13-s2',
+        title: 'Instruction Execution & ALU Flag Lab',
+        moduleTitle: 'Module 13: 8086 Instruction Set',
+        moduleId: 'm13',
+        points: [
+          'ALU Status Flags: Automatically updated by the Execution Unit (EU) after executing arithmetic, logical, and shift instructions.',
+          'Zero Flag (ZF): Becomes 1 if the outcome of the instruction is exactly zero; otherwise 0. Critical for comparison and branching.',
+          'Carry Flag (CF): Becomes 1 if there is an unsigned overflow (a carry out of the most significant bit) after an addition or borrow after a subtraction.',
+          'Sign Flag (SF): Simply copies the MSB (sign bit) of the result to indicate positive (0) or negative (1).',
+          'Use the Interactive Instruction Decoder & ALU simulator on the right to run opcodes and inspect flags and registers in real-time.'
+        ],
+        interactiveType: 'instruction-decoder'
+      },
+      {
+        id: 'm13-quiz',
+        title: 'Module 13 Recap Quiz',
+        moduleTitle: 'Module 13: 8086 Instruction Set',
+        moduleId: 'm13',
+        interactiveType: 'quiz',
+        quizQuestions: [
+          {
+            question: 'Consider the execution of the instructions "MOV AL, 7FH" followed by "ADD AL, 01H" in an 8086 microprocessor. What are the resulting values of the Carry Flag (CF) and the Overflow Flag (OF)?',
+            options: ['CF = 0, OF = 0', 'CF = 0, OF = 1', 'CF = 1, OF = 0', 'CF = 1, OF = 1'],
+            correctAnswer: 1,
+            isGateQuestion: true,
+            gateYear: 'GATE 2004',
+            explanation: '7FH (01111111B) represents +127 signed. Adding 01H yields 80H (10000000B), which is -128 signed. There is no unsigned carry out of the MSB, so CF = 0. However, adding two positive numbers produced a negative result, which represents a signed arithmetic overflow. Thus, OF = 1.'
+          },
+          {
+            question: 'Which of the following instructions does NOT modify any flags in the Flag Register?',
+            options: ['ADD AX, BX', 'CMP CX, DX', 'MOV SI, 1000H', 'AND AL, 0FH'],
+            correctAnswer: 2,
+            explanation: 'Data transfer instructions like MOV, PUSH, POP, LEA, and XCHG do not modify any ALU flags in the status register, preserving the current flags. Arithmetic (ADD, CMP) and logical (AND) instructions always alter flags.'
+          },
+          {
+            question: 'What is the difference between the "SUB AX, BX" and "CMP AX, BX" instructions?',
+            options: ['SUB affects the register values, while CMP only updates flags without altering AX', 'SUB only updates flags, while CMP alters register values', 'SUB handles signed numbers, while CMP is strictly for unsigned numbers', 'There is no difference; they are synonymous'],
+            correctAnswer: 0,
+            explanation: 'Both instructions perform subtraction (AX - BX) and update the status flags (ZF, CF, SF, OF, PF) identically. However, "SUB AX, BX" overwrites AX with the subtraction result, whereas "CMP AX, BX" discards the arithmetic outcome, keeping AX unchanged.'
+          },
+          {
+            question: 'Which instruction is used to multiply the AX register by a 16-bit operand and store the resulting 32-bit product across the combined DX and AX registers?',
+            options: ['MUL', 'IMUL', 'DIV', 'Both MUL (for unsigned) and IMUL (for signed)'],
+            correctAnswer: 3,
+            explanation: 'MUL (unsigned multiplication) and IMUL (signed multiplication) take a single 16-bit register or memory operand, multiply it by the AX accumulator, and store the 32-bit product across DX (upper 16 bits) and AX (lower 16 bits).'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'm14',
+    title: 'Module 14: Assembler Directives',
+    slides: [
+      {
+        id: 'm14-s1',
+        title: 'What are Assembler Directives?',
+        moduleTitle: 'Module 14: Assembler Directives',
+        moduleId: 'm14',
+        points: [
+          'Assembler Directives: Special commands embedded in the assembly source code that guide the assembler (MASM/TASM) during translation, but do NOT produce CPU machine code instructions.',
+          'Data Definition Directives: Reserves memory and assigns initial values. DB (Define Byte - 1 byte), DW (Define Word - 2 bytes), DD (Define Doubleword - 4 bytes).',
+          'Segment Mapping: SEGMENT and ENDS frame the start and end of logical segments (Code, Data, Stack) inside the source code module.',
+          'Logical Connection (ASSUME): Informs the compiler which physical segment register (CS, DS, SS, ES) will point to which logical segment at runtime.',
+          'Origin Control & Constants: ORG (Origin) defines the starting memory offset for code/data (e.g., ORG 100H for DOS .COM files). EQU (Equate) defines constant symbols.'
+        ]
+      },
+      {
+        id: 'm14-s2',
+        title: 'Assembler Directives & Memory Layout',
+        moduleTitle: 'Module 14: Assembler Directives',
+        moduleId: 'm14',
+        points: [
+          'Directives structure how variables are laid out inside the Data Segment (DS) starting from logical offset 0000H.',
+          'In a standard assembly program, the assembler allocates consecutive byte offsets to variables defined with DB (1 byte), DW (2 bytes), and DD (4 bytes).',
+          'The DUP (Duplicate) operator allows reserving block arrays easily (e.g., ARR DB 10 DUP(0) allocates 10 bytes initialized to zero).',
+          'Use the Interactive Directive Sandbox on the right to inspect a standard program layout and highlight directive boundaries.'
+        ],
+        interactiveType: 'directive-sandbox'
+      },
+      {
+        id: 'm14-quiz',
+        title: 'Module 14 Recap Quiz',
+        moduleTitle: 'Module 14: Assembler Directives',
+        moduleId: 'm14',
+        interactiveType: 'quiz',
+        quizQuestions: [
+          {
+            question: 'Which assembler directive is used to allocate 2 bytes of storage for a data variable, commonly representing a 16-bit word?',
+            options: ['DB (Define Byte)', 'DW (Define Word)', 'DD (Define Doubleword)', 'DQ (Define Quadword)'],
+            correctAnswer: 1,
+            explanation: 'The DW (Define Word) directive directs the assembler to allocate 2 bytes (16 bits) of consecutive memory space for the associated variable.'
+          },
+          {
+            question: 'What is the purpose of the ASSUME directive in 8086 MASM programs?',
+            options: ['To initialize physical segment registers with segment starting addresses', 'To tell the assembler which logical segment belongs to which physical segment register (CS, DS, SS, ES) during code compilation', 'To perform addition inside the ALU', 'To define constants'],
+            correctAnswer: 1,
+            explanation: 'ASSUME is a compiler-only directive. It informs the assembler about the association between segment registers and logical segments, so the compiler can generate appropriate segment override prefixes if necessary. It does NOT load the segment registers with addresses at runtime (that must be done using MOV instructions).'
+          },
+          {
+            question: 'How many bytes of physical memory are allocated by the directive "ARR DB 5 DUP(1, 2)"?',
+            options: ['5 bytes', '10 bytes', '15 bytes', '2 bytes'],
+            correctAnswer: 1,
+            explanation: 'The DUP (Duplicate) operator duplicates the nested pattern. The pattern contains two bytes: (1, 2), which is 2 bytes wide. Duplicating this pattern 5 times allocates exactly 5 * 2 = 10 bytes of memory.'
+          },
+          {
+            question: 'Which of the following directives defines a constant value that does NOT consume any physical space in the resulting executable program?',
+            options: ['ORG', 'EQU', 'DB', 'ENDS'],
+            correctAnswer: 1,
+            explanation: 'The EQU (Equate) directive defines a compile-time constant alias. The assembler replaces all occurrences of the equated symbol with its value during compilation, consuming zero physical space in the compiled binary.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'm15',
+    title: 'Module 15: Writing Simple Programs',
+    slides: [
+      {
+        id: 'm15-s1',
+        title: 'Writing Basic Assembly Programs',
+        moduleTitle: 'Module 15: Writing Simple Programs',
+        moduleId: 'm15',
+        points: [
+          '8086 programming is register-intensive and revolves around load, process, and store cycles.',
+          'Program 1: 16-bit Addition: Uses MOV to load variables from the data segment into AX and BX, executes ADD AX, BX, and stores the result back to memory.',
+          'Program 2: Find Maximum: Loops through an array, uses CMP to compare values, and JGE (Jump if Greater or Equal) to keep the highest value in AX.',
+          'Program 3: Array Summation: Sets a counter CX = array size, points SI to array start, and accumulates values using ADD AX, [SI] and INC SI inside a LOOP structure.',
+          'Program 4: String Copy: Registers SI (Source) and DI (Destination) are loaded. Clear direction flag (CLD) makes SI/DI auto-increment, and REP MOVSB performs fast copies.'
+        ]
+      },
+      {
+        id: 'm15-s2',
+        title: '8086 Assembly Emulator & Debugger',
+        moduleTitle: 'Module 15: Writing Simple Programs',
+        moduleId: 'm15',
+        points: [
+          'An Emulator mimics the 8086 hardware, allowing execution of instructions without physical IC hardware.',
+          'Single Step Debugging: Runs exactly one instruction cycle, letting you inspect registers (AX, BX, CX, DX) and pointers (IP) after each step.',
+          'Register Monitoring: Track variables stored inside 16-bit general registers or their 8-bit split halves.',
+          'Flag Status: Zero Flag (ZF), Carry Flag (CF), and Sign Flag (SF) update interactively after each arithmetic instruction.',
+          'Explore our Live 8086 Assembly Playground on the right! Select a template, run instructions step-by-step, and see register changes.'
+        ],
+        interactiveType: 'assembler-playground'
+      },
+      {
+        id: 'm15-quiz',
+        title: 'Module 15 Recap Quiz',
+        moduleTitle: 'Module 15: Writing Simple Programs',
+        moduleId: 'm15',
+        interactiveType: 'quiz',
+        quizQuestions: [
+          {
+            question: 'Which register is automatically decremented by 1 when the "LOOP label" instruction is executed in 8086 assembly language?',
+            options: ['AX', 'BX', 'CX', 'DX'],
+            correctAnswer: 2,
+            explanation: 'The LOOP instruction uses the CX register (Count register) as its counter. Each time LOOP executes, the CPU automatically decrements CX by 1. If CX is not 0, it jumps to the target label; otherwise, it falls through.'
+          },
+          {
+            question: 'In string copy instructions such as MOVSB, which register pair is used to hold the starting addresses of the Source and Destination strings respectively?',
+            options: ['BX and DX', 'SP and BP', 'SI (Source Index) and DI (Destination Index)', 'AX and CX'],
+            correctAnswer: 2,
+            explanation: '8086 string instructions require SI (Source Index) to point to the source string relative to the Data Segment (DS), and DI (Destination Index) to point to the destination relative to the Extra Segment (ES).'
+          },
+          {
+            question: 'Which instruction should be executed before string operations to ensure that the SI and DI index registers automatically INCREMENT (step forward) during string operations?',
+            options: ['STD (Set Direction Flag)', 'CLD (Clear Direction Flag)', 'STI (Set Interrupt Flag)', 'CLI (Clear Interrupt Flag)'],
+            correctAnswer: 1,
+            explanation: 'CLD (Clear Direction Flag) clears DF to 0, which directs string instructions (like MOVSB/MOVSW) to automatically increment SI and DI after processing. In contrast, STD sets DF to 1, causing SI and DI to decrement.'
+          },
+          {
+            question: 'What happens when a PUSH AX instruction is executed in an 8086 program?',
+            options: ['SP is decremented by 2, and the 16-bit value of AX is written to the Stack Segment memory at SS:SP', 'SP is incremented by 2, and the value of AX is pop-retrieved', 'AX is copied to the DS segment', 'The program halts'],
+            correctAnswer: 0,
+            explanation: 'The stack grows downwards in physical memory. When PUSH is called, SP is decremented by 2 to allocate a 16-bit word on the stack, and then the register contents are written to the stack memory address CS:SP (or SS:SP).'
+          }
+        ]
+      }
+    ]
   }
 ];
+

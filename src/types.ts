@@ -8,7 +8,7 @@ export interface Slide {
     headers: string[];
     rows: string[][];
   };
-  interactiveType?: 'evolution' | 'pins' | 'architecture' | 'flags' | 'memory-calc' | 'interrupts' | 'timing' | 'modes' | 'min-mode-hardware' | 'quiz';
+  interactiveType?: 'evolution' | 'pins' | 'architecture' | 'flags' | 'memory-calc' | 'interrupts' | 'timing' | 'modes' | 'min-mode-hardware' | 'quiz' | 'dev-pipeline' | 'addressing-modes' | 'instruction-decoder' | 'directive-sandbox' | 'assembler-playground' | 'assembler-passes' | 'assembler-outputs';
   quizQuestions?: QuizQuestion[];
   diagramLabel?: string;
 }

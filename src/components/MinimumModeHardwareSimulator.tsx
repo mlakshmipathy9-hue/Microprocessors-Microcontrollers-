@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Cpu, Zap, Link, ShieldAlert, BookOpen, Layers, Info } from 'lucide-react';
+import { renderSignalName } from './PinConfigurationSimulator';
 
 interface ComponentInfo {
   id: string;
@@ -16,6 +17,26 @@ export default function MinimumModeHardwareSimulator() {
   const [selectedChip, setSelectedChip] = useState<string>('cpu');
   const [currentTState, setCurrentTState] = useState<'idle' | 't1' | 't2' | 't3' | 't4'>('idle');
   const [busDirection, setBusDirection] = useState<'read' | 'write'>('read');
+
+  const formatActiveLowString = (str: string) => {
+    if (str.includes('WR =')) {
+      return (
+        <span className="inline-flex items-center gap-0.5">
+          <span className="overline">WR</span>
+          <span> = LOW (Active)</span>
+        </span>
+      );
+    }
+    if (str.includes('RD =')) {
+      return (
+        <span className="inline-flex items-center gap-0.5">
+          <span className="overline">RD</span>
+          <span> = LOW (Active)</span>
+        </span>
+      );
+    }
+    return str;
+  };
 
   const chips: Record<string, ComponentInfo> = {
     clock: {
@@ -340,7 +361,7 @@ export default function MinimumModeHardwareSimulator() {
                       <div>
                         <h4 className="font-bold text-slate-800 text-xs">Memory &amp; I/O</h4>
                         <p className="text-[8px] text-slate-400 block mt-1">
-                          Responding to: <span className="font-mono text-indigo-600 font-semibold">{signals.rd_wr}</span>
+                          Responding to: <span className="font-mono text-indigo-600 font-semibold inline-flex items-center gap-0.5">{formatActiveLowString(signals.rd_wr)}</span>
                         </p>
                       </div>
                     </div>
@@ -367,7 +388,9 @@ export default function MinimumModeHardwareSimulator() {
                     <strong className="text-slate-800 font-mono text-[11px]">{signals.ale}</strong>
                   </div>
                   <div className="bg-white p-2 rounded border border-slate-200">
-                    <span className="text-slate-400 font-mono text-[9px] block">DEN (Data Enable - Active Low)</span>
+                    <span className="text-slate-400 font-mono text-[9px] block">
+                      <span className="overline">DEN</span> (Data Enable - Active Low)
+                    </span>
                     <strong className="text-slate-800 font-mono text-[11px]">{signals.den}</strong>
                   </div>
                   <div className="bg-white p-2 rounded border border-slate-200">
@@ -376,7 +399,7 @@ export default function MinimumModeHardwareSimulator() {
                   </div>
                   <div className="bg-white p-2 rounded border border-slate-200">
                     <span className="text-slate-400 font-mono text-[9px] block">Control Signals Status</span>
-                    <strong className="text-indigo-600 font-mono text-[11px]">{signals.rd_wr}</strong>
+                    <strong className="text-indigo-600 font-mono text-[11px] inline-flex items-center">{formatActiveLowString(signals.rd_wr)}</strong>
                   </div>
                   <div className="bg-white p-2 rounded border border-slate-200 col-span-1 sm:col-span-2">
                     <span className="text-slate-400 font-mono text-[9px] block">Hardware Latching State</span>

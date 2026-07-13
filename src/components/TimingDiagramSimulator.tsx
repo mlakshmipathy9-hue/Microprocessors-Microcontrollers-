@@ -197,55 +197,69 @@ export default function TimingDiagramSimulator() {
             </div>
 
             {/* Grid Layout of Waveform States */}
-            <div className="grid grid-cols-12 gap-3 mb-4">
-              {/* Labels Col */}
-              <div className="col-span-3 flex flex-col justify-between py-1 space-y-2 text-right pr-3 border-r border-slate-200 font-mono text-[11px] font-bold text-slate-600">
-                <div className="h-10 flex items-center justify-end">CLK (Clock)</div>
-                <div className="h-10 flex items-center justify-end">ALE (Address Latch)</div>
-                <div className="h-10 flex items-center justify-end">AD0-AD15 (Bus)</div>
-                <div className="h-10 flex items-center justify-end">{cycleType === 'read' ? 'RD (Read)' : 'WR (Write)'}</div>
-                <div className="h-10 flex items-center justify-end">DEN (Data Enable)</div>
+            <div className="overflow-x-auto pb-2 scrollbar-thin">
+              <div className="grid grid-cols-12 gap-3 mb-4 min-w-[550px] lg:min-w-0">
+                {/* Labels Col */}
+                <div className="col-span-3 flex flex-col justify-between py-1 space-y-2 text-right pr-3 border-r border-slate-200 font-mono text-[11px] font-bold text-slate-600">
+                  <div className="h-10 flex items-center justify-end">CLK (Clock)</div>
+                  <div className="h-10 flex items-center justify-end">ALE (Address Latch)</div>
+                  <div className="h-10 flex items-center justify-end">AD0-AD15 (Bus)</div>
+                  <div className="h-10 flex items-center justify-end">
+                    {cycleType === 'read' ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span className="overline">RD</span> (Read)
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1">
+                        <span className="overline">WR</span> (Write)
+                      </span>
+                    )}
+                  </div>
+                  <div className="h-10 flex items-center justify-end inline-flex items-center gap-1">
+                    <span className="overline">DEN</span> (Data Enable)
+                  </div>
+                </div>
+
+                {/* T1 Column */}
+                <button onClick={() => { setIsPlaying(false); setCurrentTState(0); }} className="col-span-2 flex flex-col justify-between py-1 space-y-2 cursor-pointer">
+                  <span className={`text-[10px] font-mono text-center block font-bold ${currentTState === 0 ? 'text-indigo-600' : 'text-slate-400'}`}>T1</span>
+                  {getSignalVisual('CLK', 0, currentTState === 0)}
+                  {getSignalVisual('ALE', 0, currentTState === 0)}
+                  {getSignalVisual('AD0-AD15', 0, currentTState === 0)}
+                  {getSignalVisual('RD (Read)', 0, currentTState === 0)}
+                  {getSignalVisual('DEN', 0, currentTState === 0)}
+                </button>
+
+                {/* T2 Column */}
+                <button onClick={() => { setIsPlaying(false); setCurrentTState(1); }} className="col-span-2 flex flex-col justify-between py-1 space-y-2 cursor-pointer">
+                  <span className={`text-[10px] font-mono text-center block font-bold ${currentTState === 1 ? 'text-indigo-600' : 'text-slate-400'}`}>T2</span>
+                  {getSignalVisual('CLK', 1, currentTState === 1)}
+                  {getSignalVisual('ALE', 1, currentTState === 1)}
+                  {getSignalVisual('AD0-AD15', 1, currentTState === 1)}
+                  {getSignalVisual('RD (Read)', 1, currentTState === 1)}
+                  {getSignalVisual('DEN', 1, currentTState === 1)}
+                </button>
+
+                {/* T3 Column */}
+                <button onClick={() => { setIsPlaying(false); setCurrentTState(2); }} className="col-span-2 flex flex-col justify-between py-1 space-y-2 cursor-pointer">
+                  <span className={`text-[10px] font-mono text-center block font-bold ${currentTState === 2 ? 'text-indigo-600' : 'text-slate-400'}`}>T3</span>
+                  {getSignalVisual('CLK', 2, currentTState === 2)}
+                  {getSignalVisual('ALE', 2, currentTState === 2)}
+                  {getSignalVisual('AD0-AD15', 2, currentTState === 2)}
+                  {getSignalVisual('RD (Read)', 2, currentTState === 2)}
+                  {getSignalVisual('DEN', 2, currentTState === 2)}
+                </button>
+
+                {/* T4 Column */}
+                <button onClick={() => { setIsPlaying(false); setCurrentTState(3); }} className="col-span-3 flex flex-col justify-between py-1 space-y-2 cursor-pointer">
+                  <span className={`text-[10px] font-mono text-center block font-bold ${currentTState === 3 ? 'text-indigo-600' : 'text-slate-400'}`}>T4</span>
+                  {getSignalVisual('CLK', 3, currentTState === 3)}
+                  {getSignalVisual('ALE', 3, currentTState === 3)}
+                  {getSignalVisual('AD0-AD15', 3, currentTState === 3)}
+                  {getSignalVisual('RD (Read)', 3, currentTState === 3)}
+                  {getSignalVisual('DEN', 3, currentTState === 3)}
+                </button>
               </div>
-
-              {/* T1 Column */}
-              <button onClick={() => { setIsPlaying(false); setCurrentTState(0); }} className="col-span-2 flex flex-col justify-between py-1 space-y-2 cursor-pointer">
-                <span className={`text-[10px] font-mono text-center block font-bold ${currentTState === 0 ? 'text-indigo-600' : 'text-slate-400'}`}>T1</span>
-                {getSignalVisual('CLK', 0, currentTState === 0)}
-                {getSignalVisual('ALE', 0, currentTState === 0)}
-                {getSignalVisual('AD0-AD15', 0, currentTState === 0)}
-                {getSignalVisual('RD (Read)', 0, currentTState === 0)}
-                {getSignalVisual('DEN', 0, currentTState === 0)}
-              </button>
-
-              {/* T2 Column */}
-              <button onClick={() => { setIsPlaying(false); setCurrentTState(1); }} className="col-span-2 flex flex-col justify-between py-1 space-y-2 cursor-pointer">
-                <span className={`text-[10px] font-mono text-center block font-bold ${currentTState === 1 ? 'text-indigo-600' : 'text-slate-400'}`}>T2</span>
-                {getSignalVisual('CLK', 1, currentTState === 1)}
-                {getSignalVisual('ALE', 1, currentTState === 1)}
-                {getSignalVisual('AD0-AD15', 1, currentTState === 1)}
-                {getSignalVisual('RD (Read)', 1, currentTState === 1)}
-                {getSignalVisual('DEN', 1, currentTState === 1)}
-              </button>
-
-              {/* T3 Column */}
-              <button onClick={() => { setIsPlaying(false); setCurrentTState(2); }} className="col-span-2 flex flex-col justify-between py-1 space-y-2 cursor-pointer">
-                <span className={`text-[10px] font-mono text-center block font-bold ${currentTState === 2 ? 'text-indigo-600' : 'text-slate-400'}`}>T3</span>
-                {getSignalVisual('CLK', 2, currentTState === 2)}
-                {getSignalVisual('ALE', 2, currentTState === 2)}
-                {getSignalVisual('AD0-AD15', 2, currentTState === 2)}
-                {getSignalVisual('RD (Read)', 2, currentTState === 2)}
-                {getSignalVisual('DEN', 2, currentTState === 2)}
-              </button>
-
-              {/* T4 Column */}
-              <button onClick={() => { setIsPlaying(false); setCurrentTState(3); }} className="col-span-3 flex flex-col justify-between py-1 space-y-2 cursor-pointer">
-                <span className={`text-[10px] font-mono text-center block font-bold ${currentTState === 3 ? 'text-indigo-600' : 'text-slate-400'}`}>T4</span>
-                {getSignalVisual('CLK', 3, currentTState === 3)}
-                {getSignalVisual('ALE', 3, currentTState === 3)}
-                {getSignalVisual('AD0-AD15', 3, currentTState === 3)}
-                {getSignalVisual('RD (Read)', 3, currentTState === 3)}
-                {getSignalVisual('DEN', 3, currentTState === 3)}
-              </button>
             </div>
           </div>
 

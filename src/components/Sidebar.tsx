@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Module, Slide } from '../types';
 import { Cpu, ChevronRight, CheckCircle2, GraduationCap, Layout, Search, X } from 'lucide-react';
 
@@ -22,6 +22,14 @@ export default function Sidebar({
   setIsOpen
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeUnit, setActiveUnit] = useState<'unit1' | 'unit2'>(() => {
+    return ['m11', 'm12', 'm13', 'm14', 'm15'].some(id => currentModuleId === id) ? 'unit2' : 'unit1';
+  });
+
+  useEffect(() => {
+    const isUnit2 = ['m11', 'm12', 'm13', 'm14', 'm15'].some(id => currentModuleId === id);
+    setActiveUnit(isUnit2 ? 'unit2' : 'unit1');
+  }, [currentModuleId]);
 
   // Compute progress percent
   const totalSlides = modules.reduce((acc, m) => acc + m.slides.length, 0);
@@ -67,6 +75,11 @@ export default function Sidebar({
             timing: ["timing diagram", "machine cycle", "read cycle", "write cycle", "t-state", "clock"],
             modes: ["modes", "minimum mode", "maximum mode", "operating modes", "multiprocessor", "strapping"],
             'min-mode-hardware': ["hardware", "minimum mode", "demultiplexing", "latching", "transceivers", "bus cycle", "ale", "den", "circuit"],
+            'dev-pipeline': ["pipeline", "program development steps", "steps", "editor", "linker", "assembler", "debugging", "flowchart"],
+            'addressing-modes': ["addressing modes", "addressing", "immediate", "register", "index", "base", "offset", "effective address"],
+            'instruction-decoder': ["instructions", "instruction set", "decoder", "add", "sub", "and", "or", "alu", "data transfer"],
+            'directive-sandbox': ["assembler directives", "directives", "db", "dw", "segment", "assume", "org", "end"],
+            'assembler-playground': ["write programs", "assembler", "playground", "debugger", "registers", "memory", "simulation"],
             quiz: ["quiz", "assessment", "mcq", "gate", "exam", "question"]
           };
           const keywords = typeKeywords[s.interactiveType] || [];
@@ -93,8 +106,8 @@ export default function Sidebar({
       className={`fixed inset-y-0 left-0 z-40 bg-white text-slate-800 flex flex-col border-slate-200 transition-all duration-300 ease-in-out h-full shrink-0 overflow-hidden ${
         isOpen
           ? 'w-72 opacity-100 translate-x-0 border-r'
-          : 'w-0 opacity-0 -translate-x-full md:translate-x-0 border-r-0'
-      } md:static`}
+          : 'w-0 opacity-0 -translate-x-full lg:translate-x-0 border-r-0'
+      } lg:static`}
     >
       <div className="w-72 h-full flex flex-col justify-between shrink-0">
         {/* Top Scrollable/Flex Area */}
@@ -109,12 +122,16 @@ export default function Sidebar({
                 <h1 className="font-display font-bold text-xs tracking-wider uppercase text-slate-900 leading-tight">
                   8086 Microprocessor
                 </h1>
-                <span className="text-[9px] text-indigo-600 font-mono tracking-wider font-semibold uppercase">UNIT-1: SYSTEM ARCHITECTURE</span>
+                <span className="text-[9px] text-indigo-600 font-mono tracking-wider font-semibold uppercase">
+                  {['m11', 'm12', 'm13', 'm14', 'm15'].some(id => currentModuleId === id)
+                    ? 'UNIT-2: 8086 PROGRAMMING'
+                    : 'UNIT-1: SYSTEM ARCHITECTURE'}
+                </span>
               </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="md:hidden text-slate-500 hover:text-slate-900 cursor-pointer text-xl font-bold p-1"
+              className="lg:hidden text-slate-500 hover:text-slate-900 cursor-pointer text-xl font-bold p-1"
             >
               &times;
             </button>
@@ -136,7 +153,9 @@ export default function Sidebar({
               <span>{completedCount} of {totalSlides} slides studied</span>
               <span className="flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600">
                 <GraduationCap className="w-3 h-3 text-indigo-600" />
-                UNIT-1: System Architecture
+                {['m11', 'm12', 'm13', 'm14', 'm15'].some(id => currentModuleId === id)
+                  ? 'UNIT-2: 8086 Programming'
+                  : 'UNIT-1: System Architecture'}
               </span>
             </div>
           </div>
@@ -257,28 +276,62 @@ export default function Sidebar({
                 )}
               </div>
             ) : (
-              <div className="space-y-2">
-                <div className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest px-1">
-                  Learning Modules
+              <div className="space-y-4">
+                {/* Unit Selector Dropdown */}
+                <div className="relative shrink-0 px-1">
+                  <label className="block text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest mb-1.5">
+                    Select Syllabus Unit
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="unit-selector"
+                      value={activeUnit}
+                      onChange={(e) => setActiveUnit(e.target.value as 'unit1' | 'unit2')}
+                      className="w-full pl-9 pr-10 py-2.5 bg-white border border-slate-200 hover:border-indigo-300 text-slate-700 font-bold rounded-xl text-xs shadow-xs focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all cursor-pointer appearance-none outline-none"
+                    >
+                      <option value="unit1">Unit I: System Architecture</option>
+                      <option value="unit2">Unit II: 8086 Programming</option>
+                    </select>
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                      <GraduationCap className="h-4 w-4 text-indigo-600" />
+                    </div>
+                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-400 rotate-90" />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  {modules.map((m, mIdx) => {
-                    const isCurrentModule = m.id === currentModuleId;
-                    const moduleCompletedCount = m.slides.filter(s => completedSlides.includes(s.id)).length;
-                    const isModuleFullyStudied = moduleCompletedCount === m.slides.length;
-                    const displayIdx = (mIdx + 1).toString().padStart(2, '0');
+                  <div className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest px-1 flex justify-between items-center">
+                    <span>Learning Modules</span>
+                    <span className="text-[9px] font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 font-sans">
+                      {activeUnit === 'unit2' ? 'Unit II: Programming' : 'Unit I: Architecture'}
+                    </span>
+                  </div>
 
-                    return (
-                      <div key={m.id} className="space-y-1">
-                        <button
-                          onClick={() => onSelectSlide(m.id, m.slides[0].id)}
-                          className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-xs font-medium cursor-pointer text-left ${
-                            isCurrentModule
-                              ? 'border-indigo-200 bg-indigo-50 text-indigo-800 font-semibold shadow-xs'
-                              : 'border-slate-100 bg-slate-50/30 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                          }`}
-                        >
+                  <div className="space-y-2">
+                    {modules
+                      .filter((m) => {
+                        const isM2 = ['m11', 'm12', 'm13', 'm14', 'm15'].includes(m.id);
+                        return activeUnit === 'unit2' ? isM2 : !isM2;
+                      })
+                      .map((m) => {
+                        const mIdx = modules.findIndex(mod => mod.id === m.id);
+                        const isCurrentModule = m.id === currentModuleId;
+                        const moduleCompletedCount = m.slides.filter(s => completedSlides.includes(s.id)).length;
+                        const isModuleFullyStudied = moduleCompletedCount === m.slides.length;
+                        const displayIdx = (mIdx + 1).toString().padStart(2, '0');
+
+                        return (
+                          <div key={m.id} className="space-y-1">
+                            <button
+                              onClick={() => onSelectSlide(m.id, m.slides[0].id)}
+                              className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-xs font-medium cursor-pointer text-left ${
+                                isCurrentModule
+                                  ? 'border-indigo-200 bg-indigo-50 text-indigo-800 font-semibold shadow-xs'
+                                  : 'border-slate-100 bg-slate-50/30 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                              }`}
+                            >
                           <span className="truncate flex items-center gap-2.5">
                             <span className={`font-mono text-[10px] ${isCurrentModule ? 'text-indigo-600' : 'text-slate-400'}`}>
                               {displayIdx}
@@ -289,7 +342,7 @@ export default function Sidebar({
                               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCurrentModule ? 'bg-indigo-500' : 'bg-slate-300'}`}></span>
                             )}
                             <span className={`truncate ${isCurrentModule ? 'font-bold text-slate-900' : ''}`}>
-                              {m.title.replace('Module ', '')}
+                              {m.title.replace(/^Module\s+\d+:\s*/i, '')}
                             </span>
                           </span>
                           <span className="text-[9px] font-mono text-slate-500 shrink-0 bg-white px-1.5 py-0.5 rounded border border-slate-200">
@@ -328,7 +381,8 @@ export default function Sidebar({
                   })}
                 </div>
               </div>
-            )}
+            </div>
+          )}
           </div>
         </div>
 

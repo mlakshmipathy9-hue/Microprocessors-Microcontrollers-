@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Slide, QuizQuestion } from '../types';
-import { ChevronLeft, ChevronRight, CheckCircle, HelpCircle, GraduationCap, RefreshCw, Layers, PanelLeftClose, PanelLeftOpen, Sparkles, BookOpen, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle, HelpCircle, GraduationCap, RefreshCw, Layers, PanelLeftClose, PanelLeftOpen, Sparkles, BookOpen, X, ZoomIn } from 'lucide-react';
 
 // Import simulators
 import EvolutionTimeline from './EvolutionTimeline';
@@ -14,6 +14,15 @@ import TimingDiagramSimulator from './TimingDiagramSimulator';
 import OperatingModeSimulator from './OperatingModeSimulator';
 import MinimumModeHardwareSimulator from './MinimumModeHardwareSimulator';
 
+// Unit II Simulators
+import DevPipelineSimulator from './DevPipelineSimulator';
+import AddressingModesSimulator from './AddressingModesSimulator';
+import InstructionDecoderSimulator from './InstructionDecoderSimulator';
+import DirectiveSandboxSimulator from './DirectiveSandboxSimulator';
+import AssemblerPlaygroundSimulator from './AssemblerPlaygroundSimulator';
+import AssemblerPassSimulator from './AssemblerPassSimulator';
+import AssemblerOutputsSimulator from './AssemblerOutputsSimulator';
+
 interface SlidePresenterProps {
   slide: Slide;
   onNext: () => void;
@@ -22,6 +31,10 @@ interface SlidePresenterProps {
   isLast: boolean;
   onMarkComplete: (slideId: string) => void;
   completedSlides: string[];
+  revealedPointsCount: number;
+  incrementalRevealEnabled: boolean;
+  projectorMode?: boolean;
+  showInteractive?: boolean;
 }
 
 export default function SlidePresenter({
@@ -31,7 +44,11 @@ export default function SlidePresenter({
   isFirst,
   isLast,
   onMarkComplete,
-  completedSlides
+  completedSlides,
+  revealedPointsCount,
+  incrementalRevealEnabled,
+  projectorMode = false,
+  showInteractive = false
 }: SlidePresenterProps) {
   // Quiz states
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number | null>>({});
@@ -50,6 +67,98 @@ export default function SlidePresenter({
     setSidebarCollapsed(true);
     setIsExplanationOpen(false);
   }, [slide.id]);
+
+  // Magnifier States
+  const [magnifier, setMagnifier] = useState<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
+  const [magnifierModeEnabled, setMagnifierModeEnabled] = useState(false);
+  const longPressTimeoutRef = useRef<any>(null);
+  const isMovingRef = useRef(false);
+  const startPosRef = useRef({ x: 0, y: 0 });
+  const bentoCardRef = useRef<HTMLDivElement>(null);
+
+  const lensSize = 180;
+  const zoomFactor = 2.2;
+
+  // Reset magnifier when slide changes
+  useEffect(() => {
+    setMagnifier({ x: 0, y: 0, active: false });
+    setMagnifierModeEnabled(false);
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+  }, [slide.id]);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!slide.interactiveType || slide.interactiveType === 'quiz') return;
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+    const card = bentoCardRef.current;
+    if (!card) return;
+
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    startPosRef.current = { x, y };
+    isMovingRef.current = false;
+
+    if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current);
+
+    longPressTimeoutRef.current = setTimeout(() => {
+      if (!isMovingRef.current) {
+        setMagnifier({ x, y, active: true });
+        if (navigator.vibrate) {
+          try {
+            navigator.vibrate(40);
+          } catch (err) {
+            // Safe fallback
+          }
+        }
+      }
+    }, 450); // 450ms long hold
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!slide.interactiveType || slide.interactiveType === 'quiz') return;
+
+    const card = bentoCardRef.current;
+    if (!card) return;
+
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const dx = x - startPosRef.current.x;
+    const dy = y - startPosRef.current.y;
+    if (Math.sqrt(dx * dx + dy * dy) > 12) {
+      isMovingRef.current = true;
+      if (!magnifier.active) {
+        if (longPressTimeoutRef.current) {
+          clearTimeout(longPressTimeoutRef.current);
+          longPressTimeoutRef.current = null;
+        }
+      }
+    }
+
+    if (magnifier.active || magnifierModeEnabled) {
+      setMagnifier({
+        x: Math.max(0, Math.min(rect.width, x)),
+        y: Math.max(0, Math.min(rect.height, y)),
+        active: true
+      });
+    }
+  };
+
+  const handlePointerUpOrLeave = () => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+    if (!magnifierModeEnabled) {
+      setMagnifier(prev => ({ ...prev, active: false }));
+    }
+  };
 
   const handleSelectAnswer = (qIdx: number, oIdx: number, correctIdx: number) => {
     if (selectedAnswers[qIdx] !== undefined && selectedAnswers[qIdx] !== null) return; // already answered
@@ -123,6 +232,20 @@ export default function SlidePresenter({
         return <OperatingModeSimulator />;
       case 'min-mode-hardware':
         return <MinimumModeHardwareSimulator />;
+      case 'dev-pipeline':
+        return <DevPipelineSimulator />;
+      case 'addressing-modes':
+        return <AddressingModesSimulator />;
+      case 'instruction-decoder':
+        return <InstructionDecoderSimulator />;
+      case 'directive-sandbox':
+        return <DirectiveSandboxSimulator />;
+      case 'assembler-playground':
+        return <AssemblerPlaygroundSimulator />;
+      case 'assembler-passes':
+        return <AssemblerPassSimulator />;
+      case 'assembler-outputs':
+        return <AssemblerOutputsSimulator />;
       default:
         return null;
     }
@@ -133,12 +256,21 @@ export default function SlidePresenter({
       {/* Slide Content Arena */}
       <div className="flex-1 flex flex-col justify-between min-h-0">
         {/* Core Slide body */}
-        <div className="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-6 min-h-0 items-stretch overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-6 min-h-0 items-stretch overflow-y-auto xl:overflow-hidden pr-1 scrollbar-thin">
           {/* Text points (Standard Presentation Layout in a Bento Box) */}
-          {!slide.interactiveType ? (
-            <div className="xl:col-span-12 w-full max-w-none bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xs">
+          {!slide.interactiveType && (
+            <div className="w-full max-w-full bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xs max-h-[82vh] xl:max-h-[85vh] overflow-y-auto flex flex-col justify-between xl:col-span-12">
               <div className="space-y-6">
-                <div>
+                <div className="space-y-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold font-mono tracking-wider bg-indigo-50 border border-indigo-100 text-indigo-700 uppercase">
+                      <Sparkles className="w-3 h-3 text-indigo-500 animate-pulse" />
+                      {slide.moduleTitle || 'Academic Courseware'}
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-slate-50 border border-slate-200 text-slate-500 shadow-2xs">
+                      Slide ID: {slide.id}
+                    </span>
+                  </div>
                   <motion.h2
                     key={slide.title}
                     initial={{ opacity: 0, y: -10 }}
@@ -147,37 +279,45 @@ export default function SlidePresenter({
                   >
                     {slide.title}
                   </motion.h2>
-                  <div className="h-1 w-16 bg-indigo-600 rounded-full mt-3 shadow-md shadow-indigo-600/20"></div>
+                  <div className="h-1 w-20 bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full mt-3 shadow-sm"></div>
                 </div>
 
                 {/* Standard points with large, high-contrast, projector-friendly text (>= 12px) */}
                 {slide.points && (
-                  <div className="space-y-4 pr-1 overflow-y-auto max-h-[350px]">
-                    {slide.points.map((pt, idx) => (
-                      <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                        className="flex items-start gap-3.5"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-indigo-600 mt-2.5 shrink-0 shadow-md"></span>
-                        <p className="text-slate-800 text-base md:text-lg font-medium leading-relaxed">
-                          {pt}
-                        </p>
-                      </motion.div>
-                    ))}
+                  <div className="flex flex-col gap-4.5 pr-1 overflow-y-auto max-h-[480px]">
+                    {slide.points.map((pt, idx) => {
+                      const isRevealed = !incrementalRevealEnabled || idx < revealedPointsCount;
+                      if (!isRevealed) return null;
+                      return (
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.35, delay: idx * 0.04 }}
+                          className="flex gap-4 p-4 rounded-2xl bg-slate-50/60 border border-slate-100 hover:bg-slate-50 hover:border-indigo-100 hover:shadow-xs transition-all duration-250 group items-start"
+                        >
+                          <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-500 font-mono text-xs font-bold shrink-0 mt-0.5 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all duration-250 shadow-2xs">
+                            {String(idx + 1).padStart(2, '0')}
+                          </div>
+                          <p className="text-slate-800 text-base md:text-[16.5px] font-medium leading-relaxed text-justify flex-1 pt-0.5">
+                            {pt}
+                          </p>
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
+
+
             </div>
-          ) : null}
+          )}
 
           {/* Right side: Interactive component or Quiz in Bento card container */}
           {slide.interactiveType && (
             <div 
               id="interactive-bento-card"
-              className="min-h-0 flex flex-col transition-all duration-300 text-slate-900 xl:col-span-12 w-full max-w-none relative"
+              className="min-h-0 flex flex-col transition-all duration-300 text-slate-900 w-full max-w-full max-h-[82vh] xl:max-h-[85vh] overflow-y-auto relative xl:col-span-12"
             >
               <AnimatePresence mode="wait">
                 <motion.div
@@ -339,7 +479,91 @@ export default function SlidePresenter({
                       )}
                     </div>
                   ) : (
-                    renderInteractive(slide.interactiveType)
+                    <div 
+                      ref={bentoCardRef}
+                      className="relative select-none overflow-hidden rounded-3xl"
+                      onPointerDown={handlePointerDown}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUpOrLeave}
+                      onPointerCancel={handlePointerUpOrLeave}
+                      onPointerLeave={handlePointerUpOrLeave}
+                      style={{ cursor: magnifier.active ? 'crosshair' : 'auto', touchAction: 'none' }}
+                    >
+                      {/* Original Interactive Component */}
+                      {renderInteractive(slide.interactiveType)}
+
+                      {/* Floating Control Button for persistent magnifier toggle */}
+                      <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const nextEnabled = !magnifierModeEnabled;
+                            setMagnifierModeEnabled(nextEnabled);
+                            if (!nextEnabled) {
+                              setMagnifier({ x: 0, y: 0, active: false });
+                            } else {
+                              // start magnifier in the center
+                              const card = bentoCardRef.current;
+                              if (card) {
+                                setMagnifier({
+                                  x: card.clientWidth / 2,
+                                  y: card.clientHeight / 2,
+                                  active: true
+                                });
+                              }
+                            }
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-md cursor-pointer ${
+                            magnifierModeEnabled 
+                              ? 'bg-indigo-600 border-indigo-700 text-white' 
+                              : 'bg-white/90 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                          title="Toggle Magnifying Glass Lens"
+                        >
+                          <ZoomIn className={`w-3.5 h-3.5 ${magnifierModeEnabled ? 'animate-pulse' : ''}`} />
+                          <span>
+                            {magnifierModeEnabled ? 'Magnifier: ON' : 'Magnifier'}
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* Small floating tip indicator */}
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-slate-900/80 text-white text-[10px] px-3 py-1.5 rounded-full backdrop-blur-xs flex items-center gap-1.5 shadow-md">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping"></span>
+                        <span>💡 Hold down anywhere on this simulator to zoom</span>
+                      </div>
+
+                      {/* Circular Lens Overlay */}
+                      {magnifier.active && bentoCardRef.current && (
+                        <div 
+                          className="absolute border-4 border-indigo-600 rounded-full pointer-events-none z-[100] bg-slate-50"
+                          style={{
+                            width: lensSize,
+                            height: lensSize,
+                            left: magnifier.x - lensSize / 2,
+                            top: magnifier.y - lensSize / 2,
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(0, 0, 0, 0.1)',
+                          }}
+                        >
+                          <div 
+                            className="origin-top-left absolute" 
+                            style={{ 
+                              transform: `scale(${zoomFactor})`, 
+                              left: -magnifier.x * zoomFactor + lensSize / 2, 
+                              top: -magnifier.y * zoomFactor + lensSize / 2,
+                              width: bentoCardRef.current.clientWidth,
+                              height: bentoCardRef.current.clientHeight,
+                            }}
+                          >
+                            {renderInteractive(slide.interactiveType)}
+                          </div>
+                          {/* Inner target crosshair overlay */}
+                          <div className="absolute inset-0 border border-indigo-500/20 rounded-full pointer-events-none flex items-center justify-center">
+                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-600/35 border border-indigo-500/50"></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </motion.div>
               </AnimatePresence>
@@ -349,75 +573,72 @@ export default function SlidePresenter({
       </div>
 
       {/* Control Buttons (Next / Prev) */}
-      <div className="flex flex-col md:flex-row items-center justify-between border-t border-slate-200 pt-4 mt-4 gap-4 shrink-0">
-        <div className="flex items-center justify-between w-full md:w-auto gap-4">
-          <button
-            onClick={onPrev}
-            disabled={isFirst}
-            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-semibold text-xs py-2.5 px-4 bg-white border border-slate-200 rounded-xl shadow-xs hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Previous Slide
-          </button>
-
-          {/* Progress bar inside controls (mobile/tablet version) */}
-          <div className="flex md:hidden items-center gap-2 text-slate-400 font-mono text-[10px] uppercase tracking-wider font-bold">
-            {completedSlides.includes(slide.id) ? (
-              <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-150">
-                <CheckCircle className="w-3.5 h-3.5" /> Studied
-              </span>
-            ) : (
-              <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-150">
-                In Progress
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Academic Preparedness Banner - Dr. M Lakshmipathy */}
-        <div className="flex flex-col items-center text-center bg-slate-100/60 border border-slate-200/60 rounded-xl px-4 py-2 max-w-xl">
-          <p className="text-xs font-bold text-slate-800 tracking-wide">
-            Prepared by: <span className="text-indigo-600 font-extrabold">Dr M Lakshmipathy</span>
-          </p>
-          <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5 font-mono">
-            Associate Professor in ECE, Kuppam Engineering College
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between w-full md:w-auto gap-3">
-          {/* Progress bar inside controls (desktop version) */}
-          <div className="hidden lg:flex items-center gap-2 text-slate-400 font-mono text-xs uppercase tracking-wider font-bold mr-2">
-            <span>Status:</span>
-            {completedSlides.includes(slide.id) ? (
-              <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-150">
-                <CheckCircle className="w-3.5 h-3.5" /> Studied
-              </span>
-            ) : (
-              <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-150">
-                In Progress
-              </span>
-            )}
-          </div>
-
-          {slide.points && slide.interactiveType && slide.interactiveType !== 'quiz' && (
+      <div className="border-t border-slate-200 pt-4 mt-4 flex flex-col gap-3 shrink-0 w-full">
+        {/* Main Navigation Row */}
+        <div className="flex items-center justify-between w-full">
+          {/* Previous Button Container */}
+          <div className="w-36 flex justify-start">
             <button
-              onClick={() => setIsExplanationOpen(true)}
-              className="flex items-center gap-2 text-indigo-700 hover:text-indigo-800 font-bold text-xs py-2.5 px-3.5 bg-indigo-50 border border-indigo-150 rounded-xl shadow-xs hover:bg-indigo-100/80 transition-all cursor-pointer shrink-0"
-              title="View Lesson Explanation text in large projector-friendly modal"
+              onClick={onPrev}
+              disabled={isFirst}
+              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-semibold text-xs py-2.5 px-4 bg-white border border-slate-200 rounded-xl shadow-xs hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0"
             >
-              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Theory</span>
+              <ChevronLeft className="w-4 h-4" />
+              Previous
             </button>
-          )}
+          </div>
 
-          <button
-            onClick={onNext}
-            disabled={isLast}
-            className="flex items-center gap-1.5 text-indigo-600 bg-indigo-50 px-5 py-2.5 rounded-xl border border-indigo-150 hover:bg-indigo-100/50 hover:text-indigo-700 transition-colors font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs shrink-0"
-          >
-            Next Slide
-            <ChevronRight className="w-4 h-4" />
-          </button>
+          {/* Middle Row (Visible on all screens to keep things centered) */}
+          <div className="flex flex-1 items-center justify-center gap-4 px-2">
+            {/* Progress bar inside controls (Desktop only) */}
+            <div className="hidden md:flex items-center gap-2 text-slate-400 font-mono text-xs uppercase tracking-wider font-bold">
+              <span>Status:</span>
+              {completedSlides.includes(slide.id) ? (
+                <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-150 text-xs">
+                  <CheckCircle className="w-3.5 h-3.5" /> Studied
+                </span>
+              ) : (
+                <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-150 text-xs">
+                  In Progress
+                </span>
+              )}
+            </div>
+
+            {/* Academic Preparedness Banner - Dr. M Lakshmipathy (Desktop only) */}
+            {!projectorMode && (
+              <div className="hidden md:flex flex-col items-center text-center bg-slate-100/60 border border-slate-200/60 rounded-xl px-4 py-1 max-w-xs">
+                <p className="text-[10px] font-bold text-slate-800 tracking-wide">
+                  Prepared by: <span className="text-indigo-600 font-extrabold">Dr M Lakshmipathy</span>
+                </p>
+                <p className="text-[8px] text-slate-500 font-medium tracking-wide font-mono mt-0.5">
+                  KEC Kuppam
+                </p>
+              </div>
+            )}
+
+            {slide.points && slide.interactiveType && slide.interactiveType !== 'quiz' && (
+              <button
+                onClick={() => setIsExplanationOpen(true)}
+                className="flex items-center gap-2 text-indigo-700 hover:text-indigo-800 font-bold text-xs py-2.5 px-3.5 bg-indigo-50 border border-indigo-150 rounded-xl shadow-xs hover:bg-indigo-100/80 transition-all cursor-pointer shrink-0"
+                title="View Lesson Explanation text in large projector-friendly modal"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Theory</span>
+              </button>
+            )}
+          </div>
+
+          {/* Next Button Container */}
+          <div className="w-36 flex justify-end">
+            <button
+              onClick={onNext}
+              disabled={isLast}
+              className="flex items-center gap-1.5 text-indigo-600 bg-indigo-50 px-5 py-2.5 rounded-xl border border-indigo-150 hover:bg-indigo-100/50 hover:text-indigo-700 transition-colors font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs shrink-0"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -458,11 +679,16 @@ export default function SlidePresenter({
 
                 {/* Standard points with high visibility for projector */}
                 {slide.points && (
-                  <div className="space-y-4">
+                  <div className="flex flex-col gap-4">
                     {slide.points.map((pt, idx) => (
-                      <div key={idx} className="flex items-start gap-3.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 mt-2 shrink-0 shadow-md"></span>
-                        <p className="text-slate-800 text-base md:text-lg font-semibold leading-relaxed">
+                      <div 
+                        key={idx} 
+                        className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-indigo-100 hover:bg-slate-50 transition-all duration-200 items-start shadow-3xs"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-500 font-mono text-xs font-bold shrink-0 mt-0.5 shadow-3xs">
+                          {String(idx + 1).padStart(2, '0')}
+                        </div>
+                        <p className="text-slate-800 text-sm md:text-base font-semibold leading-relaxed text-justify flex-1 pt-0.5">
                           {pt}
                         </p>
                       </div>
