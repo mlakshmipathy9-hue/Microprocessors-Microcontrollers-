@@ -11,6 +11,7 @@ import FlagRegisterSimulator from './FlagRegisterSimulator';
 import MemoryCalculationSimulator from './MemoryCalculationSimulator';
 import InterruptVectorTableSimulator from './InterruptVectorTableSimulator';
 import TimingDiagramSimulator from './TimingDiagramSimulator';
+import PipeliningSimulator from './PipeliningSimulator';
 import OperatingModeSimulator from './OperatingModeSimulator';
 import MinimumModeHardwareSimulator from './MinimumModeHardwareSimulator';
 
@@ -35,6 +36,7 @@ interface SlidePresenterProps {
   incrementalRevealEnabled: boolean;
   projectorMode?: boolean;
   showInteractive?: boolean;
+  activeLabId?: string;
 }
 
 export default function SlidePresenter({
@@ -48,7 +50,8 @@ export default function SlidePresenter({
   revealedPointsCount,
   incrementalRevealEnabled,
   projectorMode = false,
-  showInteractive = false
+  showInteractive = false,
+  activeLabId
 }: SlidePresenterProps) {
   // Quiz states
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number | null>>({});
@@ -228,6 +231,8 @@ export default function SlidePresenter({
         return <InterruptVectorTableSimulator />;
       case 'timing':
         return <TimingDiagramSimulator />;
+      case 'pipelining':
+        return <PipeliningSimulator />;
       case 'modes':
         return <OperatingModeSimulator />;
       case 'min-mode-hardware':
@@ -239,7 +244,7 @@ export default function SlidePresenter({
       case 'instruction-decoder':
         return <InstructionDecoderSimulator />;
       case 'directive-sandbox':
-        return <DirectiveSandboxSimulator />;
+        return <DirectiveSandboxSimulator initialLabId={activeLabId} />;
       case 'assembler-playground':
         return <AssemblerPlaygroundSimulator />;
       case 'assembler-passes':
@@ -252,7 +257,7 @@ export default function SlidePresenter({
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-between h-full bg-slate-50 p-4 md:p-6 overflow-hidden relative">
+    <div className="flex-1 flex flex-col justify-between h-full bg-transparent p-4 md:p-6 overflow-hidden relative">
       {/* Slide Content Arena */}
       <div className="flex-1 flex flex-col justify-between min-h-0">
         {/* Core Slide body */}

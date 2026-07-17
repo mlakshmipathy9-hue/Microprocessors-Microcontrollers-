@@ -59,69 +59,159 @@ export default function TimingDiagramSimulator() {
     setCurrentTState(0);
   };
 
-  const getSignalVisual = (signalName: string, stateIndex: number, currentActive: boolean) => {
-    let state = signals.find(s => s.name === signalName)?.states[stateIndex] || 'low';
+  const getSignalState = (sigName: string, index: number): 'high' | 'low' | 'pulse' | 'address' | 'data' | 'float' => {
+    if (sigName === 'RD (Read)' && cycleType === 'write') {
+      if (index < 0) return 'high';
+      if (index > 3) return 'high';
+      return index === 0 ? 'high' : index === 3 ? 'high' : 'low';
+    }
     
-    // Customize RD/WR signal based on selected cycle type
-    if (signalName === 'RD (Read)') {
-      if (cycleType === 'write') {
-        signalName = 'WR (Write)';
-        state = stateIndex === 0 ? 'high' : stateIndex === 3 ? 'high' : 'low';
-      }
+    // Exact match or partial match
+    const sig = signals.find(s => s.name === sigName || (sigName.startsWith('RD') && s.name === 'RD (Read)'));
+    if (!sig) return 'low';
+    
+    if (index < 0) {
+      if (sig.name === 'ALE') return 'low';
+      if (sig.name === 'AD0-AD15') return 'float';
+      if (sig.name === 'RD (Read)') return 'high';
+      if (sig.name === 'DEN') return 'high';
+      return 'low';
+    }
+    if (index > 3) {
+      if (sig.name === 'ALE') return 'low';
+      if (sig.name === 'AD0-AD15') return 'float';
+      if (sig.name === 'RD (Read)') return 'high';
+      if (sig.name === 'DEN') return 'high';
+      return 'low';
+    }
+    return sig.states[index];
+  };
+
+  const getSignalVisual = (signalName: string, stateIndex: number, currentActive: boolean) => {
+    const state = getSignalState(signalName, stateIndex);
+    const prevState = getSignalState(signalName, stateIndex - 1);
+
+    const getYLevel = (s: string) => {
+      if (s === 'high') return 8;
+      if (s === 'low' || s === 'pulse') return 32;
+      return 20; // float, address, data
+    };
+
+    const yPrev = getYLevel(prevState);
+    const yCurr = getYLevel(state);
+
+    let strokeColor = currentActive ? '#6366f1' : '#cbd5e1'; 
+    let fillColor = 'transparent';
+    let pathD = '';
+    let isBus = false;
+
+    if (state === 'high') {
+      strokeColor = currentActive ? '#10b981' : '#94a3b8'; 
+      pathD = `M 0 ${yPrev} L 0 ${yCurr} L 100 ${yCurr}`;
+      fillColor = currentActive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(148, 163, 184, 0.03)';
+    } else if (state === 'low') {
+      strokeColor = currentActive ? '#ef4444' : '#cbd5e1'; 
+      pathD = `M 0 ${yPrev} L 0 ${yCurr} L 100 ${yCurr}`;
+      fillColor = currentActive ? 'rgba(239, 68, 68, 0.04)' : 'transparent';
+    } else if (state === 'pulse') {
+      strokeColor = currentActive ? '#3b82f6' : '#94a3b8'; 
+      pathD = `M 0 ${yPrev} L 0 32 L 0 8 L 50 8 L 50 32 L 100 32`;
+      fillColor = currentActive ? 'rgba(59, 130, 246, 0.06)' : 'transparent';
+    } else if (state === 'float') {
+      strokeColor = currentActive ? '#64748b' : '#94a3b8'; 
+      pathD = `M 0 ${yPrev} L 0 20 L 100 20`;
+    } else if (state === 'address' || state === 'data') {
+      isBus = true;
+      strokeColor = state === 'address' 
+        ? (currentActive ? '#6366f1' : '#818cf8') 
+        : (currentActive ? '#f59e0b' : '#fbbf24'); 
     }
 
-    const baseClass = `h-10 border rounded-lg flex items-center justify-center font-mono text-xs font-bold transition-all ${
+    const containerClass = `relative h-10 w-full border rounded-lg transition-all overflow-hidden ${
       currentActive 
-        ? 'ring-2 ring-indigo-500 scale-102 bg-white text-indigo-900 border-indigo-300 shadow-xs' 
-        : 'bg-slate-50 text-slate-400 border-slate-100'
+        ? 'ring-2 ring-indigo-500 bg-white shadow-xs border-indigo-200' 
+        : 'bg-slate-50/50 border-slate-100 hover:border-slate-200'
     }`;
 
-    switch (state) {
-      case 'pulse':
-        return (
-          <div className={baseClass}>
-            <div className="flex flex-col items-center">
-              <span className="text-[10px] font-mono">Pulse (1→0)</span>
-              <div className="flex gap-1 items-center mt-1">
-                <span className={`w-1.5 h-1.5 rounded-full ${currentActive ? 'bg-indigo-600 animate-pulse' : 'bg-slate-300'}`}></span>
-                <span className={`w-1.5 h-1.5 rounded-full ${currentActive ? 'bg-indigo-600 animate-pulse delay-75' : 'bg-slate-300'}`}></span>
-              </div>
-            </div>
-          </div>
-        );
-      case 'high':
-        return (
-          <div className={`${baseClass} border-t-4 border-t-emerald-500`}>
-            High (1)
-          </div>
-        );
-      case 'low':
-        return (
-          <div className={`${baseClass} border-b-4 border-b-rose-500`}>
-            Low (0)
-          </div>
-        );
-      case 'address':
-        return (
-          <div className={`${baseClass} bg-indigo-50 border-indigo-200 text-indigo-900`}>
-            16-Bit Address
-          </div>
-        );
-      case 'float':
-        return (
-          <div className={`${baseClass} border-slate-200 text-slate-400 border-dashed`}>
-            Float / Hi-Z
-          </div>
-        );
-      case 'data':
-        return (
-          <div className={`${baseClass} bg-amber-50 border-amber-200 text-amber-900`}>
-            16-Bit Data
-          </div>
-        );
-      default:
-        return <div className={baseClass}>-</div>;
-    }
+    return (
+      <div className={containerClass}>
+        {isBus ? (
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="none">
+            <polygon 
+              points="0,20 8,6 92,6 100,20 92,34 8,34" 
+              fill={state === 'address' 
+                ? (currentActive ? 'rgba(99, 102, 241, 0.12)' : 'rgba(129, 140, 248, 0.05)')
+                : (currentActive ? 'rgba(245, 158, 11, 0.12)' : 'rgba(251, 191, 36, 0.05)')
+              }
+            />
+            <path 
+              d="M 0 20 L 8 6 L 92 6 L 100 20 M 0 20 L 8 34 L 92 34 L 100 20 M 0 20 L 8 34 M 92 6 L 100 20" 
+              stroke={strokeColor} 
+              strokeWidth="2" 
+              fill="none" 
+            />
+            {!currentActive && (
+              <path 
+                d="M 15 6 L 5 34 M 35 6 L 25 34 M 55 6 L 45 34 M 75 6 L 65 34 M 95 6 L 85 34" 
+                stroke="#e2e8f0" 
+                strokeWidth="1" 
+              />
+            )}
+          </svg>
+        ) : (
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="none">
+            {fillColor !== 'transparent' && (
+              <path 
+                d={`${pathD} L 100 34 L 0 34 Z`} 
+                fill={fillColor} 
+              />
+            )}
+            <path 
+              d={pathD} 
+              stroke={strokeColor} 
+              strokeWidth="2.5" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              strokeDasharray={state === 'float' ? '4 3' : undefined}
+              fill="none" 
+            />
+          </svg>
+        )}
+
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+          {state === 'address' && (
+            <span className={`font-mono text-[9px] md:text-[10px] font-bold ${currentActive ? 'text-indigo-900 bg-white/80 px-1.5 py-0.5 rounded shadow-2xs border border-indigo-100' : 'text-indigo-400'}`}>
+              Address
+            </span>
+          )}
+          {state === 'data' && (
+            <span className={`font-mono text-[9px] md:text-[10px] font-bold ${currentActive ? 'text-amber-900 bg-white/80 px-1.5 py-0.5 rounded shadow-2xs border border-amber-100' : 'text-amber-500'}`}>
+              Data
+            </span>
+          )}
+          {state === 'float' && (
+            <span className={`font-mono text-[9px] font-semibold ${currentActive ? 'text-slate-600 bg-white/80 px-1 py-0.5 rounded border border-slate-200' : 'text-slate-400'}`}>
+              Float
+            </span>
+          )}
+          {state === 'high' && (
+            <span className={`font-mono text-[9px] font-medium absolute top-1 right-1.5 ${currentActive ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>
+              1
+            </span>
+          )}
+          {state === 'low' && (
+            <span className={`font-mono text-[9px] font-medium absolute bottom-1 right-1.5 ${currentActive ? 'text-rose-500 font-bold' : 'text-slate-300'}`}>
+              0
+            </span>
+          )}
+          {state === 'pulse' && (
+            <span className={`font-mono text-[9px] font-semibold absolute top-1 right-1.5 ${currentActive ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>
+              CLK
+            </span>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const tStateDescriptions = [

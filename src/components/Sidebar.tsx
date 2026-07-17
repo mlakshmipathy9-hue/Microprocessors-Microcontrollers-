@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Module, Slide } from '../types';
 import { Cpu, ChevronRight, CheckCircle2, GraduationCap, Layout, Search, X } from 'lucide-react';
+import { labExperiments } from '../data/labExperimentsData';
 
 interface SidebarProps {
   modules: Module[];
   currentModuleId: string;
   currentSlideId: string;
   completedSlides: string[];
-  onSelectSlide: (moduleId: string, slideId: string) => void;
+  onSelectSlide: (moduleId: string, slideId: string, labId?: string) => void;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
+  currentLabId?: string;
 }
 
 export default function Sidebar({
@@ -19,17 +21,25 @@ export default function Sidebar({
   completedSlides,
   onSelectSlide,
   isOpen,
-  setIsOpen
+  setIsOpen,
+  currentLabId
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeUnit, setActiveUnit] = useState<'unit1' | 'unit2'>(() => {
-    return ['m11', 'm12', 'm13', 'm14', 'm15'].some(id => currentModuleId === id) ? 'unit2' : 'unit1';
+  const [activeUnit, setActiveUnit] = useState<'unit1' | 'unit2' | 'labs'>(() => {
+    return ['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id) ? 'unit2' : 'unit1';
   });
 
   useEffect(() => {
-    const isUnit2 = ['m11', 'm12', 'm13', 'm14', 'm15'].some(id => currentModuleId === id);
+    const isUnit2 = ['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id);
+    const activeModule = modules.find(m => m.id === currentModuleId);
+    const activeSlide = activeModule?.slides.find(s => s.id === currentSlideId);
+    const isLab = activeSlide?.interactiveType && activeSlide.interactiveType !== 'quiz';
+
+    if (activeUnit === 'labs' && isLab) {
+      return;
+    }
     setActiveUnit(isUnit2 ? 'unit2' : 'unit1');
-  }, [currentModuleId]);
+  }, [currentModuleId, currentSlideId, modules]);
 
   // Compute progress percent
   const totalSlides = modules.reduce((acc, m) => acc + m.slides.length, 0);
@@ -103,7 +113,7 @@ export default function Sidebar({
 
   return (
     <div
-      className={`fixed inset-y-0 left-0 z-40 bg-white text-slate-800 flex flex-col border-slate-200 transition-all duration-300 ease-in-out h-full shrink-0 overflow-hidden ${
+      className={`fixed inset-y-0 left-0 z-40 bg-white/80 backdrop-blur-md text-slate-800 flex flex-col border-sky-100 transition-all duration-300 ease-in-out h-full shrink-0 overflow-hidden ${
         isOpen
           ? 'w-72 opacity-100 translate-x-0 border-r'
           : 'w-0 opacity-0 -translate-x-full lg:translate-x-0 border-r-0'
@@ -113,7 +123,7 @@ export default function Sidebar({
         {/* Top Scrollable/Flex Area */}
         <div className="flex flex-col flex-1 min-h-0">
           {/* Sidebar Header */}
-          <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between h-16 shrink-0">
+          <div className="p-4 border-b border-sky-100 bg-sky-50/50 flex items-center justify-between h-16 shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="p-1.5 bg-indigo-600 rounded-lg text-white shadow-xs">
                 <Cpu className="w-5 h-5" />
@@ -123,7 +133,7 @@ export default function Sidebar({
                   8086 Microprocessor
                 </h1>
                 <span className="text-[9px] text-indigo-600 font-mono tracking-wider font-semibold uppercase">
-                  {['m11', 'm12', 'm13', 'm14', 'm15'].some(id => currentModuleId === id)
+                  {['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id)
                     ? 'UNIT-2: 8086 PROGRAMMING'
                     : 'UNIT-1: SYSTEM ARCHITECTURE'}
                 </span>
@@ -138,7 +148,7 @@ export default function Sidebar({
           </div>
 
           {/* Progress summary */}
-          <div className="p-4 border-b border-slate-200 bg-slate-50/50 shrink-0">
+          <div className="p-4 border-b border-sky-100 bg-sky-50/30 shrink-0">
             <div className="flex justify-between items-center mb-1.5">
               <span className="text-[10px] font-bold text-slate-400 font-mono uppercase tracking-wider">Learning Progress</span>
               <span className="text-xs font-bold text-indigo-600 font-mono">{progressPercent}% Completed</span>
@@ -153,7 +163,7 @@ export default function Sidebar({
               <span>{completedCount} of {totalSlides} slides studied</span>
               <span className="flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600">
                 <GraduationCap className="w-3 h-3 text-indigo-600" />
-                {['m11', 'm12', 'm13', 'm14', 'm15'].some(id => currentModuleId === id)
+                {['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id)
                   ? 'UNIT-2: 8086 Programming'
                   : 'UNIT-1: System Architecture'}
               </span>
@@ -161,7 +171,7 @@ export default function Sidebar({
           </div>
 
           {/* Search box */}
-          <div className="p-4 pb-3 border-b border-slate-200 bg-slate-50/30 shrink-0">
+          <div className="p-4 pb-3 border-b border-sky-100 bg-sky-50/10 shrink-0">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -286,11 +296,12 @@ export default function Sidebar({
                     <select
                       id="unit-selector"
                       value={activeUnit}
-                      onChange={(e) => setActiveUnit(e.target.value as 'unit1' | 'unit2')}
+                      onChange={(e) => setActiveUnit(e.target.value as 'unit1' | 'unit2' | 'labs')}
                       className="w-full pl-9 pr-10 py-2.5 bg-white border border-slate-200 hover:border-indigo-300 text-slate-700 font-bold rounded-xl text-xs shadow-xs focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all cursor-pointer appearance-none outline-none"
                     >
                       <option value="unit1">Unit I: System Architecture</option>
                       <option value="unit2">Unit II: 8086 Programming</option>
+                      <option value="labs">Lab Resources</option>
                     </select>
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                       <GraduationCap className="h-4 w-4 text-indigo-600" />
@@ -305,89 +316,135 @@ export default function Sidebar({
                   <div className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest px-1 flex justify-between items-center">
                     <span>Learning Modules</span>
                     <span className="text-[9px] font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 font-sans">
-                      {activeUnit === 'unit2' ? 'Unit II: Programming' : 'Unit I: Architecture'}
+                      {activeUnit === 'labs' ? 'Lab Resources' : activeUnit === 'unit2' ? 'Unit II: Programming' : 'Unit I: Architecture'}
                     </span>
                   </div>
 
-                  <div className="space-y-2">
-                    {modules
-                      .filter((m) => {
-                        const isM2 = ['m11', 'm12', 'm13', 'm14', 'm15'].includes(m.id);
-                        return activeUnit === 'unit2' ? isM2 : !isM2;
-                      })
-                      .map((m) => {
-                        const mIdx = modules.findIndex(mod => mod.id === m.id);
-                        const isCurrentModule = m.id === currentModuleId;
-                        const moduleCompletedCount = m.slides.filter(s => completedSlides.includes(s.id)).length;
-                        const isModuleFullyStudied = moduleCompletedCount === m.slides.length;
-                        const displayIdx = (mIdx + 1).toString().padStart(2, '0');
-
+                  {activeUnit === 'labs' ? (
+                    <div className="space-y-2.5 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+                      {labExperiments.map(exp => {
+                        const isCurrent = currentSlideId === 'm11-s2' && currentLabId === exp.id;
                         return (
-                          <div key={m.id} className="space-y-1">
-                            <button
-                              onClick={() => onSelectSlide(m.id, m.slides[0].id)}
-                              className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-xs font-medium cursor-pointer text-left ${
-                                isCurrentModule
-                                  ? 'border-indigo-200 bg-indigo-50 text-indigo-800 font-semibold shadow-xs'
-                                  : 'border-slate-100 bg-slate-50/30 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                              }`}
-                            >
-                          <span className="truncate flex items-center gap-2.5">
-                            <span className={`font-mono text-[10px] ${isCurrentModule ? 'text-indigo-600' : 'text-slate-400'}`}>
-                              {displayIdx}
-                            </span>
-                            {isModuleFullyStudied ? (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            ) : (
-                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCurrentModule ? 'bg-indigo-500' : 'bg-slate-300'}`}></span>
-                            )}
-                            <span className={`truncate ${isCurrentModule ? 'font-bold text-slate-900' : ''}`}>
-                              {m.title.replace(/^Module\s+\d+:\s*/i, '')}
-                            </span>
-                          </span>
-                          <span className="text-[9px] font-mono text-slate-500 shrink-0 bg-white px-1.5 py-0.5 rounded border border-slate-200">
-                            {moduleCompletedCount}/{m.slides.length}
-                          </span>
-                        </button>
+                          <button
+                            key={exp.id}
+                            onClick={() => onSelectSlide('m11', 'm11-s2', exp.id)}
+                            className={`w-full text-left p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-2 ${
+                              isCurrent
+                                ? 'border-indigo-300 bg-indigo-50/70 text-indigo-950 font-semibold shadow-xs'
+                                : 'border-slate-100 bg-slate-50/35 text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-200'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between w-full gap-2">
+                              <span className="flex items-center gap-2">
+                                <span className={`text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded ${
+                                  isCurrent
+                                    ? 'bg-indigo-600 text-white'
+                                    : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                                }`}>
+                                  EXP {exp.number}
+                                </span>
+                                <span className={`font-bold text-xs leading-tight ${isCurrent ? 'text-slate-900' : 'text-slate-800'}`}>
+                                  {exp.title}
+                                </span>
+                              </span>
+                              {isCurrent && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 shrink-0 mt-1" />
+                              )}
+                            </div>
+                            <p className={`text-[10px] leading-normal font-medium ${isCurrent ? 'text-indigo-900/80' : 'text-slate-500'}`}>
+                              {exp.aim}
+                            </p>
+                            <div className="flex items-center justify-between mt-0.5 text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                              <span>B.Tech Syllabus Lab</span>
+                              <span className="text-[8px] font-sans text-indigo-600 bg-indigo-100/50 px-1.5 py-0.5 rounded border border-indigo-100/30">
+                                DIRECTIVE SANDBOX
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {modules
+                        .filter((m) => {
+                          const isM2 = ['m8', 'm9', 'm10', 'm11', 'm12'].includes(m.id);
+                          return activeUnit === 'unit2' ? isM2 : !isM2;
+                        })
+                        .map((m) => {
+                          const mIdx = modules.findIndex(mod => mod.id === m.id);
+                          const isCurrentModule = m.id === currentModuleId;
+                          const moduleCompletedCount = m.slides.filter(s => completedSlides.includes(s.id)).length;
+                          const isModuleFullyStudied = moduleCompletedCount === m.slides.length;
+                          const displayIdx = (mIdx + 1).toString().padStart(2, '0');
 
-                        {/* List of slides within the current selected module */}
-                        {isCurrentModule && (
-                          <div className="pl-4 pr-1 border-l border-slate-200 space-y-1 py-1 ml-3 mt-1">
-                            {m.slides.map((slide) => {
-                              const isCurrentSlide = slide.id === currentSlideId;
-                              const isSlideCompleted = completedSlides.includes(slide.id);
-
-                              return (
-                                <button
-                                  key={slide.id}
-                                  onClick={() => onSelectSlide(m.id, slide.id)}
-                                  className={`w-full text-left py-1.5 px-2.5 rounded-lg text-[11px] font-medium transition-all flex items-center justify-between group border-l-2 ${
-                                    isCurrentSlide
-                                      ? 'bg-indigo-600 text-white font-semibold shadow-xs border-indigo-400 pl-2'
-                                      : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50 border-transparent'
-                                  }`}
-                                >
-                                  <span className="truncate pr-1 group-hover:translate-x-0.5 transition-transform duration-150">{slide.title}</span>
-                                  {isSlideCompleted && !isCurrentSlide && (
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                          return (
+                            <div key={m.id} className="space-y-1">
+                              <button
+                                onClick={() => onSelectSlide(m.id, m.slides[0].id)}
+                                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-xs font-medium cursor-pointer text-left ${
+                                  isCurrentModule
+                                    ? 'border-indigo-200 bg-indigo-50 text-indigo-800 font-semibold shadow-xs'
+                                    : 'border-slate-100 bg-slate-50/30 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                                }`}
+                              >
+                                <span className="truncate flex items-center gap-2.5">
+                                  <span className={`font-mono text-[10px] ${isCurrentModule ? 'text-indigo-600' : 'text-slate-400'}`}>
+                                    {displayIdx}
+                                  </span>
+                                  {isModuleFullyStudied ? (
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                  ) : (
+                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCurrentModule ? 'bg-indigo-500' : 'bg-slate-300'}`}></span>
                                   )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                                  <span className={`truncate ${isCurrentModule ? 'font-bold text-slate-900' : ''}`}>
+                                    {m.title.replace(/^Module\s+\d+:\s*/i, '')}
+                                  </span>
+                                </span>
+                                <span className="text-[9px] font-mono text-slate-500 shrink-0 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                                  {moduleCompletedCount}/{m.slides.length}
+                                </span>
+                              </button>
+
+                              {/* List of slides within the current selected module */}
+                              {isCurrentModule && (
+                                <div className="pl-4 pr-1 border-l border-slate-200 space-y-1 py-1 ml-3 mt-1">
+                                  {m.slides.map((slide) => {
+                                    const isCurrentSlide = slide.id === currentSlideId;
+                                    const isSlideCompleted = completedSlides.includes(slide.id);
+
+                                    return (
+                                      <button
+                                        key={slide.id}
+                                        onClick={() => onSelectSlide(m.id, slide.id)}
+                                        className={`w-full text-left py-1.5 px-2.5 rounded-lg text-[11px] font-medium transition-all flex items-center justify-between group border-l-2 ${
+                                          isCurrentSlide
+                                            ? 'bg-indigo-600 text-white font-semibold shadow-xs border-indigo-400 pl-2'
+                                            : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50 border-transparent'
+                                        }`}
+                                      >
+                                        <span className="truncate pr-1 group-hover:translate-x-0.5 transition-transform duration-150">{slide.title}</span>
+                                        {isSlideCompleted && !isCurrentSlide && (
+                                          <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          )}
+            )}
           </div>
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50 text-[10px] text-slate-400 font-mono text-center flex items-center justify-center gap-2 h-14 shrink-0">
+        <div className="p-4 border-t border-sky-100 bg-sky-50/30 text-[10px] text-slate-400 font-mono text-center flex items-center justify-center gap-2 h-14 shrink-0">
           <Layout className="w-3.5 h-3.5 text-indigo-600" />
           <span className="uppercase tracking-wider">Lab Presentation mode</span>
         </div>

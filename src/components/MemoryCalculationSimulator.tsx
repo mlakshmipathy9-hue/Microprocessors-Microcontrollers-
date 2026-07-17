@@ -114,8 +114,127 @@ const segmentsData: SegmentInfo[] = [
   }
 ];
 
+interface MapRegion {
+  id: string;
+  name: string;
+  start: string;
+  end: string;
+  size: string;
+  colorClass: string;
+  textColClass: string;
+  description: string;
+  academicDetail: string;
+  details: string[];
+  assemblyExample?: string;
+}
+
+const mapRegions: MapRegion[] = [
+  {
+    id: 'bios-rom',
+    name: 'Motherboard ROM BIOS (System ROM)',
+    start: 'F0000H',
+    end: 'FFFFFH',
+    size: '64 KB',
+    colorClass: 'bg-red-50 border-red-500 hover:bg-red-100/50',
+    textColClass: 'text-red-700',
+    description: 'Contains POST (Power-On Self-Test) routines, system initialization, BIOS services, and the critical Reset Bootstrap Vector at FFFF0H.',
+    academicDetail: 'When the 8086 is powered on or reset, the CS register is loaded with FFFFH and IP with 0000H, yielding the physical starting address FFFF0H. This location points to the instruction in the ROM BIOS that begins program execution.',
+    details: [
+      'Boot Vector located at FFFF0H (CS=FFFFH, IP=0000H)',
+      'Stores basic device drivers (keyboard, screen, disk systems)',
+      'Highly persistent, non-volatile read-only silicon'
+    ],
+    assemblyExample: 'JMP FAR PTR BOOT_INITIALIZE ; Located at FFFF0H'
+  },
+  {
+    id: 'bios-shadow',
+    name: 'BIOS ROM Expansion & Shadow Memory',
+    start: 'C0000H',
+    end: 'EFFFFH',
+    size: '192 KB',
+    colorClass: 'bg-orange-50 border-orange-500 hover:bg-orange-100/50',
+    textColClass: 'text-orange-700',
+    description: 'Reserved for controller-specific BIOS extensions (like hard disk controllers and network cards) or shadow system routines.',
+    academicDetail: 'Peripheral adapters can mount their own ROM code into this region. During boot-up, the system BIOS scans this address range looking for signature bytes (55H AAH) to execute initialization routines on those cards.',
+    details: [
+      'Hard Disk controllers typically mapped to C8000H',
+      'Video card BIOS often at C0000H to C7FFFH',
+      'Option ROM scan range'
+    ],
+    assemblyExample: 'CMP WORD PTR [SI], 0AA55H\nJZ INITIALIZE_CARD_ROM'
+  },
+  {
+    id: 'vram',
+    name: 'Video Display Buffer RAM (VRAM)',
+    start: 'A0000H',
+    end: 'BFFFFH',
+    size: '128 KB',
+    colorClass: 'bg-purple-50 border-purple-500 hover:bg-purple-100/50',
+    textColClass: 'text-purple-700',
+    description: 'Mapped memory region reserved for video display controller screen buffers (CGA, EGA, VGA text and graphics modes).',
+    academicDetail: 'Writing directly to this address range updates pixels on the display screen immediately. B8000H is the standard base for 80x25 color text display mode, while A0000H is used for high-resolution graphics.',
+    details: [
+      'B8000H: Color Text Screen Buffer (each char is 2 bytes: ASCII + Attribute)',
+      'B0000H: Monochrome Text Display Buffer',
+      'A0000H: VGA Graphics mode frame buffers'
+    ],
+    assemblyExample: 'MOV AX, 0B800H\nMOV DS, AX\nMOV WORD PTR [0000H], 0A41H ; Writes \'A\' (41H) with attribute 0AH'
+  },
+  {
+    id: 'tpa',
+    name: 'Transient Program Area (TPA - User RAM)',
+    start: '00500H',
+    end: '9FFFFH',
+    size: '~638 KB',
+    colorClass: 'bg-emerald-50 border-emerald-500 hover:bg-emerald-100/50',
+    textColClass: 'text-emerald-700',
+    description: 'The largest contiguous block of conventional memory. This is where the operating system (e.g. DOS), user applications, segment registers (CS, DS, SS, ES), and variables reside.',
+    academicDetail: 'This region contains standard user programs. Program instructions (CS), variables (DS), and stack frames (SS) are all loaded dynamically within these boundaries.',
+    details: [
+      'Main application workspace',
+      'Dynamically allocated by DOS or memory managers',
+      'Accessible for direct user read/write operations'
+    ],
+    assemblyExample: 'MOV AX, 0050H\nMOV DS, AX'
+  },
+  {
+    id: 'bda',
+    name: 'BIOS Data Area (BDA)',
+    start: '00400H',
+    end: '004FFH',
+    size: '256 Bytes',
+    colorClass: 'bg-blue-50 border-blue-500 hover:bg-blue-100/50',
+    textColClass: 'text-blue-700',
+    description: 'Contains active hardware status flags and runtime variables populated by BIOS routines (such as keyboard buffers, COM/LPT port bases, and system timers).',
+    academicDetail: 'BIOS services read/write this area frequently to monitor key configurations. For instance, the system clock count (updated 18.2 times/sec by INT 08H) is saved here at address 0046CH.',
+    details: [
+      '00410H: Equipment List Flag Word',
+      '0041EH: 16-word keyboard buffer queue',
+      '0046CH: 32-bit System Timer Tick Counter'
+    ],
+    assemblyExample: 'MOV AX, 0040H\nMOV DS, AX\nMOV AL, [0017H] ; Read keyboard shift-state flags'
+  },
+  {
+    id: 'ivt',
+    name: 'Interrupt Vector Table (IVT)',
+    start: '00000H',
+    end: '003FFH',
+    size: '1 KB (1024 Bytes)',
+    colorClass: 'bg-indigo-50 border-indigo-500 hover:bg-indigo-100/50',
+    textColClass: 'text-indigo-700',
+    description: 'Holds the 32-bit addresses (Segment:Offset far pointers) for all 256 hardware and software interrupts supported by the 8086.',
+    academicDetail: 'Each of the 256 interrupts requires 4 bytes of memory to store its target Interrupt Service Routine (ISR) address: 2 bytes for Segment (CS) and 2 bytes for Offset (IP). Total size = 256 * 4 = 1024 bytes (1 KB).',
+    details: [
+      'Vector 0 (00000H): Divide-by-Zero exception',
+      'Vector 9 (00024H): Keyboard Interrupt IRQ1',
+      'Vector 21H (00084H): DOS System API services entry point'
+    ],
+    assemblyExample: 'MOV AX, 0000H\nMOV ES, AX\nLES DI, [0084H] ; ES:DI now holds ISR pointer for INT 21H'
+  }
+];
+
 export default function MemoryCalculationSimulator() {
-  const [activeTab, setActiveTab] = useState<'calculator' | 'segmented-structure'>('calculator');
+  const [activeTab, setActiveTab] = useState<'calculator' | 'segmented-structure' | 'physical-map'>('calculator');
   const [segReg, setSegReg] = useState('CS');
   const [offsetReg, setOffsetReg] = useState('IP');
   const [segValHex, setSegValHex] = useState('1000');
@@ -126,6 +245,10 @@ export default function MemoryCalculationSimulator() {
   const [shiftedSeg, setShiftedSeg] = useState('10000');
 
   const [selectedSegmentId, setSelectedSegmentId] = useState<string>('cs');
+  
+  // 1MB Physical Memory Map states
+  const [selectedMapBlock, setSelectedMapBlock] = useState<string>('ivt');
+  const [bankOp, setBankOp] = useState<'read-byte-even' | 'read-byte-odd' | 'read-word-even' | 'read-word-odd'>('read-word-even');
 
   useEffect(() => {
     // Validate hex input
@@ -182,7 +305,7 @@ export default function MemoryCalculationSimulator() {
         </div>
 
         {/* Tab Selection buttons */}
-        <div className="flex items-center bg-slate-200 p-1 rounded-lg">
+        <div className="flex flex-wrap items-center bg-slate-200 p-1 rounded-lg gap-1">
           <button
             onClick={() => setActiveTab('calculator')}
             className={`px-3 py-1.5 text-[13px] font-bold rounded-md transition-all cursor-pointer ${
@@ -199,12 +322,20 @@ export default function MemoryCalculationSimulator() {
           >
             How it works &amp; Why needed
           </button>
+          <button
+            onClick={() => setActiveTab('physical-map')}
+            className={`px-3 py-1.5 text-[13px] font-bold rounded-md transition-all cursor-pointer ${
+              activeTab === 'physical-map' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-700 hover:text-slate-900'
+            }`}
+          >
+            1MB Physical Memory Map
+          </button>
         </div>
       </div>
 
       <div className="flex-1 p-5 overflow-y-auto">
         <AnimatePresence mode="wait">
-          {activeTab === 'calculator' ? (
+          {activeTab === 'calculator' && (
             <motion.div
               key="calculator-tab"
               initial={{ opacity: 0, y: 10 }}
@@ -392,7 +523,9 @@ export default function MemoryCalculationSimulator() {
                 </div>
               </div>
             </motion.div>
-          ) : (
+          )}
+
+          {activeTab === 'segmented-structure' && (
             <motion.div
               key="segmented-tab"
               initial={{ opacity: 0, y: 10 }}
@@ -972,6 +1105,410 @@ export default function MemoryCalculationSimulator() {
                   </div>
                 </div>
 
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'physical-map' && (
+            <motion.div
+              key="physical-map-tab"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
+            >
+              {/* Top Banner */}
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-[14px] font-bold text-slate-900 font-display flex items-center gap-2">
+                    <Database className="w-4 h-4 text-indigo-700" />
+                    8086 Physical Address Space &amp; Hardware Layout (1 MB)
+                  </h3>
+                  <p className="text-[13px] text-slate-600 mt-1">
+                    Explore the allocation of the 20-bit address bus and simulate the hardware-level Even/Odd Memory Bank organization.
+                  </p>
+                </div>
+                <div className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-right">
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Addressable Range</span>
+                  <strong className="text-[13px] font-mono text-indigo-700">00000 H — FFFFF H</strong>
+                </div>
+              </div>
+
+              {/* Main Content Split Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                
+                {/* COLUMN 1: The 1MB Physical Memory Map Stack (Col-Span-5) */}
+                <div className="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-2xl p-4.5 shadow-xs relative">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-[12.5px] font-bold text-slate-800 font-display flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-indigo-700" />
+                      Physical Map Stack (00000H - FFFFFH)
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-bold bg-slate-200 px-2 py-0.5 rounded uppercase tracking-wider">
+                      Interactive
+                    </span>
+                  </div>
+
+                  {/* 1MB Stack container representing 00000H to FFFFFH */}
+                  <div className="border border-slate-300 rounded-xl bg-slate-100 p-3.5 flex flex-col justify-between relative shadow-inner space-y-2 min-h-[520px]">
+                    
+                    {/* Upper Memory Area Indicator Line */}
+                    <div className="absolute left-0 right-0 top-[28%] border-t border-dashed border-red-300 pointer-events-none flex justify-center">
+                      <span className="text-[9px] font-mono bg-red-100 text-red-700 px-1.5 py-0.5 rounded -mt-2.5 font-bold border border-red-200 shadow-2xs">
+                        Upper Memory Boundary (A0000H)
+                      </span>
+                    </div>
+
+                    {/* Address Boundary Label Top */}
+                    <div className="flex justify-between items-center text-[10.5px] font-mono font-bold text-slate-500 border-b border-slate-200 pb-1.5 z-10">
+                      <span>FFFFF H (Top of Memory)</span>
+                      <span>1,048,575 Bytes</span>
+                    </div>
+
+                    {/* Proportional Render of mapRegions */}
+                    <div className="flex-1 flex flex-col justify-between space-y-1.5 py-2">
+                      {mapRegions.map((region) => {
+                        const isSelected = selectedMapBlock === region.id;
+                        return (
+                          <div
+                            key={region.id}
+                            onClick={() => setSelectedMapBlock(region.id)}
+                            className={`border-2 rounded-lg p-2.5 relative cursor-pointer transition-all flex flex-col justify-between ${region.colorClass} ${
+                              isSelected 
+                                ? 'ring-3 ring-indigo-500/30 border-indigo-600 scale-[1.01] shadow-md z-10' 
+                                : 'border-slate-300 shadow-2xs hover:scale-[1.005]'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <span className="font-bold text-[12.5px] text-slate-900 leading-tight">
+                                {region.name}
+                              </span>
+                              <span className="text-[10px] font-mono font-bold bg-white/80 border border-slate-200 text-slate-600 px-1.5 py-0.25 rounded shrink-0">
+                                {region.size}
+                              </span>
+                            </div>
+                            
+                            <div className="flex justify-between items-end mt-1 text-[10.5px] font-mono font-bold text-slate-500">
+                              <span className="text-slate-400">Range:</span>
+                              <span className="text-slate-600">{region.start} - {region.end}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Address Boundary Label Bottom */}
+                    <div className="flex justify-between items-center text-[10.5px] font-mono font-bold text-slate-500 border-t border-slate-200 pt-1.5 z-10">
+                      <span>00000 H (Base of Memory)</span>
+                      <span>0 Bytes (IVT Vector 0)</span>
+                    </div>
+                  </div>
+
+                  {/* Summary Footer */}
+                  <div className="mt-3 text-[11.5px] text-slate-500 leading-normal bg-white p-2.5 border border-slate-150 rounded-lg">
+                    <p className="italic">
+                      <strong>Microprocessor Fact:</strong> The 8086 uses 20 address lines (A0-A19) giving exactly 2<sup>20</sup> = 1,048,576 memory locations, ranging from 00000H to FFFFFH. Click any block above to load the study file.
+                    </p>
+                  </div>
+                </div>
+
+                {/* COLUMN 2: Inspector Panel & Hardware Simulator (Col-Span-7) */}
+                <div className="lg:col-span-7 space-y-5">
+                  
+                  {/* CARD A: Region Inspector */}
+                  {(() => {
+                    const block = mapRegions.find(r => r.id === selectedMapBlock) || mapRegions[mapRegions.length - 1];
+                    return (
+                      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="w-4.5 h-4.5 text-indigo-700" />
+                            <h4 className="font-display font-bold text-[14px] text-slate-950">
+                              Academic Segment File: <span className={block.textColClass}>{block.name}</span>
+                            </h4>
+                          </div>
+                          <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                            {block.size} ({block.start} - {block.end})
+                          </span>
+                        </div>
+
+                        <div className="space-y-3.5">
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Functional Description</span>
+                            <p className="text-[13px] text-slate-700 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+                              {block.description}
+                            </p>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Microprocessor &amp; Hardware Context</span>
+                            <p className="text-[13px] text-slate-700 leading-relaxed font-sans">
+                              {block.academicDetail}
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1.5">Detailed Subsections</span>
+                              <ul className="space-y-1.5">
+                                {block.details.map((detail, idx) => (
+                                  <li key={idx} className="flex items-start gap-2 text-[12.5px] text-slate-600">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                    <span>{detail}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+
+                            {block.assemblyExample && (
+                              <div>
+                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1.5">Sample Assembly / CPU Routine</span>
+                                <div className="bg-slate-900 rounded-lg p-3 border border-slate-800 font-mono text-[11.5px] text-slate-300 leading-normal whitespace-pre-wrap shadow-inner relative">
+                                  <span className="absolute right-2 top-1.5 text-[9px] font-sans text-slate-500 uppercase font-bold tracking-wider">8086 Assembly</span>
+                                  {block.assemblyExample}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* CARD B: Even/Odd Memory Bank Hardware Simulator */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Cpu className="w-4.5 h-4.5 text-indigo-700" />
+                        <div>
+                          <h4 className="font-display font-bold text-[14px] text-slate-950">
+                            8086 Physical Memory Bank Simulator (Even vs. Odd Banks)
+                          </h4>
+                          <p className="text-[12px] text-slate-500">
+                            See how the 16-bit CPU communicates with two separate 8-bit memory boards.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Operational Selector */}
+                    <div className="space-y-2">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                        Select Memory Bus Operation Type:
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setBankOp('read-byte-even')}
+                          className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                            bankOp === 'read-byte-even'
+                              ? 'bg-indigo-50/80 border-indigo-500 ring-2 ring-indigo-300/40 text-indigo-950'
+                              : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
+                          }`}
+                        >
+                          <span className="font-bold text-[13px] flex items-center justify-between w-full">
+                            <span>1. Read Byte at Even Address</span>
+                            <span className="font-mono text-[10.5px] bg-slate-200/80 px-1.5 rounded">00040 H</span>
+                          </span>
+                          <span className="text-[11px] text-slate-500 mt-1 leading-normal">
+                            Accesses only the Lower Bank (D0 - D7).
+                          </span>
+                        </button>
+
+                        <button
+                          onClick={() => setBankOp('read-byte-odd')}
+                          className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                            bankOp === 'read-byte-odd'
+                              ? 'bg-indigo-50/80 border-indigo-500 ring-2 ring-indigo-300/40 text-indigo-950'
+                              : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
+                          }`}
+                        >
+                          <span className="font-bold text-[13px] flex items-center justify-between w-full">
+                            <span>2. Read Byte at Odd Address</span>
+                            <span className="font-mono text-[10.5px] bg-slate-200/80 px-1.5 rounded">00041 H</span>
+                          </span>
+                          <span className="text-[11px] text-slate-500 mt-1 leading-normal">
+                            Accesses only the Upper Bank (D8 - D15).
+                          </span>
+                        </button>
+
+                        <button
+                          onClick={() => setBankOp('read-word-even')}
+                          className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                            bankOp === 'read-word-even'
+                              ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-300/40 text-emerald-950 font-bold'
+                              : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700 font-semibold'
+                          }`}
+                        >
+                          <span className="font-bold text-[13px] flex items-center justify-between w-full">
+                            <span className="flex items-center gap-1.5 text-emerald-900">
+                              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>3. Read Aligned Word (Even)</span>
+                            </span>
+                            <span className="font-mono text-[10.5px] bg-emerald-100 text-emerald-800 px-1.5 rounded">00040 H</span>
+                          </span>
+                          <span className="text-[11px] text-slate-500 mt-1 leading-normal">
+                            Accesses BOTH banks simultaneously in 1 single cycle!
+                          </span>
+                        </button>
+
+                        <button
+                          onClick={() => setBankOp('read-word-odd')}
+                          className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                            bankOp === 'read-word-odd'
+                              ? 'bg-amber-50 border-amber-500 ring-2 ring-amber-300/40 text-amber-950 font-bold'
+                              : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700 font-semibold'
+                          }`}
+                        >
+                          <span className="font-bold text-[13px] flex items-center justify-between w-full">
+                            <span className="text-amber-900 font-bold">4. Read Misaligned Word (Odd)</span>
+                            <span className="font-mono text-[10.5px] bg-amber-100 text-amber-800 px-1.5 rounded">00041 H</span>
+                          </span>
+                          <span className="text-[11px] text-slate-500 mt-1 leading-normal">
+                            Requires 2 physical cycles! Splitting transfer.
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Hardware Schematic Visualization */}
+                    {(() => {
+                      const isEvenActive = bankOp === 'read-byte-even' || bankOp === 'read-word-even' || bankOp === 'read-word-odd';
+                      const isOddActive = bankOp === 'read-byte-odd' || bankOp === 'read-word-even' || bankOp === 'read-word-odd';
+                      
+                      let cycles = 1;
+                      let bheSignal = '1 (HIGH)';
+                      let a0Signal = '0 (LOW)';
+                      let dataBusStatus = 'D0 - D7 Active';
+                      let designVibe = 'border-indigo-500 bg-indigo-50/50';
+
+                      if (bankOp === 'read-byte-even') {
+                        cycles = 1;
+                        bheSignal = '1 (HIGH)';
+                        a0Signal = '0 (LOW)';
+                        dataBusStatus = 'D0 - D7 Lower Data Bus';
+                        designVibe = 'border-indigo-500 bg-indigo-50/20';
+                      } else if (bankOp === 'read-byte-odd') {
+                        cycles = 1;
+                        bheSignal = '0 (LOW)';
+                        a0Signal = '1 (HIGH)';
+                        dataBusStatus = 'D8 - D15 Upper Data Bus';
+                        designVibe = 'border-indigo-500 bg-indigo-50/20';
+                      } else if (bankOp === 'read-word-even') {
+                        cycles = 1;
+                        bheSignal = '0 (LOW)';
+                        a0Signal = '0 (LOW)';
+                        dataBusStatus = 'D0 - D15 Full 16-bit wide bus';
+                        designVibe = 'border-emerald-500 bg-emerald-50/20';
+                      } else if (bankOp === 'read-word-odd') {
+                        cycles = 2;
+                        bheSignal = 'Cycle 1: 0 (LOW) | Cycle 2: 1 (HIGH)';
+                        a0Signal = 'Cycle 1: 1 (HIGH) | Cycle 2: 0 (LOW)';
+                        dataBusStatus = 'Cycle 1: D8-D15 (Lower Byte) | Cycle 2: D0-D7 (Upper Byte)';
+                        designVibe = 'border-amber-500 bg-amber-50/20';
+                      }
+
+                      return (
+                        <div className={`border rounded-xl p-4.5 ${designVibe} transition-all space-y-4`}>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] uppercase font-mono tracking-wider font-bold text-slate-500 block">
+                              Active Hardware Pins &amp; Physical Signals
+                            </span>
+                            <div className="flex gap-2">
+                              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                                cycles === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800 animate-pulse'
+                              }`}>
+                                Bus Cycles: {cycles} {cycles === 1 ? 'Cycle' : 'Cycles Required'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Dual Bank Architecture layout */}
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* ODD BANK (UPPER 512 KB) */}
+                            <div className={`border-2 rounded-xl p-4 text-center transition-all flex flex-col justify-between h-44 shadow-2xs ${
+                              isOddActive 
+                                ? 'border-indigo-500 bg-indigo-950 text-white scale-[1.01] shadow-md' 
+                                : 'border-slate-300 bg-slate-100 text-slate-400'
+                            }`}>
+                              <div>
+                                <span className={`text-[10px] font-mono font-bold block uppercase tracking-wider ${isOddActive ? 'text-indigo-300' : 'text-slate-400'}`}>
+                                  Upper Memory Bank (Odd Bank)
+                                </span>
+                                <strong className="text-[15px] font-sans block mt-1">512 KB Space</strong>
+                                <span className="text-[11px] block mt-1 font-mono text-slate-400">Addresses: 00001H, 00003H, ... FFFFFH</span>
+                              </div>
+                              <div className="pt-2 border-t border-dashed border-slate-700/50">
+                                <span className="text-[11px] block font-semibold text-slate-300">Bus Hook: <strong className="font-mono text-indigo-300">D8 - D15</strong></span>
+                                <span className="text-[10px] block mt-0.5 text-slate-400">Enabled by <strong className="font-mono text-indigo-300">BHE# = 0</strong></span>
+                              </div>
+                            </div>
+
+                            {/* EVEN BANK (LOWER 512 KB) */}
+                            <div className={`border-2 rounded-xl p-4 text-center transition-all flex flex-col justify-between h-44 shadow-2xs ${
+                              isEvenActive 
+                                ? 'border-emerald-500 bg-emerald-950 text-white scale-[1.01] shadow-md' 
+                                : 'border-slate-300 bg-slate-100 text-slate-400'
+                            }`}>
+                              <div>
+                                <span className={`text-[10px] font-mono font-bold block uppercase tracking-wider ${isEvenActive ? 'text-emerald-300' : 'text-slate-400'}`}>
+                                  Lower Memory Bank (Even Bank)
+                                </span>
+                                <strong className="text-[15px] font-sans block mt-1">512 KB Space</strong>
+                                <span className="text-[11px] block mt-1 font-mono text-slate-400">Addresses: 00000H, 00002H, ... FFFFEH</span>
+                              </div>
+                              <div className="pt-2 border-t border-dashed border-slate-700/50">
+                                <span className="text-[11px] block font-semibold text-slate-300">Bus Hook: <strong className="font-mono text-emerald-300">D0 - D7</strong></span>
+                                <span className="text-[10px] block mt-0.5 text-slate-400">Enabled by <strong className="font-mono text-emerald-300">A0 = 0</strong></span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Physical Signal Bus Table */}
+                          <div className="bg-white rounded-lg border border-slate-200/60 overflow-hidden text-[12.5px]">
+                            <div className="grid grid-cols-4 bg-slate-50 font-bold p-2 border-b border-slate-150 text-slate-700 text-center text-[10.5px] uppercase tracking-wider">
+                              <div>BHE# (Bus High Enable)</div>
+                              <div>A0 Address Pin</div>
+                              <div>Data Bus Lines</div>
+                              <div>Memory Performance</div>
+                            </div>
+                            <div className="grid grid-cols-4 p-2 text-center font-mono text-[12px]">
+                              <div className="text-indigo-700 font-bold">{bheSignal}</div>
+                              <div className="text-indigo-700 font-bold">{a0Signal}</div>
+                              <div className="text-slate-700 font-semibold">{dataBusStatus}</div>
+                              <div className={`font-sans font-bold ${
+                                bankOp === 'read-word-even' 
+                                  ? 'text-emerald-600' 
+                                  : bankOp === 'read-word-odd'
+                                  ? 'text-amber-600 animate-pulse'
+                                  : 'text-slate-600'
+                              }`}>
+                                {bankOp === 'read-word-even' && 'Peak Speed (1 Cycle)'}
+                                {bankOp === 'read-word-odd' && 'Split Cycle (Slowdown)'}
+                                {bankOp === 'read-byte-even' && 'Standard (1 Cycle)'}
+                                {bankOp === 'read-byte-odd' && 'Standard (1 Cycle)'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Academic explanation block */}
+                          <div className="bg-slate-900 rounded-lg p-3 text-[12.5px] leading-relaxed text-slate-300">
+                            <strong className="text-white block text-[13px] mb-1 font-sans">🎓 Syllabus Guide: Why does the 8086 split physical memory into two banks?</strong>
+                            <p className="font-sans">
+                              The 8086 is a <strong>16-bit processor</strong> but must remain compatible with 8-bit peripherals and single-byte operations. Splitting RAM into Even and Odd physical banks allows the system board to read 8 bits from either bank independently, or fetch a full 16-bit word from both banks simultaneously (aligned word access). 
+                            </p>
+                            {bankOp === 'read-word-odd' && (
+                              <p className="mt-2 text-amber-300 border-t border-slate-800 pt-2 font-sans font-medium">
+                                ⚠️ <strong>Misaligned word penalty:</strong> Since address 00041H is ODD, the lower byte of the word sits in address 00041H (Odd Bank), but the upper byte sits in address 00042H (Even Bank). The processor cannot activate both banks at once for two different address alignments, forcing the BIU to run <strong>two back-to-back hardware cycles</strong>. Align variables on even addresses to keep code running fast!
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                </div>
               </div>
             </motion.div>
           )}

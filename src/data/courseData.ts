@@ -3,12 +3,12 @@ import { Module } from '../types';
 export const courseData: Module[] = [
   {
     id: 'm1',
-    title: 'Module 1: Introduction to Microprocessors',
+    title: 'Module 1: Evolution of Microprocessors',
     slides: [
       {
         id: 'm1-s1',
-        title: 'Welcome to Microprocessors & Microcontrollers!',
-        moduleTitle: 'Module 1: Introduction to Microprocessors',
+        title: '1. Welcome to Microprocessors & Microcontrollers!',
+        moduleTitle: 'Module 1: Evolution of Microprocessors',
         moduleId: 'm1',
         points: [
           'Designed specifically for B.Tech beginners starting their hardware engineering journey.',
@@ -18,9 +18,22 @@ export const courseData: Module[] = [
         ]
       },
       {
+        id: 'm1-s3', // Must be m1-s3 so SlidePresenter triggers the "vs" tab by default
+        title: '2. Microprocessor vs Microcontroller',
+        moduleTitle: 'Module 1: Evolution of Microprocessors',
+        moduleId: 'm1',
+        points: [
+          'Microprocessor (MPU) contains only the Central Processing Unit (CPU). Memory (RAM, ROM) and I/O timers are connected externally.',
+          'Microcontroller (MCU) integrates CPU, RAM, ROM, I/O ports, timers, and serial interfaces onto a single silicon chip.',
+          'MPUs are general-purpose, flexible, fast, and expensive (used in laptops, servers).',
+          'MCUs are application-specific, power-efficient, and highly cost-effective (used in washing machines, automotive ECUs, remote controllers).'
+        ],
+        interactiveType: 'evolution'
+      },
+      {
         id: 'm1-s2',
-        title: 'Evolution of Microprocessors',
-        moduleTitle: 'Module 1: Introduction to Microprocessors',
+        title: '3. Evolution of Microprocessors',
+        moduleTitle: 'Module 1: Evolution of Microprocessors',
         moduleId: 'm1',
         points: [
           '1st Generation (1971): 4-bit processors (Intel 4004) - designed for calculator logic.',
@@ -32,22 +45,20 @@ export const courseData: Module[] = [
         interactiveType: 'evolution'
       },
       {
-        id: 'm1-s3',
-        title: 'Microprocessor vs Microcontroller',
-        moduleTitle: 'Module 1: Introduction to Microprocessors',
+        id: 'm1-s5',
+        title: '4. Evolution to Pentium Series',
+        moduleTitle: 'Module 1: Evolution of Microprocessors',
         moduleId: 'm1',
         points: [
-          'Microprocessor (MPU) contains only the Central Processing Unit (CPU). Memory (RAM, ROM) and I/O timers are connected externally.',
-          'Microcontroller (MCU) integrates CPU, RAM, ROM, I/O ports, timers, and serial interfaces onto a single silicon chip.',
-          'MPUs are general-purpose, flexible, fast, and expensive (used in laptops, servers).',
-          'MCUs are application-specific, power-efficient, and highly cost-effective (used in washing machines, automotive ECUs, remote controllers).'
-        ],
-        interactiveType: 'evolution'
+          '80386 (1985): Intel\'s first true 32-bit x86 processor. Introduced virtual memory paging, supporting up to 4 GB of RAM.',
+          '80486 (1989): Integrated a floating-point unit (FPU/math coprocessor) and 8 KB of L1 cache onto the CPU core.',
+          'Pentium (1993): Launched superscalar execution (two independent execution pipelines, U and V), allowing it to process two instructions per clock cycle.'
+        ]
       },
       {
-        id: 'm1-s4',
-        title: 'Features & Applications of Intel 8086',
-        moduleTitle: 'Module 1: Introduction to Microprocessors',
+        id: 'm1-s6',
+        title: '5. Features & Key Parameters of Intel 8086',
+        moduleTitle: 'Module 1: Evolution of Microprocessors',
         moduleId: 'm1',
         points: [
           'It is a 16-bit MPU: It possesses a 16-bit ALU, 16-bit internal registers, and a 16-bit Data Bus.',
@@ -59,56 +70,57 @@ export const courseData: Module[] = [
       {
         id: 'm1-quiz',
         title: 'Module 1 Recap Quiz',
-        moduleTitle: 'Module 1: Introduction to Microprocessors',
+        moduleTitle: 'Module 1: Evolution of Microprocessors',
         moduleId: 'm1',
         interactiveType: 'quiz',
         quizQuestions: [
           {
-            question: 'In a microprocessor-based system, where are the memory (RAM, ROM) and peripheral devices typically located?',
-            options: [
-              'Integrated on the same silicon chip as the CPU',
-              'Connected externally to the CPU via system buses',
-              'Implemented purely within the CPU\'s general-purpose registers',
-              'Not required for the system to perform any calculations'
-            ],
-            correctAnswer: 1,
-            explanation: 'A microprocessor (MPU) contains only the CPU on the chip. All other system components, including RAM, ROM, timers, and I/O controllers, are located on separate chips and connected externally via system buses. This is in contrast to a microcontroller, which integrates them onto a single chip.'
-          },
-          {
             question: 'What is the word length of the Intel 8086 microprocessor?',
             options: ['4-bit', '8-bit', '16-bit', '32-bit'],
             correctAnswer: 2,
-            explanation: 'Intel 8086 is a 16-bit microprocessor because its internal registers, ALU, and data bus are all 16 bits wide.'
+            explanation: 'The Intel 8086 is a 16-bit microprocessor because its internal registers, Arithmetic Logic Unit (ALU), and internal data paths are all 16 bits wide.'
           },
           {
-            question: 'How much physical memory can the 8086 address?',
-            options: ['64 KB', '1 MB', '16 MB', '4 GB'],
+            question: 'In a microprocessor-based system, where are memory and peripheral devices located?',
+            options: ['Integrated inside the CPU chip', 'Connected externally to the CPU via system buses', 'Inside the instruction prefetch queue', 'Directly in the ALU'],
             correctAnswer: 1,
-            explanation: 'With a 20-bit address bus, 8086 can address up to 2^20 bytes, which equals exactly 1 Megabyte (1 MB).'
+            explanation: 'In a classic microprocessor system (MPU), memory and input/output peripherals are separate ICs located externally on the circuit board, connected via address, data, and control buses.'
           },
           {
-            question: 'Which generation of microprocessors does the Intel 8086 belong to?',
+            question: 'Which of the following represents a major advantage of a Microcontroller (MCU) over a Microprocessor (MPU) for dedicated applications?',
+            options: ['Higher computational speed for running desktop operating systems', 'Single-chip integration of CPU, RAM, ROM, and I/O timers, reducing size and cost', 'Larger external physical memory addressing space', 'Support for multiple operating systems'],
+            correctAnswer: 1,
+            explanation: 'Microcontrollers (MCUs) integrate CPU, RAM, ROM, and peripheral controllers on a single silicon chip, making them highly compact, low-power, and economical for embedded and dedicated applications.'
+          },
+          {
+            question: 'To which generation of microprocessors does the Intel 8086 belong?',
             options: ['First Generation', 'Second Generation', 'Third Generation', 'Fourth Generation'],
             correctAnswer: 2,
-            explanation: 'The Intel 8086, launched in 1978, is a classic representative of the 3rd generation of microprocessors, which introduced 16-bit word lengths.'
+            explanation: 'The 16-bit microprocessors (like Intel 8086, 8088, and Zilog Z8000) constitute the Third Generation of microprocessors, introduced in the late 1970s.'
           },
           {
-            question: 'What is a major advantage of a microcontroller over a microprocessor in embedded systems?',
-            options: ['Higher processing speeds and cache memory sizes', 'Single-chip integration of CPU, RAM, ROM, and I/O timers', 'Ability to execute multiple operating systems simultaneously', 'Support for external floating-point math co-processors'],
+            question: 'What is the primary physical difference between the Intel 8086 and the Intel 8088 microprocessor?',
+            options: ['The 8088 has a smaller instruction set than the 8086', 'The 8088 has an 8-bit external data bus, while the 8086 has a 16-bit external data bus', 'The 8088 does not support memory segmentation', 'The 8088 has a larger physical memory capacity'],
             correctAnswer: 1,
-            explanation: 'Microcontrollers integrate CPU, memory, and peripheral components on a single silicon chip, making them compact, power-efficient, and cost-effective.'
+            explanation: 'Internally, the 8086 and 8088 are identical. However, externally, the 8088 has only an 8-bit data bus (compared to 8086\'s 16-bit bus). This allowed IBM to build the original PC using cheaper, standard 8-bit support chips.'
           },
           {
-            question: 'What are the two major functional divisions of the Intel 8086 internal architecture?',
-            options: ['ALU and Control Unit', 'Registers and Memory Unit', 'Bus Interface Unit (BIU) and Execution Unit (EU)', 'Input Unit and Output Unit'],
+            question: 'Which of the following microprocessors was the first true 32-bit x86 processor to introduce virtual memory paging?',
+            options: ['Intel 80186', 'Intel 80286', 'Intel 80386', 'Intel Pentium'],
             correctAnswer: 2,
-            explanation: 'The 8086 splits its internal tasks into the Bus Interface Unit (BIU) for memory accesses/segmentation and the Execution Unit (EU) for instruction execution.'
+            explanation: 'The Intel 80386 was a major milestone, introducing a 32-bit register set, 32-bit address bus, and a memory management unit with virtual memory paging.'
           },
           {
-            question: 'Which bus width determines the maximum size of addressable memory in a microprocessor system?',
-            options: ['Data Bus', 'Address Bus', 'Control Bus', 'System Clock Bus'],
+            question: 'Which Intel x86 processor integrated a DMA controller, timers, and interrupt controllers directly on-chip, but did not see wide adoption in PCs?',
+            options: ['Intel 8085', 'Intel 80186', 'Intel 80486', 'Intel Pentium II'],
             correctAnswer: 1,
-            explanation: 'The width of the address bus determines how many unique memory addresses the processor can specify. For 8086, 2^20 wires allows addressing up to 1 MB.'
+            explanation: 'The 80186 integrated several motherboard support chips (DMA, Timers, Interrupt Controller) onto the CPU die. It was widely used in embedded systems rather than mainstream IBM-compatible PCs.'
+          },
+          {
+            question: 'What does the term "superscalar" mean in the context of the Intel Pentium microprocessor?',
+            options: ['It can address more than 1 MB of memory', 'It contains multiple parallel execution pipelines to run multiple instructions per clock', 'It operates with an external clock generator', 'It uses only 8-bit registers'],
+            correctAnswer: 1,
+            explanation: 'A superscalar processor contains multiple, independent execution pipelines (like the Pentium\'s U and V pipelines) that allow it to execute more than one instruction simultaneously during a single clock cycle.'
           }
         ]
       }
@@ -116,180 +128,13 @@ export const courseData: Module[] = [
   },
   {
     id: 'm2',
-    title: 'Module 2: 8086 Pin Configuration',
+    title: 'Module 2: 8086 Internal Architecture & Execution Unit',
     slides: [
       {
         id: 'm2-s1',
-        title: '8086 Pin Configuration Overview',
-        moduleTitle: 'Module 2: 8086 Pin Configuration',
+        title: '1. Internal Architecture Overview',
+        moduleTitle: 'Module 2: 8086 Internal Architecture & Execution Unit',
         moduleId: 'm2',
-        points: [
-          'The Intel 8086 is housed in a 40-Pin Dual In-line Package (DIP) operating on a single +5V power supply.',
-          'It contains multiplexed buses to save pin count (AD0-AD15 share Address and Data).',
-          'Multiplexing: Pins transmit Address during the T1 clock state, and transition to transmit Data during T2, T3, and T4 states.',
-          'MN/MX Pin (Pin 33): Used to configure the entire chip to operate in Minimum Mode (single processor) or Maximum Mode (multiprocessor).'
-        ]
-      },
-      {
-        id: 'm2-s2',
-        title: 'Interactive 8086 Pin Diagram',
-        moduleTitle: 'Module 2: 8086 Pin Configuration',
-        moduleId: 'm2',
-        points: [
-          'Address/Data Bus Pins: AD0 to AD15 (Pins 2-16 & 39).',
-          'Control Signals: RD (Read), WR (Write), ALE (Address Latch Enable), READY (Acknowledge from slow memory).',
-          'Status Signals: S0 to S7 (shared with address lines A16-A19 and BHE).',
-          'Power Supply: Vcc (Pin 40, +5V DC) and GND (Pins 1 & 20).'
-        ],
-        interactiveType: 'pins'
-      },
-      {
-        id: 'm2-quiz',
-        title: 'Module 2 Recap Quiz',
-        moduleTitle: 'Module 2: 8086 Pin Configuration',
-        moduleId: 'm2',
-        interactiveType: 'quiz',
-        quizQuestions: [
-          {
-            question: 'To interface an 8-bit memory chip to the lower bank of the 8086 memory system, which combination of signals must be decoded for the chip-select input?',
-            options: ['A0 = 0 and BHE = 1', 'A0 = 0 and BHE = 0', 'A0 = 1 and BHE = 0', 'A0 = 1 and BHE = 1'],
-            correctAnswer: 0,
-            isGateQuestion: true,
-            gateYear: 'GATE 2015',
-            explanation: 'In the 8086, the lower byte bank contains all even addresses and is selected when A0 is active low (A0 = 0). The upper byte bank contains odd addresses and is selected when BHE is active low (BHE = 0). Thus, to interface a single 8-bit memory chip strictly to the lower bank, we select when A0 = 0, and the upper bank is disabled, i.e., BHE = 1.'
-          },
-          {
-            question: 'Which pin acts as the Minimum/Maximum mode selector on the 8086?',
-            options: ['Pin 40 (Vcc)', 'Pin 33 (MN/MX)', 'Pin 21 (RESET)', 'Pin 19 (CLK)'],
-            correctAnswer: 1,
-            explanation: 'Pin 33 (MN/MX) is the mode selector. Connecting it to +5V activates Minimum Mode, while grounding it (0V) activates Maximum Mode.'
-          },
-          {
-            question: 'Why are Address and Data lines multiplexed on the 8086?',
-            options: ['To increase speed', 'To reduce the physical pin count of the chip', 'To consume less power', 'To support memory segmentation'],
-            correctAnswer: 1,
-            explanation: 'Multiplexing sharing physical pins for both Address and Data (AD0-AD15) keeps the processor package compact at exactly 40 pins instead of needing 50+ dedicated pins.'
-          },
-          {
-            question: 'What is the physical package type of the Intel 8086 microprocessor?',
-            options: ['40-Pin DIP (Dual In-line Package)', '80-Pin QFP (Quad Flat Package)', '64-Pin PGA (Pin Grid Array)', '28-Pin PLCC'],
-            correctAnswer: 0,
-            explanation: 'The 8086 is housed in a classic 40-pin Dual In-line Package (DIP), operating on a single +5V DC power supply.'
-          },
-          {
-            question: 'Which signal goes high to indicate that valid address bits are present on the multiplexed AD0-AD15 lines?',
-            options: ['RD (Read)', 'WR (Write)', 'ALE (Address Latch Enable)', 'READY'],
-            correctAnswer: 2,
-            explanation: 'ALE (Address Latch Enable) pulses active-high during clock state T1 to notify external latches (like the 8282) to latch and hold the 20-bit address.'
-          },
-          {
-            question: 'What is the purpose of the READY pin on the 8086 microprocessor?',
-            options: ['To reset the processor', 'To synchronize slow memory/peripherals with the CPU speed', 'To trigger a software interrupt', 'To enable DMA transfer'],
-            correctAnswer: 1,
-            explanation: 'When slow memory or peripherals cannot complete a read/write in a standard bus cycle, they pull the READY pin low, forcing the 8086 to insert "WAIT" states.'
-          },
-          {
-            question: 'Which of the following pins is a Non-Maskable Interrupt input?',
-            options: ['INTR', 'NMI', 'RESET', 'TEST'],
-            correctAnswer: 1,
-            explanation: 'NMI (Pin 17) is the Non-Maskable Interrupt, which is edge-triggered and cannot be disabled or ignored by software instructions.'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'm3',
-    title: 'Module 3: 8086 Microprocessor Family',
-    slides: [
-      {
-        id: 'm3-s1',
-        title: 'Intel x86 Family Tree',
-        moduleTitle: 'Module 3: 8086 Microprocessor Family',
-        moduleId: 'm3',
-        points: [
-          'Intel 8086 (1978): The baseline 16-bit processor with a 16-bit data bus.',
-          'Intel 8088 (1979): Identical internally to 8086, but possesses an 8-bit external data bus. Chosen for the original IBM PC to reduce board-wiring costs.',
-          'Intel 80186: Highly integrated version adding DMA controller, timers, and interrupt controllers directly on-chip.',
-          'Intel 80286 (1982): Introduced multi-tasking, protected mode, and a 16 MB physical addressing range.'
-        ],
-        interactiveType: 'evolution'
-      },
-      {
-        id: 'm3-s2',
-        title: 'Evolution to Pentium Series',
-        moduleTitle: 'Module 3: 8086 Microprocessor Family',
-        moduleId: 'm3',
-        points: [
-          '80386 (1985): Intel\'s first true 32-bit x86 processor. Introduced virtual memory paging, supporting up to 4 GB of RAM.',
-          '80486 (1989): Integrated a floating-point unit (FPU/math coprocessor) and 8 KB of L1 cache onto the CPU core.',
-          'Pentium (1993): Launched superscalar execution (two independent execution pipelines, U and V), allowing it to process two instructions per clock cycle.'
-        ]
-      },
-      {
-        id: 'm3-quiz',
-        title: 'Module 3 Recap Quiz',
-        moduleTitle: 'Module 3: 8086 Microprocessor Family',
-        moduleId: 'm3',
-        interactiveType: 'quiz',
-        quizQuestions: [
-          {
-            question: 'An 8086 microprocessor has a 20-bit address bus. What is the start and end of its physical address range in hexadecimal representation?',
-            options: ['0000h to FFFFh', '00000h to FFFF0h', '00000h to FFFFFh', '10000h to FFFFFh'],
-            correctAnswer: 2,
-            isGateQuestion: true,
-            gateYear: 'GATE 2007',
-            explanation: 'A 20-bit address bus can address 2^20 = 1,048,576 memory locations (1 MB). In hexadecimal, 20 bits are represented by 5 hex digits, spanning from 00000h to FFFFFh.'
-          },
-          {
-            question: 'What is the primary difference between the Intel 8086 and the Intel 8088?',
-            options: ['8088 has a 32-bit register bank', '8088 has an 8-bit external data bus, while 8086 has a 16-bit external data bus', '8088 does not support interrupts', '8086 cannot run IBM software'],
-            correctAnswer: 1,
-            explanation: 'Both are internally identical, but the 8088 was built with an 8-bit external data bus to use cheaper 8-bit electronic circuit boards during the late 70s PC boom.'
-          },
-          {
-            question: 'Which x86 processor first introduced 32-bit data registers and paging?',
-            options: ['Intel 80186', 'Intel 80286', 'Intel 80386', 'Intel Pentium'],
-            correctAnswer: 2,
-            explanation: 'The Intel 80386 was the first true 32-bit x86 processor, introducing flat-memory models, paging mechanisms, and massive 4 GB addressing boundaries.'
-          },
-          {
-            question: 'Which processor in the x86 family integrated a DMA controller, timers, and chip-select logic directly on the chip?',
-            options: ['Intel 8085', 'Intel 8088', 'Intel 80186', 'Intel 80286'],
-            correctAnswer: 2,
-            explanation: 'The Intel 80186 was a highly integrated 16-bit processor, incorporating several support peripheral chips (timers, DMA, interrupts) directly on-chip.'
-          },
-          {
-            question: 'What was the physical address bus width and memory limit of the Intel 80286?',
-            options: ['20-bit, 1 MB', '24-bit, 16 MB', '32-bit, 4 GB', '16-bit, 64 KB'],
-            correctAnswer: 1,
-            explanation: 'The 80286 featured a 24-bit address bus, allowing it to address up to 16 MB of physical RAM, and first introduced protected mode.'
-          },
-          {
-            question: 'What major feature did the Intel 80486 introduce directly onto the main processor silicon chip?',
-            options: ['On-chip L1 Cache and Floating Point Unit (FPU)', '64-bit ALU', 'Dual-core processing', 'Integrated RAM memory'],
-            correctAnswer: 0,
-            explanation: 'The 80486 integrated a math coprocessor (FPU) and an 8 KB L1 Cache onto the core, greatly speeding up scientific calculations.'
-          },
-          {
-            question: 'What does "Superscalar" mean in the context of the Intel Pentium processor?',
-            options: ['It runs on multiple frequencies simultaneously', 'It contains multiple parallel execution pipelines to run multiple instructions per clock', 'It supports up to 1 TB of RAM', 'It can run both Windows and macOS natively'],
-            correctAnswer: 1,
-            explanation: 'A superscalar processor like the original Pentium has two execution pipelines ("U" and "V") that allow executing two independent instructions in parallel during a single clock cycle.'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'm4',
-    title: 'Module 4: Internal Architecture',
-    slides: [
-      {
-        id: 'm4-s1',
-        title: '8086 Internal Architecture Overview',
-        moduleTitle: 'Module 4: Internal Architecture',
-        moduleId: 'm4',
         points: [
           'The 8086 internal architecture is split into two independent functional units:',
           '1. Bus Interface Unit (BIU): Responsible for external communication, instruction fetching, memory segmentation, and queueing.',
@@ -298,23 +143,36 @@ export const courseData: Module[] = [
         ]
       },
       {
-        id: 'm4-s2',
-        title: 'Interactive Register Organization',
-        moduleTitle: 'Module 4: Internal Architecture',
-        moduleId: 'm4',
+        id: 'm2-pipelining',
+        title: '2. Instruction Pipelining & Prefetch Queue',
+        moduleTitle: 'Module 2: 8086 Internal Architecture & Execution Unit',
+        moduleId: 'm2',
         points: [
-          'Segment Registers (BIU): CS, DS, SS, ES (Used to point to 64 KB memory segments).',
+          'Parallel Operation: The 8086 is the first commercial processor to support Instruction Pipelining. While the Execution Unit (EU) is decoding and executing instruction n, the Bus Interface Unit (BIU) fetches instruction n+1 from memory in parallel.',
+          'BIU Prefetch Queue: The BIU contains a 6-byte first-in, first-out (FIFO) prefetch queue. Whenever there are 2 or more empty bytes in the queue, the BIU automatically executes memory fetch cycles to pre-populate the queue.',
+          'Throughput Speedup: Pipelining eliminates the time the CPU spends waiting for external memory fetch cycles (bus latency), greatly improving overall processing throughput.',
+          'Pipeline Flush (Branch Penalty): When a branch instruction (like JMP, JZ, CALL) is executed, the pre-fetched instructions in the queue are no longer valid. The queue is flushed (emptied), and the BIU must start fetching from the new target address, introducing a small delay.'
+        ],
+        interactiveType: 'pipelining'
+      },
+      {
+        id: 'm2-s2',
+        title: '3. Execution Unit (EU) & Registers',
+        moduleTitle: 'Module 2: 8086 Internal Architecture & Execution Unit',
+        moduleId: 'm2',
+        points: [
+          'The EU executes instruction bytes popped from the BIU instruction queue.',
+          'Main Components: Arithmetic Logic Unit (ALU), Control Circuitry, Instruction Decoder, and register array.',
           'General Purpose Registers (EU): AX, BX, CX, DX (Can be split into 8-bit high/low halves).',
-          'Pointer & Index Registers (EU): SP (Stack Pointer), BP (Base Pointer), SI (Source Index), DI (Destination Index).',
-          'Flag Register: Represents the current status of ALU arithmetic results.'
+          'Pointer & Index Registers (EU): SP (Stack Pointer), BP (Base Pointer), SI (Source Index), DI (Destination Index).'
         ],
         interactiveType: 'architecture'
       },
       {
-        id: 'm4-s3',
-        title: 'The Flag Register Detail',
-        moduleTitle: 'Module 4: Internal Architecture',
-        moduleId: 'm4',
+        id: 'm2-s3',
+        title: '4. The Flag Register Detail',
+        moduleTitle: 'Module 2: 8086 Internal Architecture & Execution Unit',
+        moduleId: 'm2',
         points: [
           'The 8086 possesses a 16-bit Flag register with 9 active flags.',
           '6 Status Flags: CF (Carry), PF (Parity), AF (Auxiliary Carry), ZF (Zero), SF (Sign), OF (Overflow). Updated automatically by ALU.',
@@ -323,61 +181,84 @@ export const courseData: Module[] = [
         interactiveType: 'flags'
       },
       {
-        id: 'm4-quiz',
-        title: 'Module 4 Recap Quiz',
-        moduleTitle: 'Module 4: Internal Architecture',
-        moduleId: 'm4',
+        id: 'm2-quiz',
+        title: 'Module 2 Recap Quiz',
+        moduleTitle: 'Module 2: 8086 Internal Architecture & Execution Unit',
+        moduleId: 'm2',
         interactiveType: 'quiz',
         quizQuestions: [
           {
-            question: 'How is the general purpose 16-bit AX register split into 8-bit registers?',
-            options: ['AL and AL', 'AH and AL', 'AXH and AXL', 'A1 and A2'],
-            correctAnswer: 1,
-            explanation: 'The 16-bit AX register is split into AH (Accumulator High byte, bits 8-15) and AL (Accumulator Low byte, bits 0-7) which can be accessed independently in assembly.'
+            question: 'How is the general-purpose 16-bit AX register split into 8-bit registers?',
+            options: ['AH (High byte) and AL (Low byte)', 'AS (Sign byte) and AC (Carry byte)', 'AP (Pointer) and AD (Data)', 'AX cannot be split'],
+            correctAnswer: 0,
+            explanation: 'The 16-bit AX register consists of two independent 8-bit registers: AH (Accumulator High) and AL (Accumulator Low).'
           },
           {
-            question: 'Which flag is set to 1 if an arithmetic operation yields a zero result?',
-            options: ['Carry Flag (CF)', 'Sign Flag (SF)', 'Zero Flag (ZF)', 'Parity Flag (PF)'],
+            question: 'Which status flag is set to 1 if the output of an arithmetic or logical operation is exactly zero?',
+            options: ['Carry Flag (CF)', 'Sign Flag (SF)', 'Zero Flag (ZF)', 'Overflow Flag (OF)'],
             correctAnswer: 2,
-            explanation: 'The Zero Flag (ZF) is automatically set to 1 by the hardware if the outcome of the latest instruction is exactly zero.'
+            explanation: 'The Zero Flag (ZF) is automatically set to 1 by the ALU if the result of the executed instruction is zero; otherwise, it is cleared to 0.'
           },
           {
-            question: 'Which general-purpose register is automatically used as an implicit counter for loop instructions like LOOP?',
-            options: ['AX (Accumulator)', 'BX (Base)', 'CX (Count)', 'DX (Data)'],
+            question: 'Which 16-bit general register is automatically utilized as a count register by loop and shift instructions?',
+            options: ['AX (Accumulator)', 'BX (Base Register)', 'CX (Count Register)', 'DX (Data Register)'],
             correctAnswer: 2,
-            explanation: 'CX is the Count register, designed to act as an automatic counter for loops, shifts, and string instructions.'
+            explanation: 'CX is the designated Count register. Loop instructions (LOOP) and shift/rotate instructions automatically decrement CX or use CL as the iteration counter.'
           },
           {
-            question: 'What are the three control flags in the 8086 flag register?',
-            options: ['CF, PF, AF', 'ZF, SF, OF', 'DF, IF, TF', 'SP, BP, IP'],
+            question: 'Which of the following represent the three control flags in the 8086 Flag Register?',
+            options: ['CF, ZF, SF', 'DF, IF, TF', 'OF, PF, AF', 'SP, BP, IP'],
+            correctAnswer: 1,
+            explanation: 'The three control flags are DF (Direction Flag), IF (Interrupt Enable Flag), and TF (Trap/Single-Step Flag).'
+          },
+          {
+            question: 'What is the function of the Auxiliary Carry (AF) flag in the 8086 microprocessor?',
+            options: ['To signal overflow in signed operations', 'To track carry/borrow out of bit 3 (lower nibble) to support BCD (Binary Coded Decimal) arithmetic', 'To enable hardware interrupts', 'To reverse the direction of string operations'],
+            correctAnswer: 1,
+            explanation: 'The AF flag is set if there is a carry out of bit 3 (the lowest 4 bits or nibble) during addition, or a borrow during subtraction. This is used by BCD adjustment instructions like AAA or DAA.'
+          },
+          {
+            question: 'Which 16-bit register in the Execution Unit holds the offset of the top of the stack relative to the Stack Segment (SS) register?',
+            options: ['Base Pointer (BP)', 'Source Index (SI)', 'Stack Pointer (SP)', 'Instruction Pointer (IP)'],
             correctAnswer: 2,
-            explanation: 'The three Control flags are DF (Direction Flag), IF (Interrupt Flag), and TF (Trap Flag), which alter the CPU behavior under software control.'
+            explanation: 'The Stack Pointer (SP) register always holds the 16-bit offset of the current top of the stack within the Stack Segment (SS).'
           },
           {
-            question: 'Which register holds the offset of the stack segment top?',
-            options: ['Base Pointer (BP)', 'Stack Pointer (SP)', 'Source Index (SI)', 'Instruction Pointer (IP)'],
+            question: 'What happens to the 8086 prefetch queue when a branch instruction (like JMP or JZ) is executed?',
+            options: [
+              'The queue continues fetching from the next sequential address without changes',
+              'The queue is flushed (emptied), and the BIU begins fetching from the new target address',
+              'The BIU freezes and triggers a hardware interrupt',
+              'The Execution Unit takes over prefetching directly from memory'
+            ],
             correctAnswer: 1,
-            explanation: 'The Stack Pointer (SP) register maintains the 16-bit offset of the current top of the stack segment (SS:SP).'
+            explanation: 'When a branch instruction is executed, the pre-fetched sequential instruction bytes are no longer valid. The BIU flushes (empties) the 6-byte queue and starts fetching from the branch\'s target address, introducing a small delay called branch penalty.'
           },
           {
-            question: 'What is the function of the Auxiliary Carry Flag (AF)?',
-            options: ['To signal a carry out of bit 15', 'To support Binary Coded Decimal (BCD) arithmetic by tracking carries out of bit 3', 'To handle overflow on signed math', 'To control string copying directions'],
+            question: 'Which functional unit within the 8086 microprocessor is responsible for decoding and executing fetched instructions?',
+            options: ['Bus Interface Unit (BIU)', 'Execution Unit (EU)', 'Interrupt Vector Table (IVT)', 'Address Latch Enable (ALE)'],
             correctAnswer: 1,
-            explanation: 'The Auxiliary Carry Flag (AF) tracks carries out of the lower nibble (bit 3) into bit 4, supporting BCD adjustments like the DAA instruction.'
+            explanation: 'The Execution Unit (EU) contains the instruction decoder, ALU, and control circuitry that decodes instructions popped from the queue and executes them.'
+          },
+          {
+            question: 'Which of the following registers are general-purpose 16-bit registers that reside inside the Execution Unit (EU)?',
+            options: ['CS, DS, SS, ES', 'AX, BX, CX, DX', 'SP, BP, SI, DI', 'IP, Flags, Queue, Latch'],
+            correctAnswer: 1,
+            explanation: 'AX, BX, CX, DX are general-purpose registers located in the EU. They can be accessed as 16-bit registers or as 8-bit register halves.'
           }
         ]
       }
     ]
   },
   {
-    id: 'm5',
-    title: 'Module 5: Bus Interface Unit (BIU)',
+    id: 'm3',
+    title: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
     slides: [
       {
-        id: 'm5-s1',
+        id: 'm3-s1',
         title: '1. What is Memory Segmentation?',
-        moduleTitle: 'Module 5: Bus Interface Unit (BIU)',
-        moduleId: 'm5',
+        moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
+        moduleId: 'm3',
         points: [
           'Memory Segmentation: The technique of partitioning the 8086\'s 1 MB physical memory address space into smaller logical blocks (segments) of up to 64 KB each.',
           'Active Segments: At any time, the 8086 can actively reference four main memory areas: Code (CS), Data (DS), Stack (SS), and Extra (ES).',
@@ -386,46 +267,34 @@ export const courseData: Module[] = [
         ]
       },
       {
-        id: 'm5-s1-math',
+        id: 'm3-s2',
         title: '2. 1 MB Memory Bit & Byte Math',
-        moduleTitle: 'Module 5: Bus Interface Unit (BIU)',
-        moduleId: 'm5',
+        moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
+        moduleId: 'm3',
         points: [
-          'Addressable Locations: With a 20-bit address bus, the 8086 can address 2^20 physical locations: 2^20 = 1,048,576 locations.',
+          'Addressable Locations: With a 20-bit address bus, the 8086 can address 2²⁰ physical locations: 2²⁰ = 1,048,576 locations.',
           'Byte-Addressable Memory: Each individual location stores exactly 1 Byte (8 bits). Therefore, maximum addressable memory capacity is exactly 1,048,576 Bytes (1 MB).',
           'Capacity in Bits: Since 1 MB = 1,048,576 Bytes and 1 Byte = 8 bits, the total capacity is 1,048,576 × 8 = 8,388,608 bits.',
-          'Exponentials Formula: Maximum Capacity = 1 MB = 2^20 Bytes = 2^23 bits. Understanding these conversions is key for exams!'
+          'Exponentials Formula: Maximum Capacity = 1 MB = 2²⁰ Bytes = 2²³ bits. Understanding these conversions is key for exams!'
         ]
       },
       {
-        id: 'm5-s2',
-        title: '3. Need for Memory Segmentation',
-        moduleTitle: 'Module 5: Bus Interface Unit (BIU)',
-        moduleId: 'm5',
+        id: 'm3-s3',
+        title: '3. Need & Types of Memory Segmentation',
+        moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
+        moduleId: 'm3',
         points: [
           'Addressing the 20-bit Bus: The 8086 has a 20-bit address bus (1 MB physical space) but only 16-bit registers (capable of addressing only 64 KB). Segmentation bridges this gap.',
           'Program Relocated on-the-fly: Code and variables can be loaded anywhere in RAM. The compiler uses offsets; the program runs seamlessly just by loading the active segment base.',
-          'Modularity and Code Separation: Neatly isolates program executable instructions (CS) from static variables (DS) and transient context (SS).',
-          'Memory Security & Protection: Helps prevent buggy data or stack writes from running over and corrupting the executing binary code.'
+          'Segment Overlap: Segments can overlap fully or partially because base addresses can begin at any 16-byte (Paragraph) boundary. This conserves physical memory and simplifies subroutine data transfers.',
+          'Isolated I/O Space: Separate 64 KB Port Address space using dedicated instructions (IN, OUT) and low M/IO pin signaling, completely separated from main memory.'
         ]
       },
       {
-        id: 'm5-s3',
-        title: '4. Types of Memory Segmentation',
-        moduleTitle: 'Module 5: Bus Interface Unit (BIU)',
-        moduleId: 'm5',
-        points: [
-          'Non-Overlapping Segments: Active segments are fully isolated in distinct 64 KB blocks, ensuring strict safety and logical structure.',
-          'Overlapping Segments: Segments can overlap fully or partially because base addresses can begin at any 16-byte (Paragraph) boundary.',
-          'Why Overlap?: Conserves physical memory for smaller tasks (avoids forced 64 KB gaps) and simplifies shared data/vector transfer across routines.',
-          'Isolated I/O Address Space: Separate 64 KB Port Address space using dedicated instructions (IN, OUT) and low M/IO pin signaling, completely separated from Main Memory.'
-        ]
-      },
-      {
-        id: 'm5-s4',
-        title: '5. Physical Address Calculation',
-        moduleTitle: 'Module 5: Bus Interface Unit (BIU)',
-        moduleId: 'm5',
+        id: 'm3-s4',
+        title: '4. Physical Address Calculation',
+        moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
+        moduleId: 'm3',
         points: [
           'BIU Generation: The Bus Interface Unit automatically calculates the 20-bit physical address by combining a 16-bit Segment Base and a 16-bit Offset.',
           'Shift-and-Add Formula: Physical Address = (Segment Register * 10H) + Offset Register.',
@@ -435,19 +304,17 @@ export const courseData: Module[] = [
         interactiveType: 'memory-calc'
       },
       {
-        id: 'm5-quiz',
-        title: 'Module 5 Recap Quiz',
-        moduleTitle: 'Module 5: Bus Interface Unit (BIU)',
-        moduleId: 'm5',
+        id: 'm3-quiz',
+        title: 'Module 3 Recap Quiz',
+        moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
+        moduleId: 'm3',
         interactiveType: 'quiz',
         quizQuestions: [
           {
             question: 'In an 8086 microprocessor, the current Code Segment (CS) register contains 3456H and the Instruction Pointer (IP) register contains abcH. What is the physical memory address of the instruction to be fetched?',
             options: ['34560H', '3E120H', '3501CH', '3501BH'],
             correctAnswer: 2,
-            isGateQuestion: true,
-            gateYear: 'GATE 2005',
-            explanation: 'Using the 8086 address segmentation formula: Physical Address = (CS * 10H) + IP. Since CS = 3456H, CS * 10H = 34560H. Adding IP offset (abcH): 34560H + 0abcH = 3501CH. Therefore, the physical address is 3501CH.'
+            explanation: 'Using the 8086 address segmentation formula: Physical Address = (CS * 10H) + IP. Since CS = 3456H, CS * 10H = 34560H. Adding IP offset (abcH): 34560H + 0abcH = 3501CH.'
           },
           {
             question: 'If Segment Address = 3000H and Offset = 0100H, what is the computed 20-bit Physical Address?',
@@ -459,7 +326,7 @@ export const courseData: Module[] = [
             question: 'What is the maximum size of a single memory segment in the 8086?',
             options: ['16 KB', '64 KB', '256 KB', '1 MB'],
             correctAnswer: 1,
-            explanation: 'Since segment offsets are stored in 16-bit registers (2^16 = 65,536 bytes), the maximum addressable boundary of any segment is exactly 64 KB.'
+            explanation: 'Since segment offsets are stored in 16-bit registers (2¹⁶ = 65,536 bytes), the maximum addressable boundary of any segment is exactly 64 KB.'
           },
           {
             question: 'What are the four segment registers in the 8086 Bus Interface Unit?',
@@ -490,157 +357,133 @@ export const courseData: Module[] = [
     ]
   },
   {
-    id: 'm6',
-    title: 'Module 6: Execution Unit (EU)',
+    id: 'm4',
+    title: 'Module 4: 8086 Pin Configuration & Operating Modes',
     slides: [
       {
-        id: 'm6-s1',
-        title: 'Execution Unit (EU) Internal Components',
-        moduleTitle: 'Module 6: Execution Unit (EU)',
-        moduleId: 'm6',
+        id: 'm4-s1',
+        title: '1. Operating Modes Overview',
+        moduleTitle: 'Module 4: 8086 Pin Configuration & Operating Modes',
+        moduleId: 'm4',
         points: [
-          'The EU executes instruction bytes popped from the BIU instruction queue.',
-          'Main Components: Arithmetic Logic Unit (ALU), Control Circuitry, Instruction Decoder, and register array.',
-          'Instruction Decoder: Translates opcode bytes into electrical control sequences.',
-          'ALU: Performs 16-bit and 8-bit addition, subtraction, AND, OR, XOR, shifts, and compares.'
+          'To maximize flexibility, the 8086 operates in two distinct modes depending on physical system wiring.',
+          'Minimum Mode: Standard simple configuration. Pin MN/MX = +5V. CPU operates alone on the bus, generating signals directly.',
+          'Maximum Mode: Advanced multi-processor configuration. Pin MN/MX = 0V (GND). Status lines are sent to external 8288 Bus Controller.'
         ],
-        interactiveType: 'architecture'
+        interactiveType: 'min-mode-hardware'
       },
       {
-        id: 'm6-quiz',
-        title: 'Module 6 Recap Quiz',
-        moduleTitle: 'Module 6: Execution Unit (EU)',
-        moduleId: 'm6',
+        id: 'm4-s2',
+        title: '2. Pin Configuration Overview',
+        moduleTitle: 'Module 4: 8086 Pin Configuration & Operating Modes',
+        moduleId: 'm4',
+        points: [
+          'The Intel 8086 is housed in a 40-Pin Dual In-line Package (DIP) operating on a single +5V power supply.',
+          'It contains multiplexed buses to save pin count (AD0-AD15 share Address and Data).',
+          'Multiplexing: Pins transmit Address during the T1 clock state, and transition to transmit Data during T2, T3, and T4 states.',
+          'Power Supply: Vcc (Pin 40, +5V DC) and GND (Pins 1 & 20).'
+        ]
+      },
+      {
+        id: 'm4-s3',
+        title: '3. Interactive 8086 Pin Diagram',
+        moduleTitle: 'Module 4: 8086 Pin Configuration & Operating Modes',
+        moduleId: 'm4',
+        points: [
+          'Address/Data Bus Pins: AD0 to AD15 (Pins 2-16 & 39).',
+          'Control Signals: RD (Read), WR (Write), ALE (Address Latch Enable), READY (Acknowledge from slow memory).',
+          'Status Signals: S0 to S7 (shared with address lines A16-A19 and BHE).',
+          'MN/MX Pin (Pin 33): Configures the chip to operate in Minimum Mode (+5V) or Maximum Mode (GND).'
+        ],
+        interactiveType: 'pins'
+      },
+      {
+        id: 'm4-s4',
+        title: '4. Interactive Mode Wiring Comparator',
+        moduleTitle: 'Module 4: 8086 Pin Configuration & Operating Modes',
+        moduleId: 'm4',
+        points: [
+          'Observe pins 24 to 31. They completely change functions depending on system wiring!',
+          'Minimum mode pins: ALE, DEN, WR, M/IO, HOLD, HLDA, INTA, DT/R.',
+          'Maximum mode pins: S0, S1, S2, LOCK, QS0, QS1, RQ/GT0, RQ/GT1.',
+          'Max mode supports numeric co-processors like 8087 (Math coprocessor) using status decoding.'
+        ],
+        interactiveType: 'modes'
+      },
+      {
+        id: 'm4-quiz',
+        title: 'Module 4 Recap Quiz',
+        moduleTitle: 'Module 4: 8086 Pin Configuration & Operating Modes',
+        moduleId: 'm4',
         interactiveType: 'quiz',
         quizQuestions: [
           {
-            question: 'Which functional unit on the 8086 handles instruction decoding?',
-            options: ['Bus Interface Unit (BIU)', 'Execution Unit (EU)', 'Interrupt Vector Table', '8288 Bus Controller'],
+            question: 'Which pin on the Intel 8086 is used to switch between Minimum and Maximum operating modes?',
+            options: ['ALE (Pin 25)', 'RESET (Pin 21)', 'MN/MX (Pin 33)', 'READY (Pin 22)'],
+            correctAnswer: 2,
+            explanation: 'The MN/MX (Minimum/Maximum) pin is connected to +5V for Minimum Mode or connected to Ground (0V) for Maximum Mode.'
+          },
+          {
+            question: 'Why does the 8086 multiplex its address and data buses?',
+            options: ['To speed up memory access operations', 'To reduce the physical pin count of the processor package, allowing a compact 40-pin layout', 'To bypass the need for an external clock', 'To allow the use of only 8-bit segment registers'],
             correctAnswer: 1,
-            explanation: 'The Execution Unit (EU) contains the instruction decoder, which translates opcodes fetched by the BIU into real CPU execution cycles.'
+            explanation: 'By multiplexing the lower 16 address lines with the 16 data lines (AD0 - AD15), the 8086 saves 16 pins, keeping the chip size in a standard 40-pin DIP layout.'
           },
           {
-            question: 'What are the primary general-purpose 16-bit registers located in the Execution Unit?',
-            options: ['CS, DS, SS, ES', 'SP, BP, SI, DI', 'AX, BX, CX, DX', 'IP and Flag Register'],
-            correctAnswer: 2,
-            explanation: 'AX, BX, CX, and DX are the four 16-bit general-purpose data registers located inside the Execution Unit (EU).'
-          },
-          {
-            question: 'Which registers in the EU are classified as Index Registers?',
-            options: ['SP and BP', 'SI and DI', 'AX and BX', 'CS and DS'],
+            question: 'What is the physical package configuration of the Intel 8086 microprocessor?',
+            options: ['100-pin Flat Pack', '40-pin Dual In-line Package (DIP)', '68-pin Pin Grid Array (PGA)', '28-pin Small Outline Integrated Circuit (SOIC)'],
             correctAnswer: 1,
-            explanation: 'SI (Source Index) and DI (Destination Index) are index registers, primarily used in index-addressing modes and string copy instructions.'
+            explanation: 'The Intel 8086 is housed in a standard 40-pin Dual In-line Package (DIP) with 20 pins on each side.'
           },
           {
-            question: 'Where does the EU get the instructions it executes?',
-            options: ['Directly from the external system RAM', 'From the 8284 clock generator chip', 'From the BIU\'s instruction prefetch queue', 'From the interrupt vector table'],
+            question: 'What signal does the 8086 output to indicate that multiplexed pins AD0-AD15 contain a valid memory address?',
+            options: ['DEN (Data Enable)', 'DT/R (Data Transmit/Receive)', 'ALE (Address Latch Enable)', 'INTR (Interrupt Request)'],
             correctAnswer: 2,
-            explanation: 'The EU fetches instruction bytes from the BIU\'s 6-byte prefetch queue. If the queue is empty, the EU waits for the BIU to fetch more bytes.'
+            explanation: 'The ALE (Address Latch Enable) signal goes high during the T1 state of a bus cycle, signaling external latches (e.g., 8282) to capture and hold the address.'
           },
           {
-            question: 'Which register is automatically used during signed/unsigned 16-bit multiply instructions (MUL) to store the product result?',
-            options: ['AX and DX', 'BX and CX', 'SI and DI', 'SP and BP'],
-            correctAnswer: 0,
-            explanation: 'A 16-bit multiplication in 8086 multiplies AX by another operand, storing the 32-bit product across the combined DX (high 16-bits) and AX (low 16-bits) registers.'
-          },
-          {
-            question: 'Which register in the EU is typically used to point to data on the Stack Segment, other than the Stack Pointer?',
-            options: ['Instruction Pointer (IP)', 'Base Register (BX)', 'Base Pointer (BP)', 'Extra Segment (ES)'],
+            question: 'Which chip is required in 8086 Maximum Mode to decode CPU status lines and generate bus controls?',
+            options: ['Intel 8284 Clock Generator', 'Intel 8282 Address Latch', 'Intel 8288 Bus Controller', 'Intel 8255 PPI'],
             correctAnswer: 2,
-            explanation: 'The Base Pointer (BP) is designed to reference data structures and parameters stored on the stack frame relative to the stack segment (SS:BP).'
+            explanation: 'In Maximum Mode, status pins S0, S1, S2 are wired to an external Intel 8288 Bus Controller, which decodes the state and outputs clean bus control signals.'
+          },
+          {
+            question: 'Which of the following status signal encodings represents an active Instruction Fetch bus cycle in Maximum Mode?',
+            options: ['S2, S1, S0 = 100', 'S2, S1, S0 = 011', 'S2, S1, S0 = 111 (Passive)', 'S2, S1, S0 = 101'],
+            correctAnswer: 1,
+            explanation: 'In Maximum Mode, the status code S2, S1, S0 = 011 indicates a "Read Code Segment" or instruction fetch bus cycle.'
+          },
+          {
+            question: 'What is the purpose of the LOCK signal in Maximum Mode?',
+            options: ['To freeze the processor clock', 'To prevent other bus master controllers from gaining bus control during critical instructions', 'To lock the keyboard input', 'To secure memory segmentation boundaries'],
+            correctAnswer: 1,
+            explanation: 'The LOCK prefix instruction activates the active-low LOCK signal, preventing other processors or DMA controllers from taking over the system bus.'
+          },
+          {
+            question: 'What do the Queue Status pins (QS0 and QS1) represent in Maximum Mode?',
+            options: ['The speed of instruction fetching', 'The status of the BIU\'s instruction queue (Empty, Fetch first byte, Subsequent byte, or No operation)', 'The number of active memory segments', 'The priority of hardware interrupts'],
+            correctAnswer: 1,
+            explanation: 'QS0 and QS1 allow external coprocessors (like the 8087) to monitor the internal 8086 instruction queue and track when instructions are executed.'
+          },
+          {
+            question: 'Which pin on the 8086 is used to synchronize slow memory or peripheral devices with the processor clock by inserting Wait states?',
+            options: ['NMI (Non-Maskable Interrupt)', 'RESET', 'READY', 'ALE'],
+            correctAnswer: 2,
+            explanation: 'The READY pin allows slow memory or I/O devices to request additional time. If READY is pulled low, the 8086 inserts Wait states (Tw) to hold the bus until the device is ready.'
           }
         ]
       }
     ]
   },
   {
-    id: 'm7',
-    title: 'Module 7: Interrupts',
+    id: 'm5',
+    title: 'Module 5: System Timing & Bus Cycles',
     slides: [
       {
-        id: 'm7-s1',
-        title: 'Introduction to 8086 Interrupts',
-        moduleTitle: 'Module 7: Interrupts',
-        moduleId: 'm7',
-        points: [
-          'An interrupt is a hardware or software signal that halts current CPU program execution to perform a specialized service (ISR).',
-          'Interrupt Service Routine (ISR): A custom program written to handle the specific interrupt event.',
-          'Hardware Interrupts: NMI (Non-Maskable, Pin 17), INTR (Maskable, Pin 18).',
-          'Software Interrupts: Triggered by executing INT instructions (e.g., INT 21H, INT 3).'
-        ]
-      },
-      {
-        id: 'm7-s2',
-        title: 'Interrupt Vector Table (IVT) & Response',
-        moduleTitle: 'Module 7: Interrupts',
-        moduleId: 'm7',
-        points: [
-          'The first 1 KB of physical RAM (00000H - 003FFH) stores the 256 vector pointers.',
-          'When an interrupt occurs: Flags are saved, IF & TF are cleared, Return CS and IP are saved to stack, and CS:IP loads new values from IVT.',
-          'Formula: Vector RAM address = Interrupt Type * 4.'
-        ],
-        interactiveType: 'interrupts'
-      },
-      {
-        id: 'm7-quiz',
-        title: 'Module 7 Recap Quiz',
-        moduleTitle: 'Module 7: Interrupts',
-        moduleId: 'm7',
-        interactiveType: 'quiz',
-        quizQuestions: [
-          {
-            question: 'Where is the Interrupt Vector Table (IVT) located in the 8086 memory map?',
-            options: ['At the very end of memory (FFFF0H - FFFFFH)', 'In the middle segment (50000H - 503FFH)', 'At the very beginning (00000H - 003FFH)', 'Inside the CPU cache'],
-            correctAnswer: 2,
-            isGateQuestion: true,
-            gateYear: 'GATE 2006',
-            explanation: 'The IVT is hard-coded to reside in the lowest 1 KB of RAM, from physical addresses 00000H to 003FFH.'
-          },
-          {
-            question: 'If the CPU receives a software INT 3, what IVT physical address does it read to fetch the ISR vector?',
-            options: ['00003H', '0000CH (12)', '00008H', '00012H'],
-            correctAnswer: 1,
-            isGateQuestion: true,
-            gateYear: 'GATE 2005',
-            explanation: 'Since each interrupt type requires a 4-byte pointer, the address is Type * 4. Thus: Type 3 * 4 = 12 = 0000CH.'
-          },
-          {
-            question: 'Which hardware pin on the 8086 is used for maskable external interrupt requests?',
-            options: ['NMI (Pin 17)', 'INTR (Pin 18)', 'RESET (Pin 21)', 'READY (Pin 22)'],
-            correctAnswer: 1,
-            explanation: 'INTR is the Maskable Interrupt Request pin. It can be ignored if the software clears the Interrupt Flag (IF = 0).'
-          },
-          {
-            question: 'What is the size in bytes of a single interrupt vector stored in the Interrupt Vector Table (IVT)?',
-            options: ['1 byte', '2 bytes', '4 bytes', '8 bytes'],
-            correctAnswer: 2,
-            explanation: 'Each interrupt vector contains a 2-byte CS segment address and a 2-byte IP offset address, totaling exactly 4 bytes.'
-          },
-          {
-            question: 'What is the maximum number of interrupt vectors supported by the 8086 microprocessor?',
-            options: ['16', '64', '128', '256'],
-            correctAnswer: 3,
-            explanation: 'The 8086 architecture supports up to 256 distinct interrupt vectors (Types 0 through 255), filling the entire 1 KB IVT.'
-          },
-          {
-            question: 'Which instruction is executed at the end of an Interrupt Service Routine (ISR) to return control back to the main program?',
-            options: ['RET', 'RETI', 'IRET', 'HLT'],
-            correctAnswer: 2,
-            explanation: 'The IRET (Interrupt Return) instruction pops the IP, CS, and the Flag register back from the stack to resume original execution.'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'm8',
-    title: 'Module 8: System Timing',
-    slides: [
-      {
-        id: 'm8-s1',
-        title: 'Understanding 8086 System Timing',
-        moduleTitle: 'Module 8: System Timing',
-        moduleId: 'm8',
+        id: 'm5-s1',
+        title: '1. Understanding System Timing',
+        moduleTitle: 'Module 5: System Timing & Bus Cycles',
+        moduleId: 'm5',
         points: [
           'Clock Cycle (T-state): The basic unit of time, equal to one period of the CLK input.',
           'Bus Cycle / Machine Cycle: Time taken to perform one external access (e.g. read, write, I/O). Comprises exactly 4 T-states (T1, T2, T3, T4).',
@@ -651,10 +494,10 @@ export const courseData: Module[] = [
         ]
       },
       {
-        id: 'm8-s2',
-        title: 'Interactive Waveform Timing Explorer',
-        moduleTitle: 'Module 8: System Timing',
-        moduleId: 'm8',
+        id: 'm5-s2',
+        title: '2. Interactive Waveform Timing Explorer',
+        moduleTitle: 'Module 5: System Timing & Bus Cycles',
+        moduleId: 'm5',
         points: [
           'Observe ALE going high strictly during T1 to capture the address multiplexed on the bus.',
           'RD / WR go active low during T2, staying low throughout T3 to allow signal settling.',
@@ -663,10 +506,10 @@ export const courseData: Module[] = [
         interactiveType: 'timing'
       },
       {
-        id: 'm8-quiz',
-        title: 'Module 8 Recap Quiz',
-        moduleTitle: 'Module 8: System Timing',
-        moduleId: 'm8',
+        id: 'm5-quiz',
+        title: 'Module 5 Recap Quiz',
+        moduleTitle: 'Module 5: System Timing & Bus Cycles',
+        moduleId: 'm5',
         interactiveType: 'quiz',
         quizQuestions: [
           {
@@ -703,8 +546,6 @@ export const courseData: Module[] = [
             question: 'If the memory device is too slow to provide data during a read, in which clock state can "Wait" states (Tw) be inserted?',
             options: ['Between T1 and T2', 'Between T2 and T3', 'Between T3 and T4', 'After T4'],
             correctAnswer: 2,
-            isGateQuestion: true,
-            gateYear: 'GATE 2008',
             explanation: 'If the READY line is low at the start of T3, the MPU will insert one or more Wait states (Tw) between T3 and T4 to allow memory to settle.'
           }
         ]
@@ -712,90 +553,89 @@ export const courseData: Module[] = [
     ]
   },
   {
-    id: 'm9',
-    title: 'Module 9: Operating Modes',
+    id: 'm6',
+    title: 'Module 6: 8086 Interrupts & Response',
     slides: [
       {
-        id: 'm9-s1',
-        title: '8086 Operating Modes Overview',
-        moduleTitle: 'Module 9: Operating Modes',
-        moduleId: 'm9',
+        id: 'm6-s1',
+        title: '1. Introduction to 8086 Interrupts',
+        moduleTitle: 'Module 6: 8086 Interrupts & Response',
+        moduleId: 'm6',
         points: [
-          'To maximize flexibility, the 8086 operates in two distinct modes depending on physical system wiring.',
-          'Minimum Mode: Standard simple configuration. Pin MN/MX = +5V. CPU operates alone on the bus, generating signals directly.',
-          'Maximum Mode: Advanced multi-processor configuration. Pin MN/MX = 0V (GND). Status lines are sent to external 8288 Bus Controller.'
-        ],
-        interactiveType: 'min-mode-hardware'
+          'An interrupt is a hardware or software signal that halts current CPU program execution to perform a specialized service (ISR).',
+          'Interrupt Service Routine (ISR): A custom program written to handle the specific interrupt event.',
+          'Hardware Interrupts: NMI (Non-Maskable, Pin 17), INTR (Maskable, Pin 18).',
+          'Software Interrupts: Triggered by executing INT instructions (e.g., INT 21H, INT 3).'
+        ]
       },
       {
-        id: 'm9-s2',
-        title: 'Interactive Mode Wiring Comparator',
-        moduleTitle: 'Module 9: Operating Modes',
-        moduleId: 'm9',
+        id: 'm6-s2',
+        title: '2. Interrupt Vector Table (IVT) & Response',
+        moduleTitle: 'Module 6: 8086 Interrupts & Response',
+        moduleId: 'm6',
         points: [
-          'Observe pins 24 to 31. They completely change functions depending on system wiring!',
-          'Minimum mode pins: ALE, DEN, WR, M/IO, HOLD, HLDA, INTA, DT/R.',
-          'Maximum mode pins: S0, S1, S2, LOCK, QS0, QS1, RQ/GT0, RQ/GT1.',
-          'Max mode supports numeric co-processors like 8087 (Math coprocessor).'
+          'The first 1 KB of physical RAM (00000H - 003FFH) stores the 256 vector pointers.',
+          'When an interrupt occurs: Flags are saved, IF & TF are cleared, Return CS and IP are saved to stack, and CS:IP loads new values from IVT.',
+          'Formula: Vector RAM address = Interrupt Type * 4.'
         ],
-        interactiveType: 'modes'
+        interactiveType: 'interrupts'
       },
       {
-        id: 'm9-quiz',
-        title: 'Module 9 Recap Quiz',
-        moduleTitle: 'Module 9: Operating Modes',
-        moduleId: 'm9',
+        id: 'm6-quiz',
+        title: 'Module 6 Recap Quiz',
+        moduleTitle: 'Module 6: 8086 Interrupts & Response',
+        moduleId: 'm6',
         interactiveType: 'quiz',
         quizQuestions: [
           {
-            question: 'Which chip is required in 8086 Maximum Mode to decode CPU status lines and generate bus controls?',
-            options: ['Intel 8284 Clock Generator', 'Intel 8282 Address Latch', 'Intel 8288 Bus Controller', 'Intel 8255 PPI'],
+            question: 'Where is the Interrupt Vector Table (IVT) located in the 8086 memory map?',
+            options: ['At the very end of memory (FFFF0H - FFFFFH)', 'In the middle segment (50000H - 503FFH)', 'At the very beginning (00000H - 003FFH)', 'Inside the CPU cache'],
             correctAnswer: 2,
-            explanation: 'In Maximum Mode, the 8086 status pins S0, S1, S2 are wired to an external Intel 8288 Bus Controller, which decodes the state and outputs clean bus control signals.'
+            explanation: 'The IVT is hard-coded to reside in the lowest 1 KB of RAM, from physical addresses 00000H to 003FFH.'
           },
           {
-            question: 'What is the voltage level on the MN/MX pin for Maximum Mode?',
-            options: ['+5V (High)', '0V (Ground/Low)', '+12V (High)', 'Floating (Hi-Z)'],
+            question: 'If the CPU receives a software INT 3, what IVT physical address does it read to fetch the ISR vector?',
+            options: ['00003H', '0000CH (12)', '00008H', '00012H'],
             correctAnswer: 1,
-            explanation: 'Connecting the MN/MX (Pin 33) directly to Ground (0V) tells the 8086 to configure itself for Maximum Mode operation.'
+            explanation: 'Since each interrupt type requires a 4-byte pointer, the address is Type * 4. Thus: Type 3 * 4 = 12 = 0000CH.'
           },
           {
-            question: 'Which of the following signals is available ONLY in Minimum Mode?',
-            options: ['ALE (Address Latch Enable)', 'S0, S1, S2', 'LOCK', 'QS0, QS1'],
-            correctAnswer: 0,
-            explanation: 'ALE is output directly by the 8086 in Minimum Mode (pin 25). In Maximum Mode, pin 25 transitions to QS0, and ALE is instead generated by the external 8288 Bus Controller.'
-          },
-          {
-            question: 'What do the Queue Status pins (QS0 and QS1) represent in Maximum Mode?',
-            options: ['The speed of instruction fetching', 'The status of the BIU\'s instruction queue (Empty, Fetch first byte, Subsequent byte, or No operation)', 'The number of active memory segments', 'The priority of hardware interrupts'],
+            question: 'Which hardware pin on the 8086 is used for maskable external interrupt requests?',
+            options: ['NMI (Pin 17)', 'INTR (Pin 18)', 'RESET (Pin 21)', 'READY (Pin 22)'],
             correctAnswer: 1,
-            explanation: 'QS0 and QS1 allow external coprocessors (like the 8087) to monitor the internal 8086 instruction queue and track when instructions are executed.'
+            explanation: 'INTR is the Maskable Interrupt Request pin. It can be ignored if the software clears the Interrupt Flag (IF = 0).'
           },
           {
-            question: 'What is the purpose of the LOCK signal in Maximum Mode?',
-            options: ['To freeze the processor clock', 'To prevent other bus master controllers from gaining bus control during critical instructions', 'To lock the keyboard input', 'To secure memory segmentation boundaries'],
-            correctAnswer: 1,
-            explanation: 'The LOCK prefix instruction activates the active-low LOCK signal, preventing other processors or DMA controllers from taking over the system bus.'
+            question: 'What is the size in bytes of a single interrupt vector stored in the Interrupt Vector Table (IVT)?',
+            options: ['1 byte', '2 bytes', '4 bytes', '8 bytes'],
+            correctAnswer: 2,
+            explanation: 'Each interrupt vector contains a 2-byte CS segment address and a 2-byte IP offset address, totaling exactly 4 bytes.'
           },
           {
-            question: 'Which status signals on the 8086 in Maximum Mode represent an active Instruction Fetch bus cycle?',
-            options: ['S2, S1, S0 = 100', 'S2, S1, S0 = 011', 'S2, S1, S0 = 111 (Passive)', 'S2, S1, S0 = 101'],
-            correctAnswer: 1,
-            explanation: 'In Maximum Mode, the status code S2, S1, S0 = 011 indicates a "Read Code Segment" or instruction fetch bus cycle, processed by the 8288.'
+            question: 'What is the maximum number of interrupt vectors supported by the 8086 microprocessor?',
+            options: ['16', '64', '128', '256'],
+            correctAnswer: 3,
+            explanation: 'The 8086 architecture supports up to 256 distinct interrupt vectors (Types 0 through 255), filling the entire 1 KB IVT.'
+          },
+          {
+            question: 'Which instruction is executed at the end of an Interrupt Service Routine (ISR) to return control back to the main program?',
+            options: ['RET', 'RETI', 'IRET', 'HLT'],
+            correctAnswer: 2,
+            explanation: 'The IRET (Interrupt Return) instruction pops the IP, CS, and the Flag register back from the stack to resume original execution.'
           }
         ]
       }
     ]
   },
   {
-    id: 'm10',
-    title: 'Module 10: GATE Microprocessor Solved Exam Practice',
+    id: 'm7',
+    title: 'Module 7: GATE Microprocessor Solved Exam Practice',
     slides: [
       {
-        id: 'm10-s1',
-        title: 'GATE Microprocessor Exam Preparation',
-        moduleTitle: 'Module 10: GATE Exam Practice',
-        moduleId: 'm10',
+        id: 'm7-s1',
+        title: '1. GATE Microprocessor Exam Preparation',
+        moduleTitle: 'Module 7: GATE Exam Practice',
+        moduleId: 'm7',
         points: [
           'The Graduate Aptitude Test in Engineering (GATE) is a premium national-level competitive exam in India, testing in-depth conceptual and practical knowledge of microprocessors.',
           'Core 8086 syllabus areas tested in GATE include: Segmented-memory Physical Address calculations, Arithmetic overflows & status flags, Interrupt Vector Table (IVT) mapping, and memory system hardware interfacing.',
@@ -804,10 +644,10 @@ export const courseData: Module[] = [
         ]
       },
       {
-        id: 'm10-quiz',
+        id: 'm7-quiz',
         title: 'GATE Solved Practice Quiz',
-        moduleTitle: 'Module 10: GATE Exam Practice',
-        moduleId: 'm10',
+        moduleTitle: 'Module 7: GATE Exam Practice',
+        moduleId: 'm7',
         interactiveType: 'quiz',
         quizQuestions: [
           {
@@ -816,7 +656,7 @@ export const courseData: Module[] = [
             correctAnswer: 2,
             isGateQuestion: true,
             gateYear: 'GATE 2005',
-            explanation: 'To find the physical address, shift the CS value by 4 bits (multiply by 10H) and add the IP offset: CS * 10H = 34560H. Physical Address = 34560H + 0ABCH = 3501CH. (Hex calculation: 0+C=C, 6+B=17=11H, write 1 carry 1, 5+A+1=16=10H, write 0 carry 1, 4+1=5, 3=3).'
+            explanation: 'To find the physical address, shift the CS value by 4 bits (multiply by 10H) and add the IP offset: CS * 10H = 34560H. Physical Address = 34560H + 0ABCH = 3501CH.'
           },
           {
             question: 'In an 8086 microprocessor, how many machine bus cycles are required to read a 16-bit word from an ODD physical memory address?',
@@ -895,14 +735,14 @@ export const courseData: Module[] = [
     ]
   },
   {
-    id: 'm11',
-    title: 'Module 11: Program Development Steps & Tools',
+    id: 'm8',
+    title: 'Module 8: Program Development Steps & Tools',
     slides: [
       {
-        id: 'm11-s1',
+        id: 'm8-s1',
         title: '8086 Program Development Steps',
-        moduleTitle: 'Module 11: Program Development Steps & Tools',
-        moduleId: 'm11',
+        moduleTitle: 'Module 8: Program Development Steps & Tools',
+        moduleId: 'm8',
         points: [
           '1. Specification & Design: Define the problem statement, write down inputs/outputs, and outline the core algorithm and flowchart.',
           '2. Assembly Coding: Translate the flowchart blocks into 8086 assembly instructions using a plain text editor (resulting in a file like program.asm).',
@@ -912,10 +752,10 @@ export const courseData: Module[] = [
         ]
       },
       {
-        id: 'm11-s2',
+        id: 'm8-s2',
         title: 'Interactive 8086 Development Steps Lab',
-        moduleTitle: 'Module 11: Program Development Steps & Tools',
-        moduleId: 'm11',
+        moduleTitle: 'Module 8: Program Development Steps & Tools',
+        moduleId: 'm8',
         points: [
           'Visualise the complete compilation, linking, and execution pipeline of an 8086 assembly program.',
           'Step through the pipeline: Text Editor -> Assembler (MASM) -> Linker (LINK) -> Debugger/Emulator.',
@@ -925,10 +765,10 @@ export const courseData: Module[] = [
         interactiveType: 'dev-pipeline'
       },
       {
-        id: 'm11-s3',
+        id: 'm8-s3',
         title: 'One-Pass vs Two-Pass Assemblers',
-        moduleTitle: 'Module 11: Program Development Steps & Tools',
-        moduleId: 'm11',
+        moduleTitle: 'Module 8: Program Development Steps & Tools',
+        moduleId: 'm8',
         points: [
           'Two-Pass Assembler: The standard design for assemblers like MASM or TASM. It scans the source code exactly twice to resolve forward references.',
           'Pass 1 (Symbol Table construction): The assembler scans the source file to build a "Symbol Table". It identifies all user-defined labels (like START, LOOP, NUM1) and assigns them relative offset addresses based on instruction sizes.',
@@ -938,10 +778,10 @@ export const courseData: Module[] = [
         interactiveType: 'assembler-passes'
       },
       {
-        id: 'm11-s3b',
+        id: 'm8-s3b',
         title: 'Assembler Outputs: .OBJ vs .LST Files',
-        moduleTitle: 'Module 11: Program Development Steps & Tools',
-        moduleId: 'm11',
+        moduleTitle: 'Module 8: Program Development Steps & Tools',
+        moduleId: 'm8',
         interactiveType: 'assembler-outputs',
         points: [
           'Object (.OBJ) File - Machine-Readable Output: The main binary file produced by the assembler containing translated machine instructions. It is NOT directly executable yet.',
@@ -951,10 +791,10 @@ export const courseData: Module[] = [
         ]
       },
       {
-        id: 'm11-s4',
+        id: 'm8-s4',
         title: 'The Linker and Loader Roles',
-        moduleTitle: 'Module 11: Program Development Steps & Tools',
-        moduleId: 'm11',
+        moduleTitle: 'Module 8: Program Development Steps & Tools',
+        moduleId: 'm8',
         points: [
           'The Linker (LINK.EXE / TLINK.EXE): Merges separate Object (.OBJ) files into a single, relocatable Executable (.EXE). It resolves cross-module references and links library files (.LIB) containing pre-written subroutines.',
           'Relocation Dictionary: The Linker builds an EXE header containing a "Relocation Table". Because the starting address in RAM is unknown at link-time, addresses are kept relocatable.',
@@ -963,10 +803,10 @@ export const courseData: Module[] = [
         ]
       },
       {
-        id: 'm11-s5',
+        id: 'm8-s5',
         title: 'DOS DEBUG Utility & Commands',
-        moduleTitle: 'Module 11: Program Development Steps & Tools',
-        moduleId: 'm11',
+        moduleTitle: 'Module 8: Program Development Steps & Tools',
+        moduleId: 'm8',
         points: [
           'DEBUG.EXE: The classic 8086 interactive software test utility used to execute, trace, and troubleshoot compiled executable and COM files directly on the processor.',
           'Core Inspection Commands: Use R (Registers) to dump or edit current general and segment registers, and D (Dump) / E (Enter) to view or write raw hex values in memory segments.',
@@ -975,10 +815,10 @@ export const courseData: Module[] = [
         ]
       },
       {
-        id: 'm11-quiz',
-        title: 'Module 11 Recap Quiz',
-        moduleTitle: 'Module 11: Program Development Steps & Tools',
-        moduleId: 'm11',
+        id: 'm8-quiz',
+        title: 'Module 8 Recap Quiz',
+        moduleTitle: 'Module 8: Program Development Steps & Tools',
+        moduleId: 'm8',
         interactiveType: 'quiz',
         quizQuestions: [
           {
@@ -1033,14 +873,14 @@ export const courseData: Module[] = [
     ]
   },
   {
-    id: 'm12',
-    title: 'Module 12: 8086 Addressing Modes',
+    id: 'm9',
+    title: 'Module 9: 8086 Addressing Modes',
     slides: [
       {
-        id: 'm12-s1',
+        id: 'm9-s1',
         title: 'Understanding 8086 Addressing Modes',
-        moduleTitle: 'Module 12: 8086 Addressing Modes',
-        moduleId: 'm12',
+        moduleTitle: 'Module 9: 8086 Addressing Modes',
+        moduleId: 'm9',
         points: [
           'Addressing Mode: The method by which an instruction specifies where its operand(s) are located (registers, memory, or immediate constants).',
           'Immediate Addressing: The operand is a constant value embedded directly inside the instruction byte stream (e.g., MOV AX, 1234H). Highly efficient.',
@@ -1050,10 +890,10 @@ export const courseData: Module[] = [
         ]
       },
       {
-        id: 'm12-s2',
+        id: 'm9-s2',
         title: 'Effective Address Calculation Lab',
-        moduleTitle: 'Module 12: 8086 Addressing Modes',
-        moduleId: 'm12',
+        moduleTitle: 'Module 9: 8086 Addressing Modes',
+        moduleId: 'm9',
         points: [
           'Effective Address (EA): The net 16-bit logical offset generated inside the instruction (EA = Base + Index + Displacement).',
           'Default Segment Selection: Memory calculations using base registers BX, SI, or DI target the Data Segment (DS) by default. References using BP target the Stack Segment (SS) by default.',
@@ -1064,10 +904,10 @@ export const courseData: Module[] = [
         interactiveType: 'addressing-modes'
       },
       {
-        id: 'm12-quiz',
-        title: 'Module 12 Recap Quiz',
-        moduleTitle: 'Module 12: 8086 Addressing Modes',
-        moduleId: 'm12',
+        id: 'm9-quiz',
+        title: 'Module 9 Recap Quiz',
+        moduleTitle: 'Module 9: 8086 Addressing Modes',
+        moduleId: 'm9',
         interactiveType: 'quiz',
         quizQuestions: [
           {
@@ -1101,14 +941,14 @@ export const courseData: Module[] = [
     ]
   },
   {
-    id: 'm13',
-    title: 'Module 13: 8086 Instruction Set',
+    id: 'm10',
+    title: 'Module 10: 8086 Instruction Set',
     slides: [
       {
-        id: 'm13-s1',
+        id: 'm10-s1',
         title: 'Classification of 8086 Instructions',
-        moduleTitle: 'Module 13: 8086 Instruction Set',
-        moduleId: 'm13',
+        moduleTitle: 'Module 10: 8086 Instruction Set',
+        moduleId: 'm10',
         points: [
           'Data Transfer: Copy data between registers, memory, and ports (e.g., MOV, PUSH, POP, XCHG, IN, OUT, LEA). Crucially, these do NOT affect the flag register.',
           'Arithmetic: ADD, SUB, INC, DEC, CMP, MUL, DIV, and decimal BCD adjustments (AAA, DAA). These directly modify ALU status flags.',
@@ -1118,10 +958,10 @@ export const courseData: Module[] = [
         ]
       },
       {
-        id: 'm13-s2',
+        id: 'm10-s2',
         title: 'Instruction Execution & ALU Flag Lab',
-        moduleTitle: 'Module 13: 8086 Instruction Set',
-        moduleId: 'm13',
+        moduleTitle: 'Module 10: 8086 Instruction Set',
+        moduleId: 'm10',
         points: [
           'ALU Status Flags: Automatically updated by the Execution Unit (EU) after executing arithmetic, logical, and shift instructions.',
           'Zero Flag (ZF): Becomes 1 if the outcome of the instruction is exactly zero; otherwise 0. Critical for comparison and branching.',
@@ -1132,10 +972,10 @@ export const courseData: Module[] = [
         interactiveType: 'instruction-decoder'
       },
       {
-        id: 'm13-quiz',
-        title: 'Module 13 Recap Quiz',
-        moduleTitle: 'Module 13: 8086 Instruction Set',
-        moduleId: 'm13',
+        id: 'm10-quiz',
+        title: 'Module 10 Recap Quiz',
+        moduleTitle: 'Module 10: 8086 Instruction Set',
+        moduleId: 'm10',
         interactiveType: 'quiz',
         quizQuestions: [
           {
@@ -1169,40 +1009,41 @@ export const courseData: Module[] = [
     ]
   },
   {
-    id: 'm14',
-    title: 'Module 14: Assembler Directives',
+    id: 'm11',
+    title: 'Module 11: Assembler Directives',
     slides: [
       {
-        id: 'm14-s1',
-        title: 'What are Assembler Directives?',
-        moduleTitle: 'Module 14: Assembler Directives',
-        moduleId: 'm14',
+        id: 'm11-s1',
+        title: 'Core Assembler Directives & Data Definitions',
+        moduleTitle: 'Module 11: Assembler Directives',
+        moduleId: 'm11',
         points: [
-          'Assembler Directives: Special commands embedded in the assembly source code that guide the assembler (MASM/TASM) during translation, but do NOT produce CPU machine code instructions.',
-          'Data Definition Directives: Reserves memory and assigns initial values. DB (Define Byte - 1 byte), DW (Define Word - 2 bytes), DD (Define Doubleword - 4 bytes).',
-          'Segment Mapping: SEGMENT and ENDS frame the start and end of logical segments (Code, Data, Stack) inside the source code module.',
-          'Logical Connection (ASSUME): Informs the compiler which physical segment register (CS, DS, SS, ES) will point to which logical segment at runtime.',
-          'Origin Control & Constants: ORG (Origin) defines the starting memory offset for code/data (e.g., ORG 100H for DOS .COM files). EQU (Equate) defines constant symbols.'
+          'What are Assembler Directives?: Also called pseudo-instructions, these are special commands embedded in the source code meant solely for the assembler (MASM/TASM). They guide the compiler during translation and do NOT produce executable CPU machine codes or consume space in the code segment at runtime.',
+          'Data Definition Directives: Used to reserve physical memory in RAM and initialize data variables. Supported sizes include: DB (Define Byte - 1 byte / 8 bits), DW (Define Word - 2 bytes / 16 bits), DD (Define Doubleword - 4 bytes / 32 bits), DQ (Define Quadword - 8 bytes / 64 bits), and DT (Define Ten Bytes - 10 bytes / 80 bits).',
+          'Data Ordering (Little-Endian): For multi-byte declarations like DW and DD, the 8086 uses Little-Endian format: the least-significant byte (LSB) is stored at the lowest memory address offset, and the most-significant byte (MSB) at the highest address offset.',
+          'The DUP (Duplicate) Operator: Used inside data definition directives to allocate arrays or memory blocks initialized with recurring patterns. Format: COUNT DUP(Value). For example, "ARR DB 10 DUP(0)" allocates 10 bytes in memory, each initialized to 00H.',
+          'Symbolic Constants (EQU): The Equate directive creates a text or numeric alias (e.g., "MAX_LIMIT EQU 100"). The assembler replaces all instances of MAX_LIMIT with 100 at compile time. This is a compiler-only symbol and consumes zero bytes of RAM at runtime.'
         ]
       },
       {
-        id: 'm14-s2',
-        title: 'Assembler Directives & Memory Layout',
-        moduleTitle: 'Module 14: Assembler Directives',
-        moduleId: 'm14',
+        id: 'm11-s2',
+        title: 'The Three Assembly Programming Styles',
+        moduleTitle: 'Module 11: Assembler Directives',
+        moduleId: 'm11',
         points: [
-          'Directives structure how variables are laid out inside the Data Segment (DS) starting from logical offset 0000H.',
-          'In a standard assembly program, the assembler allocates consecutive byte offsets to variables defined with DB (1 byte), DW (2 bytes), and DD (4 bytes).',
-          'The DUP (Duplicate) operator allows reserving block arrays easily (e.g., ARR DB 10 DUP(0) allocates 10 bytes initialized to zero).',
-          'Use the Interactive Directive Sandbox on the right to inspect a standard program layout and highlight directive boundaries.'
+          '8086 Program Formats: 8086 assembly source code can be written in three distinct programming styles: 1) Standard Segment-Ends Style, 2) Simplified Dot-Model Style, and 3) Tiny .COM Program Style.',
+          'Standard Segment Style (EXE): Explicitly frames memory sections using logical "SEGMENT" and "ENDS" boundary identifiers. Requires the compile-time "ASSUME" directive to validate register bounds and manual runtime DS register loading via: MOV AX, DATA_SEG followed by MOV DS, AX.',
+          'Simplified Dot-Model Style (EXE): Replaces verbose wrappers with modern shortcuts (.MODEL, .STACK, .DATA, .CODE). Automatically pre-configures segment mappings based on model sizes (e.g., SMALL maps 64KB for code, 64KB for data). DS is initialized using the pre-defined @DATA segment constant.',
+          'Tiny .COM Style (Single Segment): Utilizes ".MODEL TINY" to merge the code, data, and stack into a single unified 64KB physical memory segment. Because of this unified mapping, the OS automatically sets CS = DS = SS = ES on launch, removing any need to manually initialize the DS register at runtime.',
+          'Origin Control (ORG 100H): In Tiny/COM programs, the executable binary is loaded directly as a memory image. The source code must begin with "ORG 100H" to bypass the first 256 bytes reserved by DOS for the Program Segment Prefix (PSP) block.'
         ],
         interactiveType: 'directive-sandbox'
       },
       {
-        id: 'm14-quiz',
-        title: 'Module 14 Recap Quiz',
-        moduleTitle: 'Module 14: Assembler Directives',
-        moduleId: 'm14',
+        id: 'm11-quiz',
+        title: 'Module 11 Recap Quiz',
+        moduleTitle: 'Module 11: Assembler Directives',
+        moduleId: 'm11',
         interactiveType: 'quiz',
         quizQuestions: [
           {
@@ -1228,20 +1069,26 @@ export const courseData: Module[] = [
             options: ['ORG', 'EQU', 'DB', 'ENDS'],
             correctAnswer: 1,
             explanation: 'The EQU (Equate) directive defines a compile-time constant alias. The assembler replaces all occurrences of the equated symbol with its value during compilation, consuming zero physical space in the compiled binary.'
+          },
+          {
+            question: 'In which 8086 programming style is manual runtime initialization of the Data Segment (DS) register NOT required?',
+            options: ['Standard Segment Style (explicit SEGMENT/ENDS)', 'Simplified Dot-Model Style (.MODEL SMALL)', 'Tiny .COM Style (.MODEL TINY)', 'None of the above; DS must always be initialized manually'],
+            correctAnswer: 2,
+            explanation: 'In Tiny .COM style (.MODEL TINY), code, data, and stack all share a single 64KB physical segment. When the operating system loads the executable, it automatically points all segment registers (CS, DS, SS, ES) to the same base address, making manual DS register initialization unnecessary.'
           }
         ]
       }
     ]
   },
   {
-    id: 'm15',
-    title: 'Module 15: Writing Simple Programs',
+    id: 'm12',
+    title: 'Module 12: Writing Simple Programs',
     slides: [
       {
-        id: 'm15-s1',
+        id: 'm12-s1',
         title: 'Writing Basic Assembly Programs',
-        moduleTitle: 'Module 15: Writing Simple Programs',
-        moduleId: 'm15',
+        moduleTitle: 'Module 12: Writing Simple Programs',
+        moduleId: 'm12',
         points: [
           '8086 programming is register-intensive and revolves around load, process, and store cycles.',
           'Program 1: 16-bit Addition: Uses MOV to load variables from the data segment into AX and BX, executes ADD AX, BX, and stores the result back to memory.',
@@ -1251,10 +1098,10 @@ export const courseData: Module[] = [
         ]
       },
       {
-        id: 'm15-s2',
+        id: 'm12-s2',
         title: '8086 Assembly Emulator & Debugger',
-        moduleTitle: 'Module 15: Writing Simple Programs',
-        moduleId: 'm15',
+        moduleTitle: 'Module 12: Writing Simple Programs',
+        moduleId: 'm12',
         points: [
           'An Emulator mimics the 8086 hardware, allowing execution of instructions without physical IC hardware.',
           'Single Step Debugging: Runs exactly one instruction cycle, letting you inspect registers (AX, BX, CX, DX) and pointers (IP) after each step.',
@@ -1265,10 +1112,10 @@ export const courseData: Module[] = [
         interactiveType: 'assembler-playground'
       },
       {
-        id: 'm15-quiz',
-        title: 'Module 15 Recap Quiz',
-        moduleTitle: 'Module 15: Writing Simple Programs',
-        moduleId: 'm15',
+        id: 'm12-quiz',
+        title: 'Module 12 Recap Quiz',
+        moduleTitle: 'Module 12: Writing Simple Programs',
+        moduleId: 'm12',
         interactiveType: 'quiz',
         quizQuestions: [
           {
@@ -1300,4 +1147,3 @@ export const courseData: Module[] = [
     ]
   }
 ];
-

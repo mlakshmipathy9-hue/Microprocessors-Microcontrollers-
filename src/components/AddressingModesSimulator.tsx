@@ -544,12 +544,253 @@ export default function AddressingModesSimulator() {
             <span className="text-[13px] font-sans font-bold text-indigo-900">Assoc. Prof. Dr. M Lakshmipathy</span>
           </div>
         </div>
+  
+        {/* Mobile Navigation Hub (visible on mobile/tablet only) */}
+        <div className="block lg:hidden mb-5 bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-4">
+          <div>
+            <span className="text-[10px] font-bold font-mono text-indigo-700 uppercase tracking-widest block">Addressing Mode Category</span>
+            <p className="text-[10px] text-slate-500 mt-0.5">Select a category and specific mode to simulate:</p>
+          </div>
+
+          {/* Horizontal scrolling Categories */}
+          <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-indigo-200">
+            {[
+              { id: 'all', label: '1. Reg & Imm' },
+              { id: 'memory', label: '2. Memory' },
+              { id: 'io', label: '3. I/O Ports' },
+              { id: 'special', label: '4. Special' }
+            ].map(cat => {
+              const isSel = activeUnit === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    setActiveUnit(cat.id as any);
+                    // Automatically select first mode in that category
+                    let firstModeId = 'immediate';
+                    if (cat.id === 'memory') firstModeId = 'direct';
+                    if (cat.id === 'io') firstModeId = 'fixed_port';
+                    if (cat.id === 'special') firstModeId = 'string_mode';
+                    setSelectedModeId(firstModeId);
+                    setActiveExampleIdx(0);
+                  }}
+                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl border transition-all shrink-0 cursor-pointer ${
+                    isSel
+                      ? 'bg-indigo-600 border-indigo-500 text-white shadow-xs'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Sub-mode selections based on category */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-bold font-mono text-slate-500 uppercase tracking-widest block">Specific Mode</span>
+            <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-indigo-200">
+              {/* Category 1 Modes */}
+              {activeUnit === 'all' && [
+                { id: 'immediate', label: 'Immediate Addressing' },
+                { id: 'register', label: 'Register Addressing' }
+              ].map(mode => {
+                const isSel = selectedModeId === mode.id;
+                return (
+                  <button
+                    key={mode.id}
+                    onClick={() => {
+                      setSelectedModeId(mode.id);
+                      setActiveExampleIdx(0);
+                    }}
+                    className={`px-3 py-1.5 text-xs font-mono rounded-lg border transition-all shrink-0 cursor-pointer ${
+                      isSel
+                        ? 'bg-indigo-700 border-indigo-600 text-white font-bold shadow-xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-indigo-50/20'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                );
+              })}
+
+              {/* Category 2 Modes */}
+              {activeUnit === 'memory' && [
+                { id: 'direct', label: 'Direct Memory' },
+                { id: 'register_indirect', label: 'Register Indirect' },
+                { id: 'based_displacement', label: 'Based + Disp' },
+                { id: 'indexed_displacement', label: 'Indexed + Disp' },
+                { id: 'based_indexed', label: 'Based Indexed' },
+                { id: 'based_indexed_displacement', label: 'Based Indexed + Disp' }
+              ].map(mode => {
+                const isSel = selectedModeId === mode.id;
+                return (
+                  <button
+                    key={mode.id}
+                    onClick={() => {
+                      setSelectedModeId(mode.id);
+                      setActiveExampleIdx(0);
+                    }}
+                    className={`px-3 py-1.5 text-xs font-mono rounded-lg border transition-all shrink-0 cursor-pointer ${
+                      isSel
+                        ? 'bg-amber-600 border-amber-500 text-white font-bold shadow-xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-amber-50/20'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                );
+              })}
+
+              {/* Category 3 Modes */}
+              {activeUnit === 'io' && [
+                { id: 'fixed_port', label: 'Fixed / Direct Port' },
+                { id: 'variable_port', label: 'Variable / Indirect Port' }
+              ].map(mode => {
+                const isSel = selectedModeId === mode.id;
+                return (
+                  <button
+                    key={mode.id}
+                    onClick={() => {
+                      setSelectedModeId(mode.id);
+                      setActiveExampleIdx(0);
+                    }}
+                    className={`px-3 py-1.5 text-xs font-mono rounded-lg border transition-all shrink-0 cursor-pointer ${
+                      isSel
+                        ? 'bg-purple-600 border-purple-500 text-white font-bold shadow-xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-purple-50/20'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                );
+              })}
+
+              {/* Category 4 Modes */}
+              {activeUnit === 'special' && [
+                { id: 'string_mode', label: 'String Mode' },
+                { id: 'relative_mode', label: 'Relative Mode (Jumps)' },
+                { id: 'implied_mode', label: 'Implied Mode' }
+              ].map(mode => {
+                const isSel = selectedModeId === mode.id;
+                return (
+                  <button
+                    key={mode.id}
+                    onClick={() => {
+                      setSelectedModeId(mode.id);
+                      setActiveExampleIdx(0);
+                    }}
+                    className={`px-3 py-1.5 text-xs font-mono rounded-lg border transition-all shrink-0 cursor-pointer ${
+                      isSel
+                        ? 'bg-emerald-600 border-emerald-500 text-white font-bold shadow-xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-emerald-50/20'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Collapsible Mobile Concept Maps */}
+          {(activeUnit === 'memory' || activeUnit === 'io') && (
+            <div className="pt-2 border-t border-slate-200/60">
+              <details className="group bg-white border border-slate-200 rounded-xl overflow-hidden transition-all duration-300">
+                <summary className="flex items-center justify-between p-3 cursor-pointer text-xs font-bold text-slate-700 bg-slate-50/50 hover:bg-slate-100/50 select-none">
+                  <span className="flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-indigo-600" />
+                    {activeUnit === 'memory' ? 'View Memory Address Map (Slide 5)' : 'View I/O Address Map (Slide 12)'}
+                  </span>
+                  <span className="transition-transform duration-300 group-open:rotate-180 text-slate-400">
+                    ▼
+                  </span>
+                </summary>
+                <div className="p-3 bg-white space-y-3.5 border-t border-slate-150">
+                  {activeUnit === 'memory' ? (
+                    <div className="space-y-1.5 text-[11px]">
+                      <div className="p-2 bg-indigo-50 border border-indigo-100 rounded-lg text-center font-bold text-indigo-700">
+                        Memory Addressing Modes
+                      </div>
+                      <div className="pl-2 border-l border-slate-200 space-y-1.5 pt-1">
+                        <button
+                          onClick={() => setSelectedModeId('direct')}
+                          className={`w-full text-left p-1.5 px-2.5 rounded-lg border font-mono transition-all text-[10.5px] cursor-pointer ${
+                            selectedModeId === 'direct'
+                              ? 'bg-amber-50 border-amber-300 text-amber-700 font-bold'
+                              : 'bg-white border-slate-200 text-slate-500'
+                          }`}
+                        >
+                          ├─ Direct Addressing
+                        </button>
+                        <div className="p-1.5 bg-slate-50 text-slate-500 font-mono text-[9.5px] rounded-md">
+                          └─ Indirect Modes:
+                        </div>
+                        <div className="pl-3 space-y-1">
+                          {[
+                            { id: 'register_indirect', label: 'Register Indirect' },
+                            { id: 'based_displacement', label: 'Based + Disp' },
+                            { id: 'indexed_displacement', label: 'Indexed + Disp' },
+                            { id: 'based_indexed', label: 'Based Indexed' },
+                            { id: 'based_indexed_displacement', label: 'Based Indexed + Disp' }
+                          ].map(mode => (
+                            <button
+                              key={mode.id}
+                              onClick={() => setSelectedModeId(mode.id)}
+                              className={`w-full text-left py-1 px-2 rounded-lg border font-mono transition-all text-[10px] cursor-pointer ${
+                                selectedModeId === mode.id
+                                  ? 'bg-amber-50 border-amber-300 text-amber-700 font-bold'
+                                  : 'bg-white border-slate-100 text-slate-500'
+                              }`}
+                            >
+                              • {mode.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 text-[11px]">
+                      <div className="p-2 bg-indigo-50 border border-indigo-100 rounded-lg text-center font-bold text-indigo-700">
+                        I/O Port Addressing
+                      </div>
+                      <div className="grid grid-cols-1 gap-1.5 pt-1">
+                        <button
+                          onClick={() => setSelectedModeId('fixed_port')}
+                          className={`text-left p-2 rounded-xl border font-mono transition-all text-[10.5px] cursor-pointer ${
+                            selectedModeId === 'fixed_port'
+                              ? 'bg-purple-50 border-purple-300 text-purple-700 font-bold'
+                              : 'bg-white border-slate-200 text-slate-500'
+                          }`}
+                        >
+                          <span className="font-bold text-purple-700">Fixed / Direct:</span>
+                          <p className="text-[9px] text-slate-500 font-sans mt-0.5">Address inside instruction code (00H-FFH)</p>
+                        </button>
+                        <button
+                          onClick={() => setSelectedModeId('variable_port')}
+                          className={`text-left p-2 rounded-xl border font-mono transition-all text-[10.5px] cursor-pointer ${
+                            selectedModeId === 'variable_port'
+                              ? 'bg-purple-50 border-purple-300 text-purple-700 font-bold'
+                              : 'bg-white border-slate-200 text-slate-500'
+                          }`}
+                        >
+                          <span className="font-bold text-purple-700">Variable / Indirect:</span>
+                          <p className="text-[9px] text-slate-500 font-sans mt-0.5">Address loaded dynamically in DX register</p>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </details>
+            </div>
+          )}
+        </div>
  
         {/* Main Workspace Navigation */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* Navigation Hub (Column A) */}
-          <div className="lg:col-span-4 space-y-4">
+          {/* Navigation Hub (Column A - Hidden on Mobile) */}
+          <div className="hidden lg:block lg:col-span-4 space-y-4">
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-4">
               <div>
                 <span className="text-[10px] font-bold font-mono text-indigo-600 uppercase tracking-widest block">Addressing Mode Types</span>
@@ -1032,17 +1273,20 @@ export default function AddressingModesSimulator() {
                   </div>
 
                   {/* Visual memory mapping pipeline representation */}
-                  <div className="flex items-center gap-1 pt-1.5 text-[8.5px] font-bold text-slate-500 font-sans">
-                    <div className="flex-1 h-5 bg-sky-50 border border-sky-200 text-sky-700 flex items-center justify-center rounded-lg shadow-xs font-mono">
-                      Shifted Segment ({computeMemoryEA().shiftedSegHex})
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 sm:gap-1 pt-1.5 text-[10px] sm:text-[8.5px] font-bold text-slate-500 font-sans">
+                    <div className="flex-1 min-h-[28px] sm:h-5 bg-sky-50 border border-sky-200 text-sky-700 flex items-center justify-center rounded-lg shadow-xs font-mono px-2 py-1 sm:py-0 text-center">
+                      <span className="sm:hidden mr-1 text-[8px] text-sky-500 uppercase font-sans">Shifted Seg: </span>
+                      {computeMemoryEA().shiftedSegHex}
                     </div>
-                    <div className="text-indigo-600 text-xs font-bold">+</div>
-                    <div className="flex-1 h-5 bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center rounded-lg shadow-xs font-mono">
-                      Offset EA ({computeMemoryEA().eaHex})
+                    <div className="text-indigo-600 text-xs font-bold text-center self-center sm:self-auto">+</div>
+                    <div className="flex-1 min-h-[28px] sm:h-5 bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center rounded-lg shadow-xs font-mono px-2 py-1 sm:py-0 text-center">
+                      <span className="sm:hidden mr-1 text-[8px] text-indigo-500 uppercase font-sans">Offset EA: </span>
+                      {computeMemoryEA().eaHex}
                     </div>
-                    <div className="text-indigo-600 text-xs font-bold">=</div>
-                    <div className="flex-[1.5] h-5 bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center rounded-lg shadow-xs text-[10px] font-extrabold font-mono">
-                      Physical ({computeMemoryEA().physicalHex})
+                    <div className="text-indigo-600 text-xs font-bold text-center self-center sm:self-auto">=</div>
+                    <div className="flex-[1.5] min-h-[32px] sm:h-5 bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center rounded-lg shadow-xs text-xs sm:text-[10px] font-extrabold font-mono px-2 py-1 sm:py-0 text-center">
+                      <span className="sm:hidden mr-1 text-[8px] text-emerald-500 uppercase font-sans font-bold">Physical: </span>
+                      {computeMemoryEA().physicalHex}
                     </div>
                   </div>
                 </div>

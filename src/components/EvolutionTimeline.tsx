@@ -202,7 +202,7 @@ export default function EvolutionTimeline({ defaultTab = 'timeline' }: { default
   const [selectedIdx, setSelectedIdx] = useState(4); // default to 8086 index
   const [timelineType, setTimelineType] = useState<'intel' | 'others'>('intel');
   const [activeTab, setActiveTab] = useState<'timeline' | 'vs'>(defaultTab);
-  const [decodedTerm, setDecodedTerm] = useState<'ring-bus' | 'gpu' | 'l3-cache' | 'npu'>('ring-bus');
+  const [decodedTerm, setDecodedTerm] = useState<'ring-bus' | 'gpu' | 'l3-cache'>('ring-bus');
 
   const currentList = timelineType === 'intel' ? intelGenerations : otherGenerations;
 
@@ -553,22 +553,7 @@ export default function EvolutionTimeline({ defaultTab = 'timeline' }: { default
                   </div>
                 </button>
 
-                <button
-                  onClick={() => setDecodedTerm('npu')}
-                  className={`w-full text-left p-2.5 rounded-lg border transition-all flex items-center gap-3 ${
-                    decodedTerm === 'npu'
-                      ? 'bg-white border-indigo-200 text-indigo-950 shadow-xs'
-                      : 'border-transparent hover:bg-white/50 text-slate-600 hover:text-slate-950'
-                  }`}
-                >
-                  <div className={`p-1.5 rounded ${decodedTerm === 'npu' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200/60 text-slate-500'}`}>
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold truncate">Neural Processing Unit (NPU)</div>
-                    <div className="text-[10px] text-slate-400 truncate">Trillions of operations per second for AI</div>
-                  </div>
-                </button>
+
               </div>
             </div>
 
@@ -737,52 +722,7 @@ export default function EvolutionTimeline({ defaultTab = 'timeline' }: { default
                   </motion.div>
                 )}
 
-                {decodedTerm === 'npu' && (
-                  <motion.div
-                    key="npu"
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    className="space-y-4 h-full flex flex-col justify-between"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-150 font-mono">Modern AI Era</span>
-                        <strong className="text-slate-800 text-sm font-display">Neural Processing Unit (NPU)</strong>
-                      </div>
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        CPUs do sequential math, GPUs do parallel gaming math, but artificial intelligence runs on massive arrays of matrix multiplication. The <strong>NPU</strong> is a dedicated cluster of silicon multiplier-accumulators (MACs) designed specifically to execute AI workloads at extremely low power levels.
-                      </p>
-                    </div>
 
-                    {/* DIAGRAM */}
-                    <div className="border border-slate-150 rounded-lg p-3 bg-slate-50/50 my-2">
-                      <span className="text-[9px] font-mono text-slate-400 uppercase font-bold block mb-2 text-center">AI Acceleration vs General Compute</span>
-                      <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
-                        <div className="bg-white border border-slate-200 p-2 rounded">
-                          <span className="font-bold block text-slate-700">CPU</span>
-                          <span className="text-[8px] text-slate-400">Sequential</span>
-                          <div className="mt-1 font-bold text-indigo-600">1-2 TOPS</div>
-                        </div>
-                        <div className="bg-white border border-slate-200 p-2 rounded">
-                          <span className="font-bold block text-slate-700">GPU</span>
-                          <span className="text-[8px] text-slate-400">Parallel pixels</span>
-                          <div className="mt-1 font-bold text-indigo-600">10-20 TOPS</div>
-                        </div>
-                        <div className="bg-white border border-pink-150 p-2 rounded bg-pink-50/20">
-                          <span className="font-bold block text-pink-700">NPU</span>
-                          <span className="text-[8px] text-pink-500">Tensor Matrices</span>
-                          <div className="mt-1 font-bold text-pink-600">40-50+ TOPS</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-indigo-50/60 p-2.5 rounded border border-indigo-100 text-[11px] text-slate-700">
-                      <span className="font-bold text-indigo-700 font-mono text-[9px] uppercase block mb-0.5">Energy Efficiency</span>
-                      Running a Local Large Language Model on a GPU can quickly drain laptop batteries. An NPU processes the same mathematical neural weights using <strong>90% less energy</strong>, keeping the device cool and efficient.
-                    </div>
-                  </motion.div>
-                )}
               </AnimatePresence>
             </div>
           </div>

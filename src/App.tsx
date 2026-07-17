@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { courseData } from './data/courseData';
+import { labExperiments } from './data/labExperimentsData';
 import Sidebar from './components/Sidebar';
 import SlidePresenter from './components/SlidePresenter';
 import { 
@@ -99,6 +100,9 @@ export default function App() {
 
   // Presentation State to split theoretical bullets and interactive lab on same slide
   const [showInteractiveOnSlide, setShowInteractiveOnSlide] = useState(false);
+
+  // Active lab experiment under directives/sandbox (e.g., 'exp1', 'exp2'...)
+  const [activeLabId, setActiveLabId] = useState<string>('exp1');
 
   // Reset interactive view when moving between slides
   useEffect(() => {
@@ -211,7 +215,7 @@ export default function App() {
     }
   };
 
-  const handleSelectSlide = (moduleId: string, slideId: string) => {
+  const handleSelectSlide = (moduleId: string, slideId: string, labId?: string) => {
     const mIdx = courseData.findIndex(m => m.id === moduleId);
     if (mIdx !== -1) {
       const sIdx = courseData[mIdx].slides.findIndex(s => s.id === slideId);
@@ -219,7 +223,15 @@ export default function App() {
         setCurrentModuleIdx(mIdx);
         setCurrentSlideIdx(sIdx);
         setRevealedPointsCount(1); // Reset to first point
-        setShowInteractiveOnSlide(false);
+        
+        const selectedSlide = courseData[mIdx].slides[sIdx];
+        const isLab = selectedSlide.interactiveType && selectedSlide.interactiveType !== 'quiz';
+        setShowInteractiveOnSlide(isLab ? true : false);
+
+        if (labId) {
+          setActiveLabId(labId);
+        }
+
         // Automatically close sidebar on mobile when selecting a slide
         if (window.innerWidth < 1024) {
           setSidebarOpen(false);
@@ -326,7 +338,7 @@ export default function App() {
       ref={containerRef}
       onMouseMove={handleMouseMove}
       className={`flex h-screen w-screen overflow-hidden text-slate-800 font-sans transition-all duration-350 relative ${
-        contrastMode === 'high-contrast-dark' ? 'bg-neutral-950' : 'bg-slate-50'
+        contrastMode === 'high-contrast-dark' ? 'bg-neutral-950' : 'bg-sky-100'
       } ${contrastClasses}`}
     >
       {/* 🔴 Virtual Laser Pointer Overlay */}
@@ -550,6 +562,7 @@ export default function App() {
           onSelectSlide={handleSelectSlide}
           isOpen={sidebarOpen}
           setIsOpen={setSidebarOpen}
+          currentLabId={activeLabId}
         />
       )}
 
@@ -702,7 +715,7 @@ export default function App() {
 
         {/* Top Navbar / Header banner - Hidden when Projector Mode is Active */}
         {!projectorMode && (
-          <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 shrink-0 shadow-xs relative z-10">
+          <header className="h-16 bg-white/75 backdrop-blur-md border-b border-sky-200/50 flex items-center justify-between px-4 md:px-6 shrink-0 shadow-xs relative z-10">
             <div className="flex items-center gap-2.5 md:gap-3 min-w-0">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -717,13 +730,13 @@ export default function App() {
                   <BookOpen className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
                 <div className="truncate">
-                  <span className="text-[9px] md:text-xs font-mono font-extrabold uppercase tracking-widest text-indigo-600 block leading-none">
-                    {['m11', 'm12', 'm13', 'm14', 'm15'].some(id => currentModule.id === id)
-                      ? 'UNIT-2: 8086 Programming'
-                      : 'UNIT-1: System Architecture'}
-                  </span>
-                  <h1 className="text-xs md:text-sm lg:text-base font-bold tracking-tight text-slate-900 uppercase leading-tight mt-0.5 md:mt-1 truncate">
-                    {currentSlide.title}
+                  <h1 className="text-xs md:text-sm lg:text-base font-bold tracking-tight text-slate-900 uppercase leading-tight truncate">
+                    {currentSlide.id === 'm11-s2' && showInteractiveOnSlide
+                      ? (() => {
+                          const exp = labExperiments.find(e => e.id === activeLabId);
+                          return exp ? `EXP ${exp.number}: ${exp.title}` : currentSlide.title;
+                        })()
+                      : currentSlide.title}
                   </h1>
                 </div>
               </div>
@@ -773,6 +786,7 @@ export default function App() {
             incrementalRevealEnabled={incrementalReveal}
             projectorMode={projectorMode}
             showInteractive={showInteractiveOnSlide}
+            activeLabId={activeLabId}
           />
         </main>
       </div>
