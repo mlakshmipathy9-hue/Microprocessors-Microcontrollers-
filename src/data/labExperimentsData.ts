@@ -341,7 +341,7 @@ END MAIN`,
   },
   {
     id: 'exp_bit1',
-    number: '3A',
+    number: '2A',
     title: 'Positive or Negative Data Check',
     aim: 'Write an ALP to find the given data is positive or negative.',
     directivesUsed: ['DB', 'SEGMENT', 'ENDS', 'ASSUME'],
@@ -395,7 +395,7 @@ END MAIN`,
   },
   {
     id: 'exp_bit2',
-    number: '3B',
+    number: '2B',
     title: 'Odd or Even Data Check',
     aim: 'Write an ALP to find the given data is odd or even.',
     directivesUsed: ['DB', 'SEGMENT', 'ENDS', 'ASSUME'],
@@ -449,7 +449,7 @@ END MAIN`,
   },
   {
     id: 'exp_bit3',
-    number: '3C',
+    number: '2C',
     title: 'Count Logical Ones and Zeros',
     aim: 'Write an ALP to find Logical ones and zeros in a given data.',
     directivesUsed: ['DB', 'SEGMENT', 'ENDS', 'ASSUME'],
@@ -520,7 +520,7 @@ END MAIN`,
   },
   {
     id: 'exp_arr1',
-    number: '4A',
+    number: '3A',
     title: 'Addition & Subtraction of N Numbers',
     aim: 'Write an ALP to find Addition/subtraction of N no ̳s.',
     directivesUsed: ['DB', 'DW', 'SEGMENT', 'ENDS', 'ASSUME'],
@@ -599,7 +599,7 @@ END MAIN`,
   },
   {
     id: 'exp3',
-    number: '4B',
+    number: '3B',
     title: 'Find Largest & Smallest Number in an Array',
     aim: 'Write an ALP for finding largest/smallest no.',
     directivesUsed: ['DB', 'DW', 'SEGMENT', 'ENDS', 'ASSUME'],
@@ -680,7 +680,7 @@ END MAIN`,
   },
   {
     id: 'exp4',
-    number: '4C',
+    number: '3C',
     title: 'Sort Array in Ascending/Descending Order',
     aim: 'Write an ALP to sort given array in Ascending/descending order.',
     directivesUsed: ['DB', 'DW', 'SEGMENT', 'ENDS', 'ASSUME'],
@@ -752,7 +752,7 @@ END MAIN`,
   },
   {
     id: 'exp_str1',
-    number: '5A',
+    number: '4A',
     title: 'Find String Length',
     aim: 'Write an ALP to find String length.',
     directivesUsed: ['DB', 'DW', 'SEGMENT', 'ENDS', 'ASSUME'],
@@ -809,7 +809,7 @@ END MAIN`,
   },
   {
     id: 'exp_str2',
-    number: '5B',
+    number: '4B',
     title: 'Display the Given String',
     aim: 'Write an ALP for Displaying the given String.',
     directivesUsed: ['DB', 'SEGMENT', 'ENDS', 'ASSUME'],
@@ -851,7 +851,7 @@ END MAIN`,
   },
   {
     id: 'exp_str3',
-    number: '5C',
+    number: '4C',
     title: 'Compare Two Strings',
     aim: 'Write an ALP for Comparing two Strings.',
     directivesUsed: ['DB', 'DW', 'SEGMENT', 'ENDS', 'ASSUME'],
@@ -918,7 +918,7 @@ END MAIN`,
   },
   {
     id: 'exp_str4',
-    number: '5D',
+    number: '4D',
     title: 'String Reversal & Palindrome Check',
     aim: 'Write an ALP to reverse String and Checking for palindrome.',
     directivesUsed: ['DB', 'DW', 'DUP', 'SEGMENT', 'ENDS'],
@@ -1008,7 +1008,7 @@ END MAIN`,
   },
   {
     id: 'exp5',
-    number: '6',
+    number: '5',
     title: 'Block Data Transfer (Memory Copy)',
     aim: 'Write an assembly program to copy a block of 10 data bytes from a source memory segment offset to a destination segment offset.',
     directivesUsed: ['DB', 'DUP', 'SEGMENT', 'ENDS', 'ASSUME'],
@@ -1069,8 +1069,31 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['Open workspace.', 'Observe NUM1/NUM2.', 'Execute ADC/SBB.', 'Verify sums and carry.'],
     theoryText: 'Unsigned 32-bit operands span four contiguous bytes in physical memory, arranged in Little-Endian order. Loops add/subtract byte-by-byte with carry/borrow propagation.',
     theoryDiagramType: 'carry-ripple',
-    algorithmSteps: ['Start', 'Init segment DS.', 'Add bytes with carry using ADC.', 'Subtract with SBB.', 'Save final status.', 'End.'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'process', label: 'Init DS, SI, DI, BX' }, { type: 'process', label: 'AL=[SI] + [DI] + carry' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize segment Registers (DS = @DATA) to allow pointer addressing.',
+      'Set index registers: SI points to NUM1, DI points to NUM2, BX points to RESULT_ADD.',
+      'Set CX loop counter to array length (4).',
+      'Execute CLC (Clear Carry Flag) to start first addition with CF = 0.',
+      'Loop ADD: Load AL with byte [SI], perform addition with carry (ADC AL, [DI]), and store sum AL into [BX].',
+      'Increment pointers: SI++, DI++, BX++.',
+      'Check loop counter: Decrement CX. If CX > 0, jump back to ADD loop; else continue.',
+      'Save final Carry status (CF) by performing ADC AL, 0 and saving AL in memory.',
+      'Reset pointers for Subtraction, execute CLC, and perform SBB AL, [DI] loop.',
+      'Save final Borrow status (CF) from subtraction into memory variable.'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Initialize segment registers (DS = @DATA)' },
+      { type: 'process', label: 'Set pointers: SI=&NUM1, DI=&NUM2, BX=&RESULT_ADD, CX=4' },
+      { type: 'process', label: 'Clear Carry Flag (CF = 0) using CLC' },
+      { type: 'process', label: 'AL = [SI]; AL = AL + [DI] + CF; [BX] = AL' },
+      { type: 'process', label: 'Increment pointers: SI++, DI++, BX++' },
+      { type: 'decision', label: 'Is Loop CX = 0?' },
+      { type: 'process', label: 'Save final Carry (CF) into memory FINAL_CARRY' },
+      { type: 'process', label: 'Reset pointers, clear CF, run Subtraction SBB Loop' },
+      { type: 'process', label: 'Save final Borrow into memory FINAL_BORROW' },
+      { type: 'stop', label: 'STOP (Exit via INT 21H Service 4CH)' }
+    ],
     expectedOutput: {
       desc: 'NUM1 = FCDDFEFFH, NUM2 = 04030201H',
       inputs: [{ name: 'NUM1', val: 'FF FE FD FC' }, { name: 'NUM2', val: '01 02 03 04' }],
@@ -1101,8 +1124,26 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['Load variables.', 'Perform MUL & IMUL.', 'Trace quotient and remainder with DIV & IDIV.', 'Check DX and AX registers.'],
     theoryText: 'Unsigned arithmetic is handled by MUL and DIV. Signed arithmetic utilizes IMUL and IDIV, requiring AX to be sign-extended to DX using CWD for division.',
     theoryDiagramType: 'register-pair',
-    algorithmSteps: ['Start', 'Init DS.', 'MUL/IMUL AX, operand. Save results.', 'CWD then IDIV operand. Save quotient/rem.', 'Stop'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'process', label: 'Load AX, MUL/DIV' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize Segment Registers (DS = @DATA).',
+      'Unsigned Multiplication: Load VAL1 into AX, run MUL VAL2. Store 32-bit product DX:AX in memory (U_PROD_L and U_PROD_H).',
+      'Signed Multiplication: Load S_VAL1 into AX, run IMUL S_VAL2. Store signed 32-bit product DX:AX in S_PROD.',
+      'Unsigned Division: Load VAL1 into AX, clear DX (XOR DX, DX) to prevent overflow, run DIV VAL2. Store quotient (AX) and remainder (DX).',
+      'Signed Division: Load S_VAL1 into AX, execute CWD (Convert Word to Doubleword) to sign-extend AX into DX:AX, run IDIV S_VAL2. Store quotient (AX) and remainder (DX).'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Initialize Segment Registers (DS = AX)' },
+      { type: 'process', label: 'Unsigned Mul: AX=VAL1, MUL VAL2 → Product in DX:AX' },
+      { type: 'process', label: 'Save Unsigned Product to memory U_PROD' },
+      { type: 'process', label: 'Signed Mul: AX=S_VAL1, IMUL S_VAL2 → Product in DX:AX' },
+      { type: 'process', label: 'Save Signed Product to memory S_PROD' },
+      { type: 'process', label: 'Unsigned Div: AX=VAL1, Clear DX, DIV VAL2' },
+      { type: 'process', label: 'Save Unsigned Quotient (AX) & Remainder (DX)' },
+      { type: 'process', label: 'Signed Div: AX=S_VAL1, CWD (Sign-extend to DX), IDIV S_VAL2' },
+      { type: 'process', label: 'Save Signed Quotient (AX) & Remainder (DX)' },
+      { type: 'stop', label: 'STOP (Exit via INT 21H Service 4CH)' }
+    ],
     expectedOutput: {
       desc: 'Inputs: VAL1 = 0A12H, VAL2 = 0050H. S_VAL1 = -25, S_VAL2 = 5.',
       inputs: [{ name: 'VAL1', val: '0A12H' }, { name: 'VAL2', val: '0050H' }],
@@ -1133,8 +1174,26 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['Input number N.', 'Multiply N by itself for square.', 'Multiply square by N for cube.', 'Execute loop to compute factorial.'],
     theoryText: 'Square is N*N. Cube is N*N*N. Factorial of N is computed iteratively as N * (N-1) * ... * 1 using CX loop.',
     theoryDiagramType: 'register-pair',
-    algorithmSteps: ['Start', 'Square = N*N.', 'Cube = Square*N.', 'Factorial = N * N-1 * N-2...', 'End.'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'process', label: 'AX = N * N' }, { type: 'process', label: 'Factorial loop' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize Segment Registers.',
+      'Load the input number N into registers AX and BX (AX = N, BX = N).',
+      'Square Calculation: Run MUL BX. This multiplies AX by BX (N * N) and stores the result in AX. Save the square into the SQUARE memory variable.',
+      'Cube Calculation: Multiply the computed Square in AX by N in BX (MUL BX). Save the resulting AX into CUBE memory.',
+      'Factorial Initialization: Clear/Set AX to 01H (accumulator) and set CX to N (loop counter).',
+      'Factorial Loop: Perform MUL CX (AX = AX * CX). Decrement CX automatically using the LOOP instruction, which repeats until CX = 0.',
+      'Save Factorial Result: Store final AX accumulator into FACT memory variable, then exit cleanly.'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Load Input Number N into AX & BX' },
+      { type: 'process', label: 'AX = AX * BX (N * N), Save to SQUARE' },
+      { type: 'process', label: 'AX = AX * BX (Square * N), Save to CUBE' },
+      { type: 'process', label: 'Init Factorial Accumulator: AX = 1, Loop Counter: CX = N' },
+      { type: 'process', label: 'AX = AX * CX' },
+      { type: 'decision', label: 'Is Decr CX = 0?' },
+      { type: 'process', label: 'Save final Factorial from AX to FACT' },
+      { type: 'stop', label: 'STOP (Exit)' }
+    ],
     expectedOutput: {
       desc: 'N = 5',
       inputs: [{ name: 'NUM', val: '05H' }],
@@ -1156,7 +1215,7 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     applications: [{ title: 'Scientific Math', desc: 'Statistical combinatorics and physics formulas.', icon: 'cpu' }]
   },
   exp_bit1: {
-    number: '3A',
+    number: '2A',
     title: 'Positive or Negative Data Check',
     aim: 'Write an ALP to find the given data is positive or negative.',
     objectives: ['Master conditional branching.', 'Understand status flag registers.'],
@@ -1165,8 +1224,24 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['Load test byte.', 'TEST with 80H.', 'Jump if negative (JS).', 'Store flag in memory.'],
     theoryText: 'In signed notation, the MSB (bit 7 for bytes, bit 15 for words) represents the sign. A value of 1 represents negative, 0 positive.',
     theoryDiagramType: 'pointer-scan',
-    algorithmSteps: ['Start', 'AL = Byte.', 'TEST AL, 80H.', 'If Sign Set: Negative. Else: Positive.', 'End.'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'decision', label: 'Is MSB Set?' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize Segment Registers (DS = @DATA).',
+      'Load the 8-bit signed test data into register AL.',
+      'Execute TEST AL, 80H to logically AND AL with 10000000B. This isolates Bit 7 (the sign bit) and updates the Sign Flag (SF) without changing AL.',
+      'Check status flags: If Sign Flag is set (SF = 1, meaning MSB is 1), the number is Negative. If SF = 0, the number is Positive.',
+      'Use JS (Jump on Sign) to branch. If JS is taken, jump to NEGATIVE_HANDLER and set BL = 01H. If JS is not taken, set BL = 00H (Positive).',
+      'Store register BL (sign result flag) in memory variable RESULT, then exit.'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Load data value into register AL' },
+      { type: 'process', label: 'Run bitwise test: TEST AL, 80H (isolates sign bit 7)' },
+      { type: 'decision', label: 'Is MSB (Bit 7) Set to 1?' },
+      { type: 'process', label: 'Set BL = 00H (Positive Flag)' },
+      { type: 'process', label: 'Set BL = 01H (Negative Flag)' },
+      { type: 'process', label: 'Store BL value in variable RESULT' },
+      { type: 'stop', label: 'STOP (Exit)' }
+    ],
     expectedOutput: {
       desc: 'Input: -45 (0D3H)',
       inputs: [{ name: 'DATA_VAL', val: 'D3H' }],
@@ -1188,7 +1263,7 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     applications: [{ title: 'Sensor Input', desc: 'Filter negative pressure or temperature bounds.', icon: 'thermometer' }]
   },
   exp_bit2: {
-    number: '3B',
+    number: '2B',
     title: 'Odd or Even Data Check',
     aim: 'Write an ALP to find the given data is odd or even.',
     objectives: ['Examine parity and LSB.', 'Create decision routines.'],
@@ -1197,8 +1272,24 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['Load number.', 'TEST with 01H.', 'JZ if even.', 'Store odd/even flag.'],
     theoryText: 'An integer is odd if its LSB is 1, and even if LSB is 0. Shifting or masking bit 0 determines parity.',
     theoryDiagramType: 'pointer-scan',
-    algorithmSteps: ['Start', 'AL = byte.', 'TEST AL, 01H.', 'If ZF=1: Even. Else: Odd.', 'End.'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'decision', label: 'Is LSB 0?' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize Segment Registers (DS = @DATA).',
+      'Load the 8-bit test byte into register AL.',
+      'Execute TEST AL, 01H to perform a bitwise AND with 00000001B. This isolates Bit 0 (Least Significant Bit, LSB) and updates the Zero Flag (ZF).',
+      'Analyze the Zero Flag (ZF): If LSB is 0, the result is 00H and ZF is set to 1 (Even). If LSB is 1, the result is 01H and ZF is set to 0 (Odd).',
+      'Use JZ (Jump on Zero) to branch. If ZF = 1, jump to EVEN_HANDLER and load BL = 00H. If ZF = 0, load BL = 01H (Odd Flag).',
+      'Store register BL into memory variable RESULT, then exit.'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Load data value into register AL' },
+      { type: 'process', label: 'Run bitwise test: TEST AL, 01H (isolates LSB bit 0)' },
+      { type: 'decision', label: 'Is LSB (Bit 0) Equal to 1?' },
+      { type: 'process', label: 'Set BL = 00H (Even Flag, since Bit 0 = 0)' },
+      { type: 'process', label: 'Set BL = 01H (Odd Flag, since Bit 0 = 1)' },
+      { type: 'process', label: 'Store BL value in variable RESULT' },
+      { type: 'stop', label: 'STOP (Exit)' }
+    ],
     expectedOutput: {
       desc: 'Input: 47 (2FH)',
       inputs: [{ name: 'DATA_VAL', val: '2FH' }],
@@ -1220,7 +1311,7 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     applications: [{ title: 'Data Comm', desc: 'Validating parity errors in transmission packets.', icon: 'hard-drive' }]
   },
   exp_bit3: {
-    number: '3C',
+    number: '2C',
     title: 'Count Logical Ones and Zeros',
     aim: 'Write an ALP to find Logical ones and zeros in a given data.',
     objectives: ['Master bit-level registers.', 'Design a shift-counter loop.'],
@@ -1229,8 +1320,26 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['Load test byte.', 'Set loop count CX=8.', 'SHR AL, 1 and query Carry Flag.', 'Increment respective registers.'],
     theoryText: 'By shifting right 8 times, each bit enters the carry flag. We increment BL on carry and BH on no carry.',
     theoryDiagramType: 'pointer-scan',
-    algorithmSteps: ['Start', 'CX=8, BL=0, BH=0.', 'Shift right AL.', 'If Carry=1: BL++. Else: BH++.', 'Loop CX times.', 'End.'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'process', label: 'AL=Byte, CX=8' }, { type: 'process', label: 'Shift right AL, check CF' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize Segment Registers (DS = @DATA).',
+      'Load the 8-bit test data into register AL.',
+      'Initialize registers: Set loop counter CX = 8 (for 8 bits), clear BL = 0 (Ones counter), and clear BH = 0 (Zeros counter).',
+      'Shift Operation: Perform logical Shift Right (SHR AL, 1). The Least Significant Bit (LSB) of AL is shifted out and enters the Carry Flag (CF).',
+      'Conditional Check: Use JC (Jump if Carry). If CF = 1, jump to INC_ONES and execute INC BL. If CF = 0, execute INC BH (zeros) and bypass the ones counter.',
+      'Decrement loop counter CX: Execute LOOP instruction. If CX is not 0, jump back to the Shift Operation; otherwise continue.',
+      'Store counters: Move BL (Ones count) to memory location ONES, and BH (Zeros count) to memory location ZEROS, then exit.'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Load AL with data byte; Clear counters: BL=0 (Ones), BH=0 (Zeros); Set CX=8' },
+      { type: 'process', label: 'Shift AL right by 1 bit: SHR AL, 1 (moves LSB into Carry Flag CF)' },
+      { type: 'decision', label: 'Is Carry Flag CF Set to 1?' },
+      { type: 'process', label: 'Increment Zeros Counter: INC BH' },
+      { type: 'process', label: 'Increment Ones Counter: INC BL' },
+      { type: 'decision', label: 'Is Loop CX = 0?' },
+      { type: 'process', label: 'Store BL (Ones) and BH (Zeros) into memory' },
+      { type: 'stop', label: 'STOP (Exit)' }
+    ],
     expectedOutput: {
       desc: 'Input: 0A5H (10100101B)',
       inputs: [{ name: 'DATA_VAL', val: 'A5H' }],
@@ -1252,7 +1361,7 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     applications: [{ title: 'Cryptography', desc: 'Calculating hash parity weight vectors.', icon: 'key' }]
   },
   exp_arr1: {
-    number: '4A',
+    number: '3A',
     title: 'Addition & Subtraction of N Numbers',
     aim: 'Write an ALP to find Addition/subtraction of N no ̳s.',
     objectives: ['Understand data array traversals.', 'Use index accumulators.'],
@@ -1261,8 +1370,24 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['Point SI to array.', 'Loop CX=N times.', 'Accumulate AL += [SI].', 'Repeat with SUB for subtraction.'],
     theoryText: 'Traversing an array involves looping N times, loading successive offsets into SI, and performing ALU accumulation.',
     theoryDiagramType: 'pointer-scan',
-    algorithmSteps: ['Start', 'Init DS and LEA SI, ARRAY.', 'CX=5, AL=0.', 'Loop: ADD AL, [SI], INC SI.', 'Store sum in memory.', 'End.'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'process', label: 'AL = 0, SI = array' }, { type: 'process', label: 'AL = AL + [SI], INC SI' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize Segment Registers (DS = @DATA).',
+      'Point SI to the starting address of the data array (LEA SI, ARRAY).',
+      'Set loop counter CX to the array length N (e.g., 5). Clear the accumulator AL to 00H.',
+      'Addition Loop: Add the current byte element pointed to by SI to the AL accumulator (ADD AL, [SI]).',
+      'Increment the array pointer SI (INC SI) to transition to the next element.',
+      'Check loop state: Decrement CX. If CX > 0, repeat the Addition Loop; otherwise store the final AL sum into memory variable SUM.',
+      'Reinitialize: Reload the array pointer SI, reload loop counter CX, load AL with the first array element, then perform sequential array subtraction (SUB AL, [SI]) and store result in DIFF.'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Point SI to array start; Set CX=N (5); Clear Accumulator AL=0' },
+      { type: 'process', label: 'Add element to accumulator: ADD AL, [SI]' },
+      { type: 'process', label: 'Increment array pointer: INC SI' },
+      { type: 'decision', label: 'Is Loop CX = 0?' },
+      { type: 'process', label: 'Store AL (Sum) in variable SUM; Reinit for Subtraction' },
+      { type: 'stop', label: 'STOP (Exit)' }
+    ],
     expectedOutput: {
       desc: 'Array: 10H, 20H, 30H, 40H, 50H (Length=5)',
       inputs: [{ name: 'ARRAY', val: '10H, 20H, 30H, 40H, 50H' }],
@@ -1284,7 +1409,7 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     applications: [{ title: 'Sensor Averaging', desc: 'Smoothing fluctuating signal readings.', icon: 'thermometer' }]
   },
   exp3: {
-    number: '4B',
+    number: '3B',
     title: 'Find Largest & Smallest Number in an Array',
     aim: 'Write an ALP for finding largest/smallest no.',
     objectives: ['Master array pointers.', 'Use comparative conditional branches.'],
@@ -1293,8 +1418,29 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['LEA SI, ARRAY.', 'Set candidate Max/Min = [SI].', 'Compare AL with current [SI+1].', 'Update extrema registers on conditions.'],
     theoryText: 'An array of N bytes is searched. AL stores Max, AH stores Min. LOOP instruction handles counter decrements.',
     theoryDiagramType: 'pointer-scan',
-    algorithmSteps: ['Start', 'Init SI pointer.', 'CX = N-1.', 'Compare and update Max (AL) and Min (AH).', 'LOOP.', 'Store Max/Min.', 'Stop'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'process', label: 'AL = [SI], AH = [SI]' }, { type: 'decision', label: 'Is element > AL?' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize Segment Registers (DS = @DATA).',
+      'Point SI index register to start of array (LEA SI, ARRAY).',
+      'Load the first element into AL (Max candidate) and AH (Min candidate) (AL = [SI], AH = [SI]).',
+      'Initialize loop counter CX = N - 1 (elements left to examine).',
+      'Scan Loop: Increment SI pointer (SI++) to target next element.',
+      'Max Check: Compare current element [SI] with AL. If [SI] > AL (using JAE/JA), copy [SI] to AL (AL = [SI]).',
+      'Min Check: Compare current element [SI] with AH. If [SI] < AH (using JBE/JB), copy [SI] to AH (AH = [SI]).',
+      'Decrement counter and loop: Execute LOOP instruction. If CX > 0, repeat Scan Loop.',
+      'Save Results: Store AL in MAX_VAL and AH in MIN_VAL memory offsets, then exit cleanly.'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Point SI to array start; AL=[SI] (Max), AH=[SI] (Min); Set CX=N-1' },
+      { type: 'process', label: 'Increment pointer SI++ to point to next element' },
+      { type: 'decision', label: 'Is current [SI] > AL (Max)?' },
+      { type: 'process', label: 'Update Max candidate: AL = [SI]' },
+      { type: 'decision', label: 'Is current [SI] < AH (Min)?' },
+      { type: 'process', label: 'Update Min candidate: AH = [SI]' },
+      { type: 'decision', label: 'Is Loop CX = 0?' },
+      { type: 'process', label: 'Save AL (Largest) and AH (Smallest) to memory' },
+      { type: 'stop', label: 'STOP (Exit)' }
+    ],
     expectedOutput: {
       desc: 'Array: 25H, 4AH, 12H, 8BH, 05H, 92H, 31H',
       inputs: [{ name: 'ARRAY', val: '25H, 4AH, 12H, 8BH, 05H, 92H, 31H' }],
@@ -1316,7 +1462,7 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     applications: [{ title: 'Peak Detection', desc: 'Signal peak analyses in instrumentation.', icon: 'cpu' }]
   },
   exp4: {
-    number: '4C',
+    number: '3C',
     title: 'Sort Array in Ascending/Descending Order',
     aim: 'Write an ALP to sort given array in Ascending/descending order.',
     objectives: ['Implement sorting algorithms.', 'Utilize memory value exchangers.'],
@@ -1325,8 +1471,29 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['Set outer counter DX = N - 1.', 'Set inner counter CX = DX.', 'Compare adjacent elements.', 'XCHG if condition met.'],
     theoryText: 'Bubble sort sweeps the array repeatedly. In each pass, adjacent elements are swapped if out of order, bubbling the largest value to the end.',
     theoryDiagramType: 'bubble-swap',
-    algorithmSteps: ['Start', 'DX = LEN - 1.', 'CX = DX, SI = Array.', 'Compare [SI], [SI+1].', 'Swap if AL > [SI+1].', 'LOOP CX, DEC DX, Loop DX.', 'End.'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'process', label: 'DX = N-1' }, { type: 'decision', label: 'Swap adjacent?' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize Segment Registers (DS = @DATA).',
+      'Set Outer Pass Counter DX to N - 1 (representing maximum passes required).',
+      'Pass Start: Point SI index register to the array start. Copy the pass limit to inner counter CX (CX = DX).',
+      'Element Load: Read byte [SI] into register AL.',
+      'Comparison: Compare AL with the adjacent element [SI + 1] (CMP AL, [SI + 1]).',
+      'Swap Decision: If AL <= [SI + 1] (sorted order), skip swap. Otherwise, swap memory elements: load [SI + 1] into AH, write AL to [SI + 1], and write AH to [SI].',
+      'Increment Pointer SI++ to target the next pair.',
+      'Inner Loop control: Decrement CX. If CX > 0, repeat the comparison; else finish current pass.',
+      'Outer Loop control: Decrement DX. If DX > 0, jump back to Pass Start to perform the next sweep; else the array is fully sorted.'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Init Outer Counter: DX = N-1 (Passes count)' },
+      { type: 'process', label: 'Point SI to start of array; Set Inner Counter: CX = DX' },
+      { type: 'process', label: 'AL = [SI] (Load current element)' },
+      { type: 'decision', label: 'Is AL <= [SI+1] (Ordered)?' },
+      { type: 'process', label: 'Swap memory elements: [SI] and [SI+1] via AH register' },
+      { type: 'process', label: 'Increment Pointer: SI++' },
+      { type: 'decision', label: 'Is Inner Loop CX = 0?' },
+      { type: 'decision', label: 'Is Outer Loop DX = 0?' },
+      { type: 'stop', label: 'STOP (Array successfully sorted)' }
+    ],
     expectedOutput: {
       desc: 'Array: 88H, 11H, 55H, 22H, 44H',
       inputs: [{ name: 'LIST', val: '88H, 11H, 55H, 22H, 44H' }],
@@ -1348,7 +1515,7 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     applications: [{ title: 'Task Scheduler', desc: 'Sort execution queues based on priority keys.', icon: 'cpu' }]
   },
   exp_str1: {
-    number: '5A',
+    number: '4A',
     title: 'Find String Length',
     aim: 'Write an ALP to find String length.',
     objectives: ['Understand string instructions.', 'Grasp SCASB string scans.'],
@@ -1357,8 +1524,26 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['LEA DI, STRING.', 'Set AL = terminator ($).', 'CX = FFFFH.', 'REPNE SCASB, calculate length.'],
     theoryText: 'SCASB compares AL with ES:[DI] and updates DI and CX. REPNE repeats until AL match occurs.',
     theoryDiagramType: 'pointer-scan',
-    algorithmSteps: ['Start', 'Init ES and DI pointer.', 'AL = "$", CX = FFFFH.', 'REPNE SCASB.', 'NOT CX and DEC CX.', 'Store result.', 'Stop'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'process', label: 'DI = String, CX = FFFF' }, { type: 'process', label: 'REPNE SCASB' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize Segment Registers (ES must equal DS to allow string scans).',
+      'Load DI index register with the starting offset of the target string (LEA DI, STRING).',
+      'Load search register AL with the string terminator character code (AL = "$").',
+      'Set loop counter CX to FFFFH (maximum unsigned 16-bit integer to handle downward count).',
+      'Clear Direction Flag: Execute CLD (DF = 0) to guarantee DI increments automatically.',
+      'Scan String: Run REPNE SCASB, which compares AL with ES:[DI], increments DI, and decrements CX until AL matches or CX is 0.',
+      'Calculate length: Execute NOT CX followed by DEC CX to transform the down-counted CX value into the exact string length.',
+      'Save Results: Store CX in STR_LEN memory, then exit cleanly.'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Point ES to DS; Load DI with string address; Set AL="$" (Terminator)' },
+      { type: 'process', label: 'Initialize search count: CX = FFFFH; Clear Direction Flag (DF=0)' },
+      { type: 'process', label: 'Scan String: REPNE SCASB (compares AL with ES:[DI], DI++, CX--)' },
+      { type: 'decision', label: 'Is Terminator "$" Found (ZF=1)?' },
+      { type: 'process', label: 'Convert CX count: NOT CX, then DEC CX to find exact string length' },
+      { type: 'process', label: 'Save final length CX into memory variable STR_LEN' },
+      { type: 'stop', label: 'STOP (Exit)' }
+    ],
     expectedOutput: {
       desc: 'String: "KUPPAM$"',
       inputs: [{ name: 'STR_VAL', val: 'KUPPAM$' }],
@@ -1380,7 +1565,7 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     applications: [{ title: 'Parser Compiler', desc: 'Evaluating bounds of text tokens.', icon: 'cpu' }]
   },
   exp_str2: {
-    number: '5B',
+    number: '4B',
     title: 'Display the Given String',
     aim: 'Write an ALP for Displaying the given String.',
     objectives: ['Master DOS interrupt calls.', 'Display texts in terminal.'],
@@ -1389,8 +1574,21 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['Define string with "$".', 'Load segment.', 'LEA DX, STRING.', 'Set AH = 09H, INT 21H.'],
     theoryText: 'DOS interrupt 21H service 09H prints a character string to the standard output. Offset must be loaded in DX.',
     theoryDiagramType: 'block-copy',
-    algorithmSteps: ['Start', 'Init DS.', 'LEA DX, MESSAGE.', 'AH = 09H.', 'INT 21H.', 'Stop'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'process', label: 'DX = msg offset, AH = 09H' }, { type: 'process', label: 'INT 21H' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize Data Segment: Load AX with @DATA and set DS = AX.',
+      'Load DX register with the starting offset address of the message (LEA DX, MESSAGE).',
+      'Select print function: Load register AH with service code 09H (Write string to standard output).',
+      'Trigger BIOS/DOS: Execute software interrupt INT 21H. This parses memory starting at DS:DX, writing characters to terminal until the "$" terminator is encountered.',
+      'Clean Return: Set AH = 4CH and trigger INT 21H to exit back to the DOS prompt cleanly.'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Initialize Segment Register: DS = @DATA' },
+      { type: 'process', label: 'Load string offset into DX: LEA DX, MESSAGE' },
+      { type: 'process', label: 'Select DOS display string service: AH = 09H' },
+      { type: 'process', label: 'Execute software interrupt: INT 21H (displays text in console)' },
+      { type: 'stop', label: 'STOP (Exit cleanly)' }
+    ],
     expectedOutput: {
       desc: 'String: "HELLO FROM 8086 MICRO-COURSE$"',
       inputs: [{ name: 'MSG', val: 'HELLO FROM 8086 MICRO-COURSE$' }],
@@ -1412,7 +1610,7 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     applications: [{ title: 'Command Terminal', desc: 'Displaying debug information and menu logs.', icon: 'cpu' }]
   },
   exp_str3: {
-    number: '5C',
+    number: '4C',
     title: 'Compare Two Strings',
     aim: 'Write an ALP for Comparing two Strings.',
     objectives: ['Learn string comparators.', 'Master REPE index loops.'],
@@ -1421,8 +1619,27 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['Load SI = str1, DI = str2.', 'CX = Length.', 'CLD, REPE CMPSB.', 'Query Zero Flag (JZ).'],
     theoryText: 'CMPSB compares DS:[SI] with ES:[DI], incrementing SI/DI. REPE repeats until comparison is unequal or CX is 0.',
     theoryDiagramType: 'block-copy',
-    algorithmSteps: ['Start', 'SI = Str1, DI = Str2, CX = Length.', 'CLD, REPE CMPSB.', 'If ZF=1: Equal. Else: Unequal.', 'End.'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'process', label: 'SI = Str1, DI = Str2, CLD' }, { type: 'process', label: 'REPE CMPSB' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize Segment Registers (ensure extra segment ES points to data segment DS: ES = DS).',
+      'Point SI register to the start of STR1, and DI register to the start of STR2.',
+      'Load loop counter CX with the character length of the strings to compare.',
+      'Clear Direction Flag: Execute CLD (DF = 0) to ensure index pointers SI and DI increment automatically.',
+      'Compare Strings: Execute REPE CMPSB. This instruction compares the byte at DS:SI with ES:DI, increments SI and DI, and decrements CX. It repeats while characters are equal and CX is not 0.',
+      'Check status flags: If Zero Flag is set (ZF = 1), the strings match completely. Jump to MATCH_HANDLER and set AL = 00H.',
+      'Mismatch Handler: If ZF = 0, set AL = 01H (signifying unequal strings).',
+      'Save Results: Store AL into memory variable COMPARE_RESULT, then exit cleanly.'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Point ES to DS; SI = Offset STR1, DI = Offset STR2, CX = String Length' },
+      { type: 'process', label: 'Clear Direction Flag: CLD (auto-increments SI and DI)' },
+      { type: 'process', label: 'Compare characters: REPE CMPSB (compares [SI] and [DI], SI++, DI++, CX--)' },
+      { type: 'decision', label: 'Are Strings Identical (ZF=1)?' },
+      { type: 'process', label: 'Set AL = 01H (Mismatch Flag)' },
+      { type: 'process', label: 'Set AL = 00H (Match Flag)' },
+      { type: 'process', label: 'Store AL value into memory COMPARE_RESULT' },
+      { type: 'stop', label: 'STOP (Exit)' }
+    ],
     expectedOutput: {
       desc: 'Str1: "HELLO", Str2: "HELLO"',
       inputs: [{ name: 'STR1', val: 'HELLO' }, { name: 'STR2', val: 'HELLO' }],
@@ -1444,7 +1661,7 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     applications: [{ title: 'Credential Validation', desc: 'Matching input passcode entries.', icon: 'key' }]
   },
   exp_str4: {
-    number: '5D',
+    number: '4D',
     title: 'String Reversal & Palindrome Check',
     aim: 'Write an ALP to reverse String and Checking for palindrome.',
     objectives: ['Perform string reversals.', 'Verify string symmetry.'],
@@ -1453,8 +1670,30 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['SI = str1 end, DI = rev_str.', 'Copy bytes backwards in LOOP.', 'Compare str1 and rev_str with CMPSB.'],
     theoryText: 'First, the string is copied from end to start. Then, CMPSB compares original and reversed sequences to verify symmetry.',
     theoryDiagramType: 'bubble-swap',
-    algorithmSteps: ['Start', 'Reverse copy STR1 into REV_STR.', 'Compare STR1 and REV_STR with REPE CMPSB.', 'If equal: Palindrome. Else: Not.', 'Stop'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'process', label: 'Reverse STR1 into REV_STR' }, { type: 'process', label: 'Compare STR1, REV_STR' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize Segment Registers (DS and ES).',
+      'Point SI register to the end of STR1 (last character) and DI to the start of REV_STR memory.',
+      'Load loop counter CX with the string length.',
+      'Reversal Loop: Load character AL = [SI], store at destination [DI] = AL. Decrement SI (SI--) and increment DI (DI++).',
+      'Check Loop count CX: Decrement CX via LOOP. If CX > 0, repeat Reversal Loop.',
+      'Append Terminator: Store "$" character at end of REV_STR memory block.',
+      'Re-initialize Pointers: Reset SI to start of STR1, reset DI to start of REV_STR, set CX to string length, and clear DF (CLD).',
+      'Verify Palindrome: Run REPE CMPSB to compare original STR1 with reversed REV_STR byte-by-byte.',
+      'Branch on Equality: If ZF = 1 (match), set AL = 01H (is Palindrome). If ZF = 0, set AL = 00H (not Palindrome). Save AL in PALINDROME_FLAG.'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Point SI to last character of STR1; Point DI to REV_STR; Set CX=Length' },
+      { type: 'process', label: 'Copy character backwards: AL = [SI], [DI] = AL, SI--, DI++' },
+      { type: 'decision', label: 'Is Copy Loop CX = 0?' },
+      { type: 'process', label: 'Reinit pointers: SI = &STR1, DI = &REV_STR, CX = Length; CLD' },
+      { type: 'process', label: 'Compare strings: REPE CMPSB' },
+      { type: 'decision', label: 'Are Strings Identical (ZF=1)?' },
+      { type: 'process', label: 'Set AL = 00H (Not Palindrome)' },
+      { type: 'process', label: 'Set AL = 01H (Is Palindrome)' },
+      { type: 'process', label: 'Store AL value into memory PALINDROME_FLAG' },
+      { type: 'stop', label: 'STOP (Exit)' }
+    ],
     expectedOutput: {
       desc: 'String: "MADAM"',
       inputs: [{ name: 'STR1', val: 'MADAM' }],
@@ -1476,7 +1715,7 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     applications: [{ title: 'Genome Sequence', desc: 'Detecting DNA sequence symmetry markers.', icon: 'cpu' }]
   },
   exp5: {
-    number: '6',
+    number: '5',
     title: 'Block Data Transfer (Memory Copy)',
     aim: 'Write an assembly program to copy a block of 10 data bytes from a source memory segment offset to a destination segment offset.',
     objectives: ['Learn high-speed data transfers.', 'Understand REP MOVSB instructions.'],
@@ -1485,8 +1724,23 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     procedureSteps: ['SI = SRC, DI = DEST, CX = 10.', 'CLD (Direction Flag = 0).', 'REP MOVSB.'],
     theoryText: 'REP MOVSB automates loop copies. While CX is not zero, it moves DS:SI to ES:DI, incrementing both pointers.',
     theoryDiagramType: 'block-copy',
-    algorithmSteps: ['Start', 'Init DS and ES registers.', 'SI = Source, DI = Destination, CX = 10.', 'CLD, REP MOVSB.', 'Stop'],
-    flowchartSteps: [{ type: 'start', label: 'START' }, { type: 'process', label: 'SI = Src, DI = Dest, CX = 10' }, { type: 'process', label: 'REP MOVSB' }, { type: 'stop', label: 'STOP' }],
+    algorithmSteps: [
+      'Initialize Segment Registers: Set ES equal to DS (ES = DS).',
+      'Set index registers: SI points to starting offset of SRC block, DI points to DEST block.',
+      'Set transfer loop counter CX to 10 (bytes count).',
+      'Clear Direction Flag: Execute CLD (DF = 0) to ensure SI and DI increment automatically (from lower to higher address).',
+      'Execute Copy: Run REP MOVSB. This copies the byte at DS:[SI] to ES:[DI], increments SI and DI, decrements CX, and repeats until CX = 0.',
+      'Verify: Check destination memory block to ensure all bytes were successfully duplicated, then exit.'
+    ],
+    flowchartSteps: [
+      { type: 'start', label: 'START' },
+      { type: 'process', label: 'Point ES to DS; SI = Source block Offset, DI = Destination Offset' },
+      { type: 'process', label: 'Set CX = 10 (transfer size); Clear Direction Flag: CLD (auto-increments)' },
+      { type: 'process', label: 'REP MOVSB (copies byte from DS:[SI] to ES:[DI], increments SI and DI, decrements CX)' },
+      { type: 'decision', label: 'Is Block Copy CX = 0?' },
+      { type: 'process', label: 'Verify that DEST_BLOCK memory contains matching copied bytes' },
+      { type: 'stop', label: 'STOP (Exit cleanly)' }
+    ],
     expectedOutput: {
       desc: 'Source block: 10H to 99H (10 bytes)',
       inputs: [{ name: 'SRC_BLOCK', val: '10 20 30 40 50 60 70 80 90 99' }],

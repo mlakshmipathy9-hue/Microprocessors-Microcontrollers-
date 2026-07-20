@@ -320,51 +320,88 @@ export default function Sidebar({
                     </span>
                   </div>
 
-                  {activeUnit === 'labs' ? (
-                    <div className="space-y-2.5 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
-                      {labExperiments.map(exp => {
-                        const isCurrent = currentSlideId === 'm11-s2' && currentLabId === exp.id;
-                        return (
-                          <button
-                            key={exp.id}
-                            onClick={() => onSelectSlide('m11', 'm11-s2', exp.id)}
-                            className={`w-full text-left p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-2 ${
-                              isCurrent
-                                ? 'border-indigo-300 bg-indigo-50/70 text-indigo-950 font-semibold shadow-xs'
-                                : 'border-slate-100 bg-slate-50/35 text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-200'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between w-full gap-2">
-                              <span className="flex items-center gap-2">
-                                <span className={`text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded ${
-                                  isCurrent
-                                    ? 'bg-indigo-600 text-white'
-                                    : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
-                                }`}>
-                                  EXP {exp.number}
-                                </span>
-                                <span className={`font-bold text-xs leading-tight ${isCurrent ? 'text-slate-900' : 'text-slate-800'}`}>
-                                  {exp.title}
-                                </span>
-                              </span>
-                              {isCurrent && (
-                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 shrink-0 mt-1" />
-                              )}
+                  {activeUnit === 'labs' ? (() => {
+                    const groupedLabs = [
+                      {
+                        title: "Lab Resources 1: Arithmetic Instructions",
+                        experiments: labExperiments.filter(e => typeof e.number === 'string' && e.number.startsWith('1'))
+                      },
+                      {
+                        title: "Lab Resources 2: Bit Manipulation Instructions",
+                        experiments: labExperiments.filter(e => typeof e.number === 'string' && e.number.startsWith('2'))
+                      },
+                      {
+                        title: "Lab Resources 3: Array Operations",
+                        experiments: labExperiments.filter(e => typeof e.number === 'string' && e.number.startsWith('3'))
+                      },
+                      {
+                        title: "Lab Resources 4: String Operations",
+                        experiments: labExperiments.filter(e => typeof e.number === 'string' && e.number.startsWith('4'))
+                      },
+                      {
+                        title: "Lab Resources 5: Block Data Transfer",
+                        experiments: labExperiments.filter(e => e.number === '5')
+                      }
+                    ];
+
+                    return (
+                      <div className="space-y-5 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+                        {groupedLabs.map((group, gIdx) => {
+                          if (group.experiments.length === 0) return null;
+                          return (
+                            <div key={gIdx} className="space-y-2">
+                              <h5 className="text-[9.5px] font-black font-mono text-indigo-600 bg-indigo-50/50 px-2 py-1 rounded-lg border border-indigo-100/40 uppercase tracking-widest pl-2">
+                                {group.title}
+                              </h5>
+                              <div className="space-y-2">
+                                {group.experiments.map(exp => {
+                                  const isCurrent = currentSlideId === 'm11-s2' && currentLabId === exp.id;
+                                  return (
+                                    <button
+                                      key={exp.id}
+                                      onClick={() => onSelectSlide('m11', 'm11-s2', exp.id)}
+                                      className={`w-full text-left p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-2 ${
+                                        isCurrent
+                                          ? 'border-indigo-300 bg-indigo-50/70 text-indigo-950 font-semibold shadow-xs'
+                                          : 'border-slate-100 bg-slate-50/35 text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-200'
+                                      }`}
+                                    >
+                                      <div className="flex items-start justify-between w-full gap-2">
+                                        <span className="flex items-center gap-2">
+                                          <span className={`text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded ${
+                                            isCurrent
+                                              ? 'bg-indigo-600 text-white'
+                                              : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                                          }`}>
+                                            EXP {exp.number}
+                                          </span>
+                                          <span className={`font-bold text-xs leading-tight ${isCurrent ? 'text-slate-900' : 'text-slate-800'}`}>
+                                            {exp.title}
+                                          </span>
+                                        </span>
+                                        {isCurrent && (
+                                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 shrink-0 mt-1" />
+                                        )}
+                                      </div>
+                                      <p className={`text-[10px] leading-normal font-medium ${isCurrent ? 'text-indigo-900/80' : 'text-slate-500'}`}>
+                                        {exp.aim}
+                                      </p>
+                                      <div className="flex items-center justify-between mt-0.5 text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                                        <span>B.Tech Syllabus Lab</span>
+                                        <span className="text-[8px] font-sans text-indigo-600 bg-indigo-100/50 px-1.5 py-0.5 rounded border border-indigo-100/30">
+                                          DIRECTIVE SANDBOX
+                                        </span>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
-                            <p className={`text-[10px] leading-normal font-medium ${isCurrent ? 'text-indigo-900/80' : 'text-slate-500'}`}>
-                              {exp.aim}
-                            </p>
-                            <div className="flex items-center justify-between mt-0.5 text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
-                              <span>B.Tech Syllabus Lab</span>
-                              <span className="text-[8px] font-sans text-indigo-600 bg-indigo-100/50 px-1.5 py-0.5 rounded border border-indigo-100/30">
-                                DIRECTIVE SANDBOX
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
+                          );
+                        })}
+                      </div>
+                    );
+                  })() : (
                     <div className="space-y-2">
                       {modules
                         .filter((m) => {

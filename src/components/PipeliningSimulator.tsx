@@ -943,12 +943,209 @@ const CYCLE_DATABASE: Record<'sequential' | 'branch' | 'saturation', CycleStep[]
   ]
 };
 
+interface AnalogyStation {
+  name: string;
+  desc: string;
+  active: boolean;
+  complete?: boolean;
+}
+
+interface AnalogyStep {
+  cycle: number;
+  station1: AnalogyStation;
+  station2: AnalogyStation;
+  station3: AnalogyStation;
+  explanation: string;
+}
+
+const SANDWICH_SEQUENTIAL_STEPS: AnalogyStep[] = [
+  {
+    cycle: 1,
+    station1: { name: 'Customer 1', desc: '🍔 Ordering Sandwich', active: true },
+    station2: { name: 'Empty', desc: '💤 Idle', active: false },
+    station3: { name: 'Empty', desc: '💤 Idle', active: false },
+    explanation: 'Worker 1 is taking Customer 1\'s order. Other stations are completely idle because they have no work yet. Efficiency is extremely low.'
+  },
+  {
+    cycle: 2,
+    station1: { name: 'Empty', desc: '💤 Idle', active: false },
+    station2: { name: 'Customer 1', desc: '🔥 Toasting & Fillings', active: true },
+    station3: { name: 'Empty', desc: '💤 Idle', active: false },
+    explanation: 'Customer 1\'s sandwich is being toasted at Station 2. Since this is non-pipelined, Customer 2 is forced to wait outside. Station 1 and 3 sit completely idle!'
+  },
+  {
+    cycle: 3,
+    station1: { name: 'Empty', desc: '💤 Idle', active: false },
+    station2: { name: 'Empty', desc: '💤 Idle', active: false },
+    station3: { name: 'Customer 1', desc: '💰 Wrapping & Paying', active: true },
+    explanation: 'Customer 1 is paying and wrapping up. Stations 1 and 2 are completely idle. Customer 2 and 3 are still waiting in line outside!'
+  },
+  {
+    cycle: 4,
+    station1: { name: 'Customer 2', desc: '🍔 Ordering Sandwich', active: true },
+    station2: { name: 'Empty', desc: '💤 Idle', active: false },
+    station3: { name: 'Empty', desc: '💤 Idle', active: false },
+    explanation: 'Customer 1 has left. Customer 2 can finally step inside and order. The sequential cycle restarts. Still, Stations 2 and 3 remain idle.'
+  },
+  {
+    cycle: 5,
+    station1: { name: 'Empty', desc: '💤 Idle', active: false },
+    station2: { name: 'Customer 2', desc: '🔥 Toasting & Fillings', active: true },
+    station3: { name: 'Empty', desc: '💤 Idle', active: false },
+    explanation: 'Customer 2\'s sandwich is being toasted. No other station is active. Customer 3 continues to wait outside.'
+  },
+  {
+    cycle: 6,
+    station1: { name: 'Empty', desc: '💤 Idle', active: false },
+    station2: { name: 'Empty', desc: '💤 Idle', active: false },
+    station3: { name: 'Customer 2', desc: '💰 Wrapping & Paying', active: true },
+    explanation: 'Customer 2 is paying and wrapping up. Once again, Stations 1 and 2 are idle, and Customer 3 is still waiting.'
+  },
+  {
+    cycle: 7,
+    station1: { name: 'Customer 3', desc: '🍔 Ordering Sandwich', active: true },
+    station2: { name: 'Empty', desc: '💤 Idle', active: false },
+    station3: { name: 'Empty', desc: '💤 Idle', active: false },
+    explanation: 'Customer 3 can finally order. Worker 1 is busy, but Workers 2 and 3 are sitting idle.'
+  },
+  {
+    cycle: 8,
+    station1: { name: 'Empty', desc: '💤 Idle', active: false },
+    station2: { name: 'Customer 3', desc: '🔥 Toasting & Fillings', active: true },
+    station3: { name: 'Empty', desc: '💤 Idle', active: false },
+    explanation: 'Customer 3\'s sandwich is being toasted.'
+  },
+  {
+    cycle: 9,
+    station1: { name: 'Empty', desc: '💤 Idle', active: false },
+    station2: { name: 'Empty', desc: '💤 Idle', active: false },
+    station3: { name: 'Customer 3', desc: '💰 Wrapping & Paying', active: true },
+    explanation: 'Customer 3 is paying. All 3 customers are finally served after 9 cycles. Total idle time for the workers was a massive 66%!'
+  }
+];
+
+const SANDWICH_PIPELINED_STEPS: AnalogyStep[] = [
+  {
+    cycle: 1,
+    station1: { name: 'Customer 1', desc: '🍔 Ordering Sandwich', active: true },
+    station2: { name: 'Empty', desc: '💤 Idle', active: false },
+    station3: { name: 'Empty', desc: '💤 Idle', active: false },
+    explanation: 'Customer 1 starts ordering at Station 1. The other stations are idle because they are waiting for work to flow down the line.'
+  },
+  {
+    cycle: 2,
+    station1: { name: 'Customer 2', desc: '🍔 Ordering Sandwich', active: true },
+    station2: { name: 'Customer 1', desc: '🔥 Toasting & Fillings', active: true },
+    station3: { name: 'Empty', desc: '💤 Idle', active: false },
+    explanation: '🚀 Parallel Overlap! While Customer 1\'s sandwich is being toasted at Station 2, Worker 1 is already taking Customer 2\'s order at Station 1! No waiting.'
+  },
+  {
+    cycle: 3,
+    station1: { name: 'Customer 3', desc: '🍔 Ordering Sandwich', active: true },
+    station2: { name: 'Customer 2', desc: '🔥 Toasting & Fillings', active: true },
+    station3: { name: 'Customer 1', desc: '💰 Wrapping & Paying', active: true },
+    explanation: '🌟 Maximum Efficiency! All 3 stations are busy simultaneously! Customer 1 is paying, Customer 2 is getting toppings, and Customer 3 is ordering.'
+  },
+  {
+    cycle: 4,
+    station1: { name: '✅ Finished', desc: 'Next Customer', active: false, complete: true },
+    station2: { name: 'Customer 3', desc: '🔥 Toasting & Fillings', active: true },
+    station3: { name: 'Customer 2', desc: '💰 Wrapping & Paying', active: true },
+    explanation: 'Customer 1 has already left the store happy! Customer 2 is paying, and Customer 3 is at Station 2. Continuous output is being maintained!'
+  },
+  {
+    cycle: 5,
+    station1: { name: '✅ Finished', desc: 'Next Customer', active: false, complete: true },
+    station2: { name: '✅ Finished', desc: 'Next Customer', active: false, complete: true },
+    station3: { name: 'Customer 3', desc: '💰 Wrapping & Paying', active: true },
+    explanation: 'Customer 2 has left. Customer 3 is paying. All 3 customers are fully served in just 5 cycles, nearly twice as fast as sequential!'
+  }
+];
+
+const HARDWARE_SEQUENTIAL_STEPS = [
+  {
+    cycle: 1,
+    biu: { name: 'Instruction 1', desc: '📥 Fetching (Memory Access)', active: true },
+    eu: { name: 'Empty', desc: '💤 Idle (Stalled)', active: false },
+    explanation: 'The Bus Interface Unit (BIU) is fetching Instruction 1 from external memory. The Execution Unit (EU) is stalled waiting for code.'
+  },
+  {
+    cycle: 2,
+    biu: { name: 'Empty', desc: '💤 Idle', active: false },
+    eu: { name: 'Instruction 1', desc: '⚙️ Executing (ALU Core)', active: true },
+    explanation: 'The EU is executing Instruction 1. Since pipelining is turned OFF, the BIU remains completely idle and does not fetch Instruction 2 yet!'
+  },
+  {
+    cycle: 3,
+    biu: { name: 'Instruction 2', desc: '📥 Fetching (Memory Access)', active: true },
+    eu: { name: 'Empty', desc: '💤 Idle (Stalled)', active: false },
+    explanation: 'Instruction 1 has completed execution. Now, the BIU wakes up to fetch Instruction 2 while the EU sits idle waiting.'
+  },
+  {
+    cycle: 4,
+    biu: { name: 'Empty', desc: '💤 Idle', active: false },
+    eu: { name: 'Instruction 2', desc: '⚙️ Executing (ALU Core)', active: true },
+    explanation: 'The EU executes Instruction 2. The BIU goes back to sleep. Total execution is slow and disjointed.'
+  },
+  {
+    cycle: 5,
+    biu: { name: 'Instruction 3', desc: '📥 Fetching (Memory Access)', active: true },
+    eu: { name: 'Empty', desc: '💤 Idle (Stalled)', active: false },
+    explanation: 'The BIU fetches the third instruction from memory. The EU is once again stalled.'
+  },
+  {
+    cycle: 6,
+    biu: { name: 'Empty', desc: '💤 Idle', active: false },
+    eu: { name: 'Instruction 3', desc: '⚙️ Executing (ALU Core)', active: true },
+    explanation: 'The EU executes Instruction 3. All 3 instructions are completed in 6 cycles.'
+  }
+];
+
+const HARDWARE_PIPELINED_STEPS = [
+  {
+    cycle: 1,
+    biu: { name: 'Instruction 1', desc: '📥 Fetching (Memory Access)', active: true },
+    eu: { name: 'Empty', desc: '💤 Idle (Stalled)', active: false },
+    explanation: 'The BIU fetches Instruction 1 from memory into the prefetch queue. The EU is idle because it is cycle 1.'
+  },
+  {
+    cycle: 2,
+    biu: { name: 'Instruction 2', desc: '📥 Prefetching (Overlap!)', active: true },
+    eu: { name: 'Instruction 1', desc: '⚙️ Executing (ALU Core)', active: true },
+    explanation: '🚀 Parallel overlap! While the EU executes Instruction 1, the BIU asynchronously prefetches Instruction 2 from memory into the queue. Zero cycle delay!'
+  },
+  {
+    cycle: 3,
+    biu: { name: 'Instruction 3', desc: '📥 Prefetching (Overlap!)', active: true },
+    eu: { name: 'Instruction 2', desc: '⚙️ Executing (ALU Core)', active: true },
+    explanation: '🌟 Seamless concurrency! The EU executes Instruction 2, while the BIU prefetches Instruction 3 into the queue. The ALU never stalls.'
+  },
+  {
+    cycle: 4,
+    biu: { name: 'Empty', desc: '💤 Complete (Standby)', active: false },
+    eu: { name: 'Instruction 3', desc: '⚙️ Executing (ALU Core)', active: true },
+    explanation: 'All instructions have been prefetched. The EU executes the final instruction (Instruction 3) from the queue. Total time: 4 cycles instead of 6!'
+  }
+];
+
 export default function PipeliningSimulator() {
   const [activeTab, setActiveTab] = useState<'intro' | 'architecture' | 'simulation' | 'analysis' | 'summary'>('intro');
   const [activeScenario, setActiveScenario] = useState<'sequential' | 'branch' | 'saturation'>('sequential');
   
   const currentScenario = SCENARIOS[activeScenario];
   const INSTRUCTIONS = currentScenario.instructions;
+
+  // Simplified Analogy States
+  const [introMode, setIntroMode] = useState<'analogy' | 'hardware'>('analogy');
+  const [analogyStyle, setAnalogyStyle] = useState<'sequential' | 'pipelined'>('pipelined');
+  const [analogyStep, setAnalogyStep] = useState<number>(1);
+
+  useEffect(() => {
+    setAnalogyStep(1);
+  }, [analogyStyle, introMode]);
+
+  // Concept Clarification Helper state
+  const [helpTab, setHelpTab] = useState<'shift' | 'fetch' | 'cycle5'>('shift');
 
   // Simulator States
   const [queue, setQueue] = useState<string[]>([]); // Max 6 bytes
@@ -1221,6 +1418,300 @@ export default function PipeliningSimulator() {
                   <strong className="text-emerald-600 text-xs font-mono block mb-1">2. Execution Unit (EU)</strong>
                   <span className="text-xs text-slate-600">
                     The core engine that pulls bytes from the prefetch queue, decodes their meaning, and executes them instantly.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Simplified Concept Clarifier */}
+            <div className="bg-white rounded-xl p-5 border border-indigo-150 space-y-4 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-indigo-500 animate-pulse shrink-0" />
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-950 uppercase tracking-wider font-mono">
+                      Interactive Pipeline Concept Clarifier
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-sans">
+                      Step through clock cycles to see why pipelining is so much faster!
+                    </p>
+                  </div>
+                </div>
+                {/* Mode Selector */}
+                <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs self-start sm:self-auto">
+                  <button
+                    onClick={() => setIntroMode('analogy')}
+                    className={`px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
+                      introMode === 'analogy'
+                        ? 'bg-indigo-600 text-white shadow-3xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    🍔 Sandwich Analogy
+                  </button>
+                  <button
+                    onClick={() => setIntroMode('hardware')}
+                    className={`px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
+                      introMode === 'hardware'
+                        ? 'bg-indigo-600 text-white shadow-3xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    ⚡ Microprocessor Clock
+                  </button>
+                </div>
+              </div>
+
+              {/* Selector for Style: Sequential vs Pipelined */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider font-mono">Workflow Method</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${analogyStyle === 'pipelined' ? 'bg-emerald-500 animate-ping' : 'bg-rose-500'}`}></span>
+                    <span className="text-xs font-bold text-slate-800">
+                      {analogyStyle === 'pipelined' ? 'Pipelined (Overlapped parallel activity)' : 'Sequential (One at a time)'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex bg-white p-1 rounded-lg border border-slate-200 text-xs gap-1">
+                  <button
+                    onClick={() => setAnalogyStyle('sequential')}
+                    className={`px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      analogyStyle === 'sequential'
+                        ? 'bg-rose-600 text-white shadow-3xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    Sequential (Slow)
+                  </button>
+                  <button
+                    onClick={() => setAnalogyStyle('pipelined')}
+                    className={`px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      analogyStyle === 'pipelined'
+                        ? 'bg-emerald-600 text-white shadow-3xs'
+                        : 'text-emerald-700 hover:text-emerald-950'
+                    }`}
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    Pipelined (Fast)
+                  </button>
+                </div>
+              </div>
+
+              {/* Interactive Cycle Stepper Controller */}
+              <div className="flex items-center justify-between gap-4 py-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-500 font-mono">ACTIVE CYCLE:</span>
+                  <div className="bg-indigo-100 text-indigo-800 text-xs font-mono font-bold px-2.5 py-1 rounded-lg border border-indigo-200">
+                    Cycle {analogyStep}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setAnalogyStep(prev => Math.max(1, prev - 1))}
+                    disabled={analogyStep === 1}
+                    className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-transparent transition-all cursor-pointer"
+                    title="Previous Cycle"
+                  >
+                    <ChevronRight className="w-4 h-4 rotate-180" />
+                  </button>
+                  {/* Slider of cycle numbers */}
+                  <div className="flex gap-1">
+                    {Array.from(
+                      { length: analogyStyle === 'sequential' ? (introMode === 'analogy' ? 9 : 6) : (introMode === 'analogy' ? 5 : 4) },
+                      (_, i) => i + 1
+                    ).map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => setAnalogyStep(n)}
+                        className={`w-6 h-6 rounded-md text-[10.5px] font-mono font-bold border transition-all cursor-pointer ${
+                          analogyStep === n
+                            ? analogyStyle === 'pipelined'
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-3xs'
+                              : 'bg-rose-600 text-white border-rose-600 shadow-3xs'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setAnalogyStep(prev => Math.min(analogyStyle === 'sequential' ? (introMode === 'analogy' ? 9 : 6) : (introMode === 'analogy' ? 5 : 4), prev + 1))}
+                    disabled={analogyStep === (analogyStyle === 'sequential' ? (introMode === 'analogy' ? 9 : 6) : (introMode === 'analogy' ? 5 : 4))}
+                    className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-transparent transition-all cursor-pointer"
+                    title="Next Cycle"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* RENDER DYNAMIC VISUALIZATION CANVAS */}
+              {introMode === 'analogy' ? (
+                // Sandwich Analogy Rendering
+                <div className="space-y-4 pt-1">
+                  {/* Visual Row of 3 Stations */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {[
+                      {
+                        title: 'Station 1: Take Order',
+                        biuEquiv: 'BIU Fetch equivalent',
+                        data: (analogyStyle === 'sequential' ? SANDWICH_SEQUENTIAL_STEPS : SANDWICH_PIPELINED_STEPS)[analogyStep - 1]?.station1,
+                        colorClass: 'border-blue-100 bg-blue-50/20 text-blue-900',
+                        activeColorClass: 'border-blue-500 bg-blue-50 text-blue-950 shadow-xs ring-1 ring-blue-500/15',
+                        dotColor: 'bg-blue-500'
+                      },
+                      {
+                        title: 'Station 2: Add Fillings',
+                        biuEquiv: 'Prefetch Queue equivalent',
+                        data: (analogyStyle === 'sequential' ? SANDWICH_SEQUENTIAL_STEPS : SANDWICH_PIPELINED_STEPS)[analogyStep - 1]?.station2,
+                        colorClass: 'border-purple-100 bg-purple-50/20 text-purple-900',
+                        activeColorClass: 'border-purple-500 bg-purple-50 text-purple-950 shadow-xs ring-1 ring-purple-500/15',
+                        dotColor: 'bg-purple-500'
+                      },
+                      {
+                        title: 'Station 3: Wrap & Pay',
+                        biuEquiv: 'EU Execute equivalent',
+                        data: (analogyStyle === 'sequential' ? SANDWICH_SEQUENTIAL_STEPS : SANDWICH_PIPELINED_STEPS)[analogyStep - 1]?.station3,
+                        colorClass: 'border-emerald-100 bg-emerald-50/20 text-emerald-900',
+                        activeColorClass: 'border-emerald-500 bg-emerald-50 text-emerald-950 shadow-xs ring-1 ring-emerald-500/15',
+                        dotColor: 'bg-emerald-500'
+                      }
+                    ].map((st, idx) => {
+                      const isActive = st.data?.active;
+                      const isComplete = st.data?.complete;
+                      return (
+                        <div
+                          key={idx}
+                          className={`border-2 rounded-xl p-3.5 transition-all duration-300 flex flex-col justify-between h-28 ${
+                            isActive ? st.activeColorClass : st.colorClass
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold uppercase font-mono tracking-wide">{st.title}</span>
+                              {isActive && <span className="flex h-2 w-2 relative">
+                                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${st.dotColor} opacity-75`}></span>
+                                <span className={`relative inline-flex rounded-full h-2 w-2 ${st.dotColor}`}></span>
+                              </span>}
+                            </div>
+                            <span className="text-[9px] text-slate-400 font-mono block mt-0.5">{st.biuEquiv}</span>
+                          </div>
+
+                          <div className="mt-2.5 pt-2 border-t border-dashed border-slate-200/50 flex items-center gap-2">
+                            {isActive ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm">👤</span>
+                                <span className="text-xs font-bold font-mono">{st.data.name}</span>
+                              </div>
+                            ) : isComplete ? (
+                              <span className="text-xs text-emerald-600 font-bold font-mono flex items-center gap-1">
+                                <CheckCircle className="w-3.5 h-3.5" /> Serviced
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-400 italic font-mono">💤 Worker Idle</span>
+                            )}
+                          </div>
+                          {isActive && (
+                            <span className="text-[10px] text-slate-500 font-sans block truncate">{st.data.desc}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Real-time Dynamic Analogy Explainer Text */}
+                  <div className="bg-indigo-50/40 border border-indigo-100 p-4 rounded-xl space-y-1.5">
+                    <span className="text-[9px] text-indigo-500 font-extrabold uppercase tracking-widest font-mono block">ANALYSIS & WHY IT HAPPENS:</span>
+                    <p className="text-xs text-slate-700 leading-relaxed font-sans">
+                      {(analogyStyle === 'sequential' ? SANDWICH_SEQUENTIAL_STEPS : SANDWICH_PIPELINED_STEPS)[analogyStep - 1]?.explanation}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                // Hardware Simulator Concept Rendering
+                <div className="space-y-4 pt-1">
+                  {/* High level units block */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      {
+                        name: 'Bus Interface Unit (BIU)',
+                        role: 'FETCH PHASE',
+                        data: (analogyStyle === 'sequential' ? HARDWARE_SEQUENTIAL_STEPS : HARDWARE_PIPELINED_STEPS)[analogyStep - 1]?.biu,
+                        borderClass: 'border-blue-100 bg-blue-50/20 text-blue-900',
+                        activeBorderClass: 'border-blue-500 bg-blue-50 text-blue-950 shadow-xs ring-1 ring-blue-500/15',
+                        dotColor: 'bg-blue-500'
+                      },
+                      {
+                        name: 'Execution Unit (EU)',
+                        role: 'EXECUTE PHASE',
+                        data: (analogyStyle === 'sequential' ? HARDWARE_SEQUENTIAL_STEPS : HARDWARE_PIPELINED_STEPS)[analogyStep - 1]?.eu,
+                        borderClass: 'border-emerald-100 bg-emerald-50/20 text-emerald-900',
+                        activeBorderClass: 'border-emerald-500 bg-emerald-50 text-emerald-950 shadow-xs ring-1 ring-emerald-500/15',
+                        dotColor: 'bg-emerald-500'
+                      }
+                    ].map((u, idx) => {
+                      const isActive = u.data?.active;
+                      return (
+                        <div
+                          key={idx}
+                          className={`border-2 rounded-xl p-4 transition-all duration-300 flex flex-col justify-between h-28 ${
+                            isActive ? u.activeBorderClass : u.borderClass
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold font-mono uppercase tracking-wide">{u.name}</span>
+                              {isActive && <span className="flex h-2 w-2 relative">
+                                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${u.dotColor} opacity-75`}></span>
+                                <span className={`relative inline-flex rounded-full h-2 w-2 ${u.dotColor}`}></span>
+                              </span>}
+                            </div>
+                            <span className="text-[9.5px] text-slate-400 font-extrabold font-mono uppercase">{u.role}</span>
+                          </div>
+
+                          <div className="mt-2.5 pt-2 border-t border-dashed border-slate-200/50 flex flex-col">
+                            {isActive ? (
+                              <div>
+                                <span className="text-xs font-bold font-mono text-slate-800">{u.data.name}</span>
+                                <span className="text-[10px] text-slate-500 block font-mono">{u.data.desc}</span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400 italic font-mono flex items-center gap-1">
+                                <XCircle className="w-3.5 h-3.5" /> Unit Suspended (Idle)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Real-time Dynamic Hardware Explanation text */}
+                  <div className="bg-indigo-50/40 border border-indigo-100 p-4 rounded-xl space-y-1.5">
+                    <span className="text-[9px] text-indigo-500 font-extrabold uppercase tracking-widest font-mono block">HARDWARE EXPLANATION:</span>
+                    <p className="text-xs text-slate-700 leading-relaxed font-sans">
+                      {(analogyStyle === 'sequential' ? HARDWARE_SEQUENTIAL_STEPS : HARDWARE_PIPELINED_STEPS)[analogyStep - 1]?.explanation}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Dynamic Comparison Summary Footer Card */}
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between text-xs font-mono gap-2">
+                <span className="text-slate-500">Compare Total Execution Steps:</span>
+                <div className="flex flex-wrap gap-3">
+                  <span className="text-slate-700">
+                    🔄 Sequential: <strong className="text-red-600 font-extrabold">{introMode === 'analogy' ? '9 Steps' : '6 Cycles'}</strong>
+                  </span>
+                  <span className="text-slate-700">
+                    🚀 Pipelined: <strong className="text-emerald-600 font-extrabold">{introMode === 'analogy' ? '5 Steps' : '4 Cycles'}</strong>
+                  </span>
+                  <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0">
+                    ~{introMode === 'analogy' ? '44%' : '33%'} Faster!
                   </span>
                 </div>
               </div>
@@ -1579,6 +2070,299 @@ export default function PipeliningSimulator() {
                       BIU appends at Rear →
                     </span>
                   </div>
+                </div>
+
+                {/* Interactive Concept Clarifier Q&A */}
+                <div id="qna-explainer" className="bg-amber-50/40 border border-amber-200 rounded-xl p-5 space-y-4 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-amber-200/50 pb-3 gap-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-amber-600 shrink-0 animate-pulse" />
+                      <div>
+                        <h4 className="text-xs font-bold font-mono uppercase tracking-wider text-amber-950">
+                          FIFO Queue & Memory Fetch Q&A Explainer
+                        </h4>
+                        <p className="text-[10px] text-amber-800 font-sans mt-0.5">
+                          Highly requested clarifications about the internal 8086 pipeline architecture.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Selector Tabs */}
+                    <div className="flex bg-amber-100/60 p-0.5 rounded-lg border border-amber-250 text-[11px] self-start sm:self-auto font-mono flex-wrap gap-1">
+                      <button
+                        onClick={() => setHelpTab('shift')}
+                        className={`px-3 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                          helpTab === 'shift'
+                            ? 'bg-amber-600 text-white shadow-3xs'
+                            : 'text-amber-850 hover:text-amber-955'
+                        }`}
+                      >
+                        🔄 Slot 1 Shifting
+                      </button>
+                      <button
+                        onClick={() => setHelpTab('fetch')}
+                        className={`px-3 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                          helpTab === 'fetch'
+                            ? 'bg-amber-600 text-white shadow-3xs'
+                            : 'text-amber-850 hover:text-amber-955'
+                        }`}
+                      >
+                        📥 Memory Bus Fetches
+                      </button>
+                      <button
+                        onClick={() => setHelpTab('cycle5')}
+                        className={`px-3 py-1 rounded-md font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                          helpTab === 'cycle5'
+                            ? 'bg-amber-600 text-white shadow-3xs'
+                            : 'text-amber-850 hover:text-amber-955'
+                        }`}
+                      >
+                        ⚡ Why Queue Grows (Cycle 5)
+                      </button>
+                    </div>
+                  </div>
+
+                  {helpTab === 'shift' ? (
+                    <div className="space-y-4 text-xs">
+                      <div className="bg-white/85 p-3.5 rounded-xl border border-amber-100/80 space-y-2">
+                        <p className="font-bold text-amber-950 text-sm">
+                          ❓ "Why is Slot 1 overwritten with 34H? Why isn't it written to Slot 2 instead?"
+                        </p>
+                        <p className="text-slate-700 leading-relaxed">
+                          This is a very common source of confusion! The prefetch queue is a <strong>FIFO (First-In, First-Out) Shift Register</strong>, meaning it operates like a <strong>grocery checkout conveyor belt</strong> rather than a static array of slots.
+                        </p>
+                      </div>
+
+                      {/* Interactive visual stepping diagram of the shift */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                        <div className="bg-white border border-amber-100 rounded-lg p-3 space-y-2.5">
+                          <span className="text-[9px] font-bold text-amber-750 uppercase font-mono block">Step 1: Opcode Fetched</span>
+                          <div className="flex items-center gap-1 font-mono text-[10px]">
+                            <div className="w-12 h-8 rounded border border-amber-400 bg-amber-50 flex items-center justify-center font-bold text-amber-900">
+                              B8H
+                            </div>
+                            <div className="w-12 h-8 rounded border border-dashed border-slate-200 flex items-center justify-center text-slate-400">
+                              empty
+                            </div>
+                            <div className="w-12 h-8 rounded border border-dashed border-slate-200 flex items-center justify-center text-slate-400">
+                              empty
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-slate-600 font-sans leading-tight">
+                            The BIU fetches <strong>B8H</strong> and pushes it. Since the queue is empty, it lands at the front in <strong>Slot 1</strong>.
+                          </p>
+                        </div>
+
+                        <div className="bg-white border border-amber-100 rounded-lg p-3 space-y-2.5">
+                          <span className="text-[9px] font-bold text-amber-750 uppercase font-mono block">Step 2: EU Pops B8H</span>
+                          <div className="flex items-center gap-1 font-mono text-[10px]">
+                            <div className="w-12 h-8 rounded border border-dashed border-rose-300 bg-rose-50/70 flex items-center justify-center font-bold text-rose-700">
+                              pop!
+                            </div>
+                            <div className="w-12 h-8 rounded border border-dashed border-slate-200 flex items-center justify-center text-slate-400">
+                              empty
+                            </div>
+                            <div className="w-12 h-8 rounded border border-dashed border-slate-200 flex items-center justify-center text-slate-400">
+                              empty
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-slate-600 font-sans leading-tight">
+                            In the next cycle, the EU <strong>pops</strong> B8H out of the queue to start processing. <strong>Slot 1 is now instantly empty again!</strong>
+                          </p>
+                        </div>
+
+                        <div className="bg-white border border-amber-100 rounded-lg p-3 space-y-2.5">
+                          <span className="text-[9px] font-bold text-amber-750 uppercase font-mono block">Step 3: New Byte Pushed</span>
+                          <div className="flex items-center gap-1 font-mono text-[10px]">
+                            <div className="w-12 h-8 rounded border border-emerald-400 bg-emerald-50 flex items-center justify-center font-bold text-emerald-800">
+                              34H
+                            </div>
+                            <div className="w-12 h-8 rounded border border-dashed border-slate-200 flex items-center justify-center text-slate-400">
+                              empty
+                            </div>
+                            <div className="w-12 h-8 rounded border border-dashed border-slate-200 flex items-center justify-center text-slate-400">
+                              empty
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-slate-600 font-sans leading-tight">
+                            Simultaneously, the BIU fetches the next byte <strong>34H</strong>. Since the queue shifted and Slot 1 was empty, <strong>34H goes straight into Slot 1</strong>!
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="bg-amber-100/50 border-l-4 border-amber-500 p-3 rounded-r-lg text-[11px] text-amber-900 leading-relaxed font-sans">
+                        <strong>Summary:</strong> It was not an "overwrite" in memory. It is the behavior of a <strong>shifting pipeline</strong>. When the byte in front is consumed, the remaining space moves forward. If the EU hadn't consumed B8H, 34H would indeed have been written into Slot 2! But because B8H was retrieved, the conveyor belt advanced, placing 34H in Slot 1.
+                      </div>
+                    </div>
+                  ) : helpTab === 'fetch' ? (
+                    <div className="space-y-4 text-xs">
+                      <div className="bg-white/85 p-3.5 rounded-xl border border-amber-100/80 space-y-2">
+                        <p className="font-bold text-amber-950 text-sm">
+                          ❓ "When `MOV AX, 1234H` is fetched from memory, is each byte fetched one-by-one or are all bytes fetched at once?"
+                        </p>
+                        <p className="text-slate-700 leading-relaxed">
+                          <strong>They are fetched one-by-one over multiple clock cycles!</strong> The CPU cannot physically fetch all 3 bytes at the same time. Let's see why:
+                        </p>
+                      </div>
+
+                      {/* Visual memory mapping of bytes */}
+                      <div className="bg-white border border-amber-100 rounded-lg p-4 space-y-3.5">
+                        <span className="text-[9px] font-bold text-amber-750 uppercase font-mono block">Memory Layout of 3-Byte instruction: MOV AX, 1234H</span>
+                        
+                        <div className="space-y-1.5 max-w-md">
+                          <div className="flex items-center gap-3">
+                            <span className="w-16 font-mono text-[10px] text-slate-500">Address 1000H:</span>
+                            <div className="flex-1 h-7 border border-blue-200 bg-blue-50/50 rounded flex items-center justify-between px-3 font-mono text-[11px] text-blue-900">
+                              <span className="font-bold">B8H</span>
+                              <span className="text-[9px] text-blue-700 font-semibold">Opcode (Instructions for MOV AX)</span>
+                            </div>
+                            <span className="text-[10px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded font-mono font-bold shrink-0">Cycle 1 Fetch</span>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <span className="w-16 font-mono text-[10px] text-slate-500">Address 1001H:</span>
+                            <div className="flex-1 h-7 border border-emerald-200 bg-emerald-50/50 rounded flex items-center justify-between px-3 font-mono text-[11px] text-emerald-900">
+                              <span className="font-bold">34H</span>
+                              <span className="text-[9px] text-emerald-700 font-semibold">Low Byte of Immediate (1234H)</span>
+                            </div>
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-mono font-bold shrink-0">Cycle 2 Fetch</span>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <span className="w-16 font-mono text-[10px] text-slate-500">Address 1002H:</span>
+                            <div className="flex-1 h-7 border border-purple-200 bg-purple-50/50 rounded flex items-center justify-between px-3 font-mono text-[11px] text-purple-900">
+                              <span className="font-bold">12H</span>
+                              <span className="text-[9px] text-purple-700 font-semibold">High Byte of Immediate (1234H)</span>
+                            </div>
+                            <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-mono font-bold shrink-0">Cycle 3 Fetch</span>
+                          </div>
+                        </div>
+
+                        <div className="text-[10.5px] text-slate-600 leading-relaxed font-sans space-y-1.5 pt-1">
+                          <p>
+                            1. Memory in the 8086 system is strictly <strong>byte-addressable</strong> (each address holds exactly 8 bits / 1 byte).
+                          </p>
+                          <p>
+                            2. To read the instruction, the BIU must trigger the external system bus to read Address 1000H first, then 1001H, then 1002H.
+                          </p>
+                          <p>
+                            3. <strong>The Pipelining Advantage:</strong> Because reading memory over the system bus is slow, the BIU prefetches these bytes into the 6-byte queue in advance. That way, the execution core (EU) doesn't have to wait for the memory fetches—it gets them instantly from the queue!
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // CYCLE 5 PIPELINE GROWTH WALKTHROUGH
+                    <div className="space-y-4 text-xs">
+                      <div className="bg-white/85 p-3.5 rounded-xl border border-amber-100/80 space-y-2">
+                        <p className="font-bold text-amber-950 text-sm">
+                          ❓ "In Cycle 5, how does the queue grow to 2 bytes?"
+                        </p>
+                        <p className="text-slate-700 leading-relaxed">
+                          The queue size is determined by a simple balance equation: <br />
+                          <strong className="text-amber-900 font-mono text-[11px] block mt-1.5 bg-amber-50 p-2 rounded border border-amber-150">
+                            New Queue Size = Previous Size + (Bytes Fetched by BIU) - (Bytes Consumed by EU)
+                          </strong>
+                        </p>
+                      </div>
+
+                      {/* Interactive visual stepping diagram of the shift */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                        <div className="bg-white border border-amber-100 rounded-xl p-3.5 space-y-3 shadow-3xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase font-mono block">Cycle 4 (Setup)</span>
+                            <span className="text-[10px] bg-indigo-100 text-indigo-800 font-mono font-bold px-1.5 py-0.5 rounded">EU Pulls</span>
+                          </div>
+                          
+                          <div className="space-y-2 border-t border-slate-100 pt-2 text-[11px] font-mono">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500">Queue State:</span>
+                              <span className="font-bold bg-indigo-50 border border-indigo-200 text-indigo-900 px-1.5 py-0.5 rounded">['BB'] (1 Byte)</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500">EU Action:</span>
+                              <span className="font-bold text-rose-600">Pops '12H' (-1)</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500">BIU Action:</span>
+                              <span className="font-bold text-blue-600">Fetches 'BBH' (+1)</span>
+                            </div>
+                          </div>
+                          <p className="text-[10.5px] text-slate-600 font-sans leading-relaxed pt-2 border-t border-slate-100">
+                            The EU pops <strong>12H</strong> (the 3rd byte of <code>MOV AX</code>) into its decoder. Simultaneously, the BIU fetches the next instruction's opcode <strong>BBH</strong> into the queue.
+                          </p>
+                        </div>
+
+                        <div className="bg-amber-50/30 border-2 border-amber-400 rounded-xl p-3.5 space-y-3 shadow-2xs relative">
+                          <div className="absolute -top-2.5 right-3 bg-amber-600 text-white font-mono text-[8.5px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                            Active Cycle
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-amber-900 uppercase font-mono block">Cycle 5 (The Shift)</span>
+                            <span className="text-[10px] bg-amber-200 text-amber-900 font-mono font-bold px-1.5 py-0.5 rounded">Queue Grows!</span>
+                          </div>
+                          
+                          <div className="space-y-2 border-t border-amber-200 pt-2 text-[11px] font-mono">
+                            <div className="flex items-center justify-between">
+                              <span className="text-amber-800">Queue Start:</span>
+                              <span className="font-bold text-amber-900">['BB'] (1 Byte)</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-amber-800">EU Action:</span>
+                              <span className="font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-150">🧠 DECODE (0 Pops)</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-amber-800">BIU Action:</span>
+                              <span className="font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-150">📥 FETCH '11H' (+1)</span>
+                            </div>
+                            <div className="flex items-center justify-between pt-1.5 border-t border-dashed border-amber-350">
+                              <span className="font-bold text-amber-950">Queue End:</span>
+                              <span className="font-extrabold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200">['BB', '11'] (2)</span>
+                            </div>
+                          </div>
+                          <p className="text-[10.5px] text-slate-700 font-sans leading-relaxed pt-2 border-t border-dashed border-amber-200">
+                            <strong>Why does it grow?</strong> Since decoding is an <em>internal</em> CPU activity, the EU <strong>does not pull any bytes from the queue</strong> in Cycle 5 (consumed = 0). But the autonomous BIU keeps fetching and pushes <strong>11H</strong> (+1). Thus: 1 + 1 - 0 = <strong>2 bytes</strong>!
+                          </p>
+                        </div>
+
+                        <div className="bg-white border border-amber-100 rounded-xl p-3.5 space-y-3 shadow-3xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase font-mono block">Cycle 6 (Next Cycle)</span>
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-mono font-bold px-1.5 py-0.5 rounded">Grows More</span>
+                          </div>
+                          
+                          <div className="space-y-2 border-t border-slate-100 pt-2 text-[11px] font-mono">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500">Queue Start:</span>
+                              <span className="font-bold text-slate-900">['BB', '11'] (2)</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500">EU Action:</span>
+                              <span className="font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-150">⚡ EXECUTE (0 Pops)</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500">BIU Action:</span>
+                              <span className="font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-150">📥 FETCH '11H' (+1)</span>
+                            </div>
+                            <div className="flex items-center justify-between pt-1.5 border-t border-dashed border-slate-200">
+                              <span className="font-bold text-slate-950">Queue End:</span>
+                              <span className="font-extrabold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200">['BB', '11', '11'] (3)</span>
+                            </div>
+                          </div>
+                          <p className="text-[10.5px] text-slate-600 font-sans leading-relaxed pt-2 border-t border-slate-100">
+                            The EU is now executing <code>MOV AX, 1234H</code> (consumed = 0). The BIU fetches the next operand <strong>11H</strong> (+1). The queue continues to grow: 2 + 1 - 0 = <strong>3 bytes</strong>!
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="bg-amber-100/50 border-l-4 border-amber-500 p-3 rounded-r-lg text-[11px] text-amber-900 leading-relaxed font-sans flex items-start gap-2">
+                        <span className="text-base shrink-0">💡</span>
+                        <span>
+                          <strong>Key Takeaway:</strong> Pipelining works because the BIU can <strong>build up a backlog</strong> of instructions in the queue while the EU is busy decoding and executing instructions inside the chip. When the EU finishes execution, it doesn't have to wait for the memory bus—it pops the pre-fetched bytes immediately!
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Clock Timeline Overlap Trace Chart (Gantt representation) */}
