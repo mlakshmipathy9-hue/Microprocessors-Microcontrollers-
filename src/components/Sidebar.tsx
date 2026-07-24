@@ -25,11 +25,13 @@ export default function Sidebar({
   currentLabId
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeUnit, setActiveUnit] = useState<'unit1' | 'unit2' | 'labs'>(() => {
+  const [activeUnit, setActiveUnit] = useState<'unit1' | 'unit2' | 'unit3' | 'labs'>(() => {
+    if (['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].some(id => currentModuleId === id)) return 'unit3';
     return ['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id) ? 'unit2' : 'unit1';
   });
 
   useEffect(() => {
+    const isUnit3 = ['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].some(id => currentModuleId === id);
     const isUnit2 = ['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id);
     const activeModule = modules.find(m => m.id === currentModuleId);
     const activeSlide = activeModule?.slides.find(s => s.id === currentSlideId);
@@ -38,7 +40,7 @@ export default function Sidebar({
     if (activeUnit === 'labs' && isLab) {
       return;
     }
-    setActiveUnit(isUnit2 ? 'unit2' : 'unit1');
+    setActiveUnit(isUnit3 ? 'unit3' : isUnit2 ? 'unit2' : 'unit1');
   }, [currentModuleId, currentSlideId, modules]);
 
   // Compute progress percent
@@ -88,7 +90,7 @@ export default function Sidebar({
             'dev-pipeline': ["pipeline", "program development steps", "steps", "editor", "linker", "assembler", "debugging", "flowchart"],
             'addressing-modes': ["addressing modes", "addressing", "immediate", "register", "index", "base", "offset", "effective address"],
             'instruction-decoder': ["instructions", "instruction set", "decoder", "add", "sub", "and", "or", "alu", "data transfer"],
-            'directive-sandbox': ["assembler directives", "directives", "db", "dw", "segment", "assume", "org", "end"],
+            'directive-sandbox': ["assembler directives", "directives", "db", "dw", "segment", "assume", "org", "end", "stack", "push", "pop", "call", "ret", "proc", "near", "far"],
             'assembler-playground': ["write programs", "assembler", "playground", "debugger", "registers", "memory", "simulation"],
             quiz: ["quiz", "assessment", "mcq", "gate", "exam", "question"]
           };
@@ -133,7 +135,9 @@ export default function Sidebar({
                   8086 Microprocessor
                 </h1>
                 <span className="text-[9px] text-indigo-600 font-mono tracking-wider font-semibold uppercase">
-                  {['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id)
+                  {['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].some(id => currentModuleId === id)
+                    ? 'UNIT-3: 8086 INTERFACING'
+                    : ['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id)
                     ? 'UNIT-2: 8086 PROGRAMMING'
                     : 'UNIT-1: SYSTEM ARCHITECTURE'}
                 </span>
@@ -163,7 +167,9 @@ export default function Sidebar({
               <span>{completedCount} of {totalSlides} slides studied</span>
               <span className="flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600">
                 <GraduationCap className="w-3 h-3 text-indigo-600" />
-                {['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id)
+                {['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].some(id => currentModuleId === id)
+                  ? 'UNIT-3: 8086 Interfacing'
+                  : ['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id)
                   ? 'UNIT-2: 8086 Programming'
                   : 'UNIT-1: System Architecture'}
               </span>
@@ -296,11 +302,12 @@ export default function Sidebar({
                     <select
                       id="unit-selector"
                       value={activeUnit}
-                      onChange={(e) => setActiveUnit(e.target.value as 'unit1' | 'unit2' | 'labs')}
+                      onChange={(e) => setActiveUnit(e.target.value as 'unit1' | 'unit2' | 'unit3' | 'labs')}
                       className="w-full pl-9 pr-10 py-2.5 bg-white border border-slate-200 hover:border-indigo-300 text-slate-700 font-bold rounded-xl text-xs shadow-xs focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all cursor-pointer appearance-none outline-none"
                     >
                       <option value="unit1">Unit I: System Architecture</option>
                       <option value="unit2">Unit II: 8086 Programming</option>
+                      <option value="unit3">Unit III: 8086 Interfacing</option>
                       <option value="labs">Lab Resources</option>
                     </select>
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
@@ -316,7 +323,7 @@ export default function Sidebar({
                   <div className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest px-1 flex justify-between items-center">
                     <span>Learning Modules</span>
                     <span className="text-[9px] font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 font-sans">
-                      {activeUnit === 'labs' ? 'Lab Resources' : activeUnit === 'unit2' ? 'Unit II: Programming' : 'Unit I: Architecture'}
+                      {activeUnit === 'labs' ? 'Lab Resources' : activeUnit === 'unit3' ? 'Unit III: Interfacing' : activeUnit === 'unit2' ? 'Unit II: Programming' : 'Unit I: Architecture'}
                     </span>
                   </div>
 
@@ -405,8 +412,11 @@ export default function Sidebar({
                     <div className="space-y-2">
                       {modules
                         .filter((m) => {
+                          const isM3 = ['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].includes(m.id);
                           const isM2 = ['m8', 'm9', 'm10', 'm11', 'm12'].includes(m.id);
-                          return activeUnit === 'unit2' ? isM2 : !isM2;
+                          if (activeUnit === 'unit3') return isM3;
+                          if (activeUnit === 'unit2') return isM2;
+                          return !isM2 && !isM3;
                         })
                         .map((m) => {
                           const mIdx = modules.findIndex(mod => mod.id === m.id);

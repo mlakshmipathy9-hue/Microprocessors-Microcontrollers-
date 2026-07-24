@@ -168,13 +168,15 @@ export const courseData: Module[] = [
       },
       {
         id: 'm2-s3',
-        title: '4. The Flag Register Detail',
+        title: '4. Register Organization & Flag Register Details 📋',
         moduleTitle: 'Module 2: 8086 Internal Architecture & Execution Unit',
         moduleId: 'm2',
         points: [
-          'The 8086 possesses a 16-bit Flag register with 9 active flags.',
-          '6 Status Flags: CF (Carry), PF (Parity), AF (Auxiliary Carry), ZF (Zero), SF (Sign), OF (Overflow). Updated automatically by ALU.',
-          '3 Control Flags: DF (Direction for strings), IF (Interrupt Enable), TF (Trap for debugging). Controlled by software instructions (CLI, STI, CLD, STD).'
+          '8086 Register Organization Overview: The 8086 CPU contains fourteen 16-bit internal registers categorized into General Purpose, Segment, Pointer & Index, and Special/Flag registers.',
+          'General Purpose Registers (AX, BX, CX, DX): 16-bit registers in EU used for arithmetic, logic, and data operations. Each can be accessed as two independent 8-bit high/low byte registers (AH/AL, BH/BL, CH/CL, DH/DL).',
+          'Segment Registers (CS, DS, SS, ES): 16-bit registers in BIU holding base addresses for Code, Data, Stack, and Extra memory segments (1 MB physical space).',
+          'Pointers & Index Registers (IP, SP, BP, SI, DI): 16-bit registers holding memory offset addresses. IP points to next instruction; SP/BP manage stack frame; SI/DI handle source/destination indexing.',
+          '16-Bit Flag Register (Status & Control Flags): Contains 9 active bits out of 16 bits. 6 Status Flags (CF, PF, AF, ZF, SF, OF) automatically updated by ALU operations, and 3 Control Flags (DF, IF, TF) set or cleared by software instructions (CLI, STI, CLD, STD).'
         ],
         interactiveType: 'flags'
       },
@@ -957,15 +959,25 @@ export const courseData: Module[] = [
       },
       {
         id: 'm10-s2',
-        title: '2. Instruction Format 🧩',
+        title: '2. General 8086 Machine Instruction Format & Builder 🧩',
         moduleTitle: 'Module 10: 8086 Instruction Set',
         moduleId: 'm10',
+        interactiveType: 'instruction-builder',
         points: [
-          'Learn opcode, operands, instruction length, and machine code.',
-          'Length Variability: 8086 instructions are variable-length, ranging from 1 byte (e.g., NOP, CLC) up to 6 bytes (e.g., complex memory addressing with displacements).',
-          'Opcode (Operation Code): Specifies the type of operation to perform (e.g., 100010 for MOV). It is usually 6 bits, followed by D and W bits.',
-          'D (Direction) & W (Word/Byte) Bits: D = 1 means data flows to register (REG field); D = 0 means data flows to memory/reg (R/M field). W = 1 indicates a 16-bit word operation; W = 0 indicates an 8-bit byte operation.',
-          'MOD-REG-R/M Byte: Determines the addressing modes, registers, or memory displacements used as operands.'
+          '8. General 8086 Machine Instruction Format: An 8086 instruction may contain different fields depending on the instruction. Not every instruction contains every field. Length varies from 1 to 6 bytes.',
+          'Format Layout: [ Prefix ] | [ Opcode ] | [ MOD ] | [ REG ] | [ R/M ] | [ Displacement ] | [ Immediate Data ]',
+          'Prefix (Optional): Repeat (REP) or segment override prefix (e.g. CS:, ES:).',
+          'Opcode (Required): Specifies the operation to perform (6-bit opcode + D & W status bits).',
+          'MOD (Addressing Mode): 2-bit field specifying register mode or displacement length (0, 1, or 2 bytes).',
+          'REG (Register): 3-bit field specifying a 16-bit or 8-bit register operand.',
+          'R/M (Register/Memory): 3-bit field specifying target register or base/index displacement combination.',
+          'Displacement (Optional): 8-bit or 16-bit memory address offset.',
+          'Immediate Data (Optional): 8-bit or 16-bit constant data value embedded in machine code.',
+          '9. Interactive Instruction Builder 🧩: Use the interactive tool on the right to select operations (MOV, ADD, SUB, INC, CMP), destination/source registers, or immediate values, dynamically construct assembly instructions, and run the 4-step CPU Decode pipeline (FETCH → DECODE OPCODE → IDENTIFY OPERANDS → EXECUTE).',
+          '10. Quick Comparison: Opcode (What operation to perform), Operand (Data or location involved), Destination (Where result goes), Source (Where data comes from), Addressing Mode (How operand is accessed), Machine Code (CPU binary/hex representation).',
+          '11. Remember 🧠: OPCODE = WHAT TO DO | OPERAND = ON WHAT TO DO | ADDRESSING MODE = HOW TO FIND OPERAND.',
+          'Execution Flow: Assembly Language → Opcode + Operand(s) → Machine Code → 8086 Executes.',
+          'Key Facts: 8086 instructions are variable length (1 to 6 bytes). Not every instruction contains all fields. The 8086 uses Little-Endian storage for multi-byte data.'
         ]
       },
       {
@@ -982,20 +994,7 @@ export const courseData: Module[] = [
         ],
         interactiveType: 'instruction-decoder'
       },
-      {
-        id: 'm10-s3b',
-        title: '3b. XLAT - Conversion & Translation 📟',
-        moduleTitle: 'Module 10: 8086 Instruction Set',
-        moduleId: 'm10',
-        points: [
-          'XLAT (Translate): A unique and powerful data transfer instruction that translates a byte value in AL using a memory-based lookup table.',
-          'Hardware Mechanism: It performs the memory read: AL ← DS:[BX + AL]. BX must be pre-loaded with the 16-bit offset of the table, and AL holds the index (0–255).',
-          'Decimal to ASCII Conversion: To convert a raw decimal number (0–9) in AL to its ASCII equivalent (30H–39H), load BX with a table of values [30H, 31H, ..., 39H]. Executing XLAT instantly updates AL to the correct ASCII code!',
-          'Hex to Seven-Segment LED Conversion: Extremely popular in embedded systems! Store the 7-segment binary active codes (e.g., 3FH for 0, 06H for 1) in a 16-byte table. XLAT maps the hex digit in AL (0-15) directly to its LED segments byte.',
-          'Try it out! Use the Interactive XLAT Conversion Laboratory in the simulator on the right. Select the XLAT instruction, adjust AL, choose a conversion scenario, and run the instruction to watch the CPU execute the lookup.'
-        ],
-        interactiveType: 'instruction-decoder'
-      },
+
       {
         id: 'm10-s4',
         title: '4. Arithmetic Instructions ➕',
@@ -1125,6 +1124,18 @@ export const courseData: Module[] = [
             options: ['DS:[BX + AL]', 'ES:[SI + AL]', 'DS:[BP + AL]', 'SS:[SP + AL]'],
             correctAnswer: 0,
             explanation: 'The XLAT instruction calculates the lookup address by adding the unsigned index in AL to the base offset in BX, accessing the Data Segment (DS) by default. Therefore, the physical memory location accessed is DS:[BX + AL].'
+          },
+          {
+            question: 'In the 8086 microprocessor stack architecture, what micro-steps occur when the instruction "PUSH AX" is executed?',
+            options: ['SP is incremented by 2, then AX is written to SS:[SP]', 'SP is decremented by 2, then the 16-bit word in AX is written to SS:[SP]', 'AX is written to memory, then SP is set to 0000H', 'SP is decremented by 1, then AL is written'],
+            correctAnswer: 1,
+            explanation: 'The 8086 stack grows DOWNWARDS towards lower memory addresses. Executing PUSH AX first decrements SP by 2 (SP ← SP - 2), and then writes the 16-bit word from AX into memory at location SS:[SP].'
+          },
+          {
+            question: 'Where is the Base of the Stack (BOS) located relative to the Top of the Stack (TOS) in the 8086 memory architecture as items are pushed?',
+            options: ['Base of Stack is at a LOWER memory address than Top of Stack', 'Base of Stack is at a HIGHER memory address than Top of Stack because the stack grows downward', 'Base of Stack and Top of Stack are always at the exact same address', 'Base of Stack resides in the Extra Segment (ES) while TOS resides in Code Segment (CS)'],
+            correctAnswer: 1,
+            explanation: 'Because the 8086 stack grows downward from high offsets to low offsets, the Base of the Stack (initial maximum SP) sits at a HIGHER memory address, while the Top of the Stack (current SP) moves to LOWER memory addresses as data is pushed.'
           }
         ]
       }
@@ -1160,8 +1171,41 @@ export const courseData: Module[] = [
         interactiveType: 'directive-sandbox'
       },
       {
+        id: 'm11-s2b',
+        title: '8086 Memory Models (.MODEL Directive) 🧠',
+        moduleTitle: 'Module 11: Assembler Directives',
+        moduleId: 'm11',
+        points: [
+          'The .MODEL Directive: Defines the memory organization and allocation limits for code and data segments in simplified dot-model programs (Syntax: .MODEL <Size>).',
+          '1. TINY Model: Code + Data + Stack all share ONE unified 64KB segment. Generates lightweight DOS .COM executables where CS = DS = SS = ES.',
+          '2. SMALL Model: One 64KB Code Segment + One 64KB Data Segment (max 128KB total). Uses NEAR pointers by default. Perfect for standard 8086 assembly routines.',
+          '3. MEDIUM Model: Code spans MULTIPLE segments (>64KB using FAR calls), while Data is restricted to ONE 64KB segment.',
+          '4. COMPACT Model: Code is limited to ONE 64KB segment (NEAR calls), while Data spans MULTIPLE segments (>64KB using FAR pointers).',
+          '5. LARGE Model: Both Code and Data span MULTIPLE 64KB segments (FAR calls & FAR pointers). Individual arrays are capped at 64KB.',
+          '6. HUGE Model: Multiple Code and Data segments, AND single data structures/arrays CAN exceed 64KB by performing segment arithmetic.',
+          'Explore our Interactive Memory Models & Directive Sandbox on the right to compare segment structures and layout parameters!'
+        ],
+        interactiveType: 'directive-sandbox'
+      },
+      {
+        id: 'm11-s2c',
+        title: 'NEAR and FAR Code Calls (PROC & PTR Directives) 📞',
+        moduleTitle: 'Module 11: Assembler Directives',
+        moduleId: 'm11',
+        points: [
+          'What are NEAR and FAR Calls?: In 8086 segmented architecture, procedure calls are categorized based on whether the destination subroutine is in the SAME code segment (NEAR) or a DIFFERENT code segment (FAR).',
+          '1. NEAR Call (Intra-segment Call): Called when the procedure resides within the current 64KB Code Segment. The CS register remains unchanged. The CPU pushes ONLY the 16-bit Instruction Pointer (IP) onto the stack (2 bytes).',
+          '2. FAR Call (Inter-segment Call): Called when the procedure resides in a DIFFERENT code segment. The CPU pushes BOTH the 16-bit CS register AND the 16-bit IP register onto the stack (4 bytes total: CS first, then IP).',
+          'Procedure Directives (PROC NEAR / PROC FAR): Tell the assembler (MASM/TASM) whether to generate an intra-segment or inter-segment call, and whether the procedure ending RET should assemble into a 2-byte NEAR return (RETN) or 4-byte FAR return (RETF).',
+          'PTR Directive Overrides: "CALL NEAR PTR MyLabel" forces a 16-bit offset call, while "CALL FAR PTR MyLabel" forces a 32-bit CS:IP inter-segment call.',
+          'Memory Model Defaults: In .MODEL SMALL, subroutines default to NEAR. In .MODEL MEDIUM, LARGE, and HUGE, subroutines default to FAR because code spans multiple 64KB code segments.',
+          'Interactive Simulator: Use the "NEAR & FAR Calls" tab in our Directive Sandbox on the right to simulate stack frame pushes and CS:IP register changes!'
+        ],
+        interactiveType: 'directive-sandbox'
+      },
+      {
         id: 'm11-quiz',
-        title: 'Module 12 Recap Quiz',
+        title: 'Module 11 Recap Quiz',
         moduleTitle: 'Module 11: Assembler Directives',
         moduleId: 'm11',
         interactiveType: 'quiz',
@@ -1176,6 +1220,18 @@ export const courseData: Module[] = [
             ],
             correctAnswer: 1,
             explanation: 'Assembler directives (pseudo-instructions) are directives for the assembler software (e.g. MASM/TASM) during translation and produce no executable CPU machine code, whereas CPU instructions are translated directly into binary opcodes.'
+          },
+          {
+            question: 'Which 8086 memory model restricts code to a single 64KB segment, but allows data to span MULTIPLE segments using FAR pointers?',
+            options: ['SMALL Model', 'MEDIUM Model', 'COMPACT Model', 'TINY Model'],
+            correctAnswer: 2,
+            explanation: 'In the COMPACT memory model, code is restricted to one 64KB segment (using NEAR calls), while data can span multiple data segments using 32-bit FAR pointers.'
+          },
+          {
+            question: 'In which 8086 memory model can a single large array or data structure exceed the 64KB segment size boundary?',
+            options: ['LARGE Model', 'MEDIUM Model', 'HUGE Model', 'SMALL Model'],
+            correctAnswer: 2,
+            explanation: 'The HUGE memory model allows both multiple code/data segments AND permits single arrays to exceed 64KB by automatically handling segment arithmetic.'
           },
           {
             question: 'Which of the following programming styles merges code, data, and stack into a single 64KB physical segment where CS = DS = SS = ES?',
@@ -1193,6 +1249,23 @@ export const courseData: Module[] = [
             ],
             correctAnswer: 1,
             explanation: 'The three programming styles for 8086 programs are Standard Segment-Ends Style (explicit SEGMENT/ENDS), Simplified Dot-Model Style (.MODEL shortcuts), and Tiny .COM Program Style (.MODEL TINY).'
+          },
+          {
+            question: 'During the execution of a FAR CALL instruction in the 8086 CPU, what values are pushed onto the Stack?',
+            options: [
+              'Only the 16-bit Instruction Pointer (IP)',
+              'Only the 16-bit Code Segment (CS)',
+              'Both the 16-bit CS register and the 16-bit IP register (4 bytes total)',
+              'Both AX and BX registers'
+            ],
+            correctAnswer: 2,
+            explanation: 'A FAR call is an inter-segment call to a subroutine in a different code segment. Therefore, the 8086 CPU must save both the current Code Segment (CS) and Instruction Pointer (IP) onto the stack so it can return back to the caller segment.'
+          },
+          {
+            question: 'How many bytes are popped from the stack when a procedure declared as "PROC NEAR" completes execution via a RET instruction?',
+            options: ['1 Byte', '2 Bytes (16-bit IP)', '4 Bytes (32-bit CS:IP)', '8 Bytes'],
+            correctAnswer: 1,
+            explanation: 'A NEAR procedure resides in the same 64KB code segment. When it completes, the RET instruction pops only the saved 16-bit Instruction Pointer (IP) from the stack, which consumes 2 bytes.'
           }
         ]
       }
@@ -1204,15 +1277,15 @@ export const courseData: Module[] = [
     slides: [
       {
         id: 'm12-s1',
-        title: 'Writing Basic Assembly Programs',
+        title: 'Simple Arithmetic Programs (Addition, Subtraction, Multiplication & Division)',
         moduleTitle: 'Module 12: Writing Simple Programs',
         moduleId: 'm12',
         points: [
-          '8086 programming is register-intensive and revolves around load, process, and store cycles.',
-          'Program 1: 16-bit Addition: Uses MOV to load variables from the data segment into AX and BX, executes ADD AX, BX, and stores the result back to memory.',
-          'Program 2: Find Maximum: Loops through an array, uses CMP to compare values, and JGE (Jump if Greater or Equal) to keep the highest value in AX.',
-          'Program 3: Array Summation: Sets a counter CX = array size, points SI to array start, and accumulates values using ADD AX, [SI] and INC SI inside a LOOP structure.',
-          'Program 4: String Copy: Registers SI (Source) and DI (Destination) are loaded. Clear direction flag (CLD) makes SI/DI auto-increment, and REP MOVSB performs fast copies.'
+          '8086 arithmetic programming is register-intensive and follows systematic load, process, and store execution cycles using physical memory.',
+          'Program 1: 16-Bit Unsigned Addition: Loads two 16-bit operands into AX and BX using MOV, executes ADD AX, BX, updates status flags (ZF, CF, SF), and stores the result to memory at location 1004H.',
+          'Program 2: 16-Bit Unsigned Subtraction: Loads minuend and subtrahend into AX and BX, executes SUB AX, BX, sets the borrow flag (CF=1) if underflow occurs, and stores the 16-bit difference to memory.',
+          'Program 3: 16-Bit Unsigned Multiplication: Loads multiplicand into AX and multiplier into BX, executes MUL BX (AX × BX), generating a 32-bit product stored across DX (High Word) and AX (Low Word).',
+          'Program 4: 16-Bit Unsigned Division: Clears high word DX (XOR DX, DX), loads dividend into AX and divisor into BX, executes DIV BX (DX:AX ÷ BX), resulting in quotient in AX and remainder in DX.'
         ]
       },
       {
@@ -1255,10 +1328,493 @@ export const courseData: Module[] = [
             explanation: 'CLD (Clear Direction Flag) clears DF to 0, which directs string instructions (like MOVSB/MOVSW) to automatically increment SI and DI after processing. In contrast, STD sets DF to 1, causing SI and DI to decrement.'
           },
           {
-            question: 'What happens when a PUSH AX instruction is executed in an 8086 program?',
-            options: ['SP is decremented by 2, and the 16-bit value of AX is written to the Stack Segment memory at SS:SP', 'SP is incremented by 2, and the value of AX is pop-retrieved', 'AX is copied to the DS segment', 'The program halts'],
+            question: 'What is the primary advantage of single-step execution in an 8086 software emulator or debugger when running assembly programs?',
+            options: [
+              'It automatically fixes syntax errors in the source code',
+              'It executes one instruction at a time, allowing developers to inspect register values (AX, BX, SP) and flag states after each step',
+              'It converts assembly code directly into high-level C++ source code',
+              'It doubles the hardware clock speed of the physical processor'
+            ],
+            correctAnswer: 1,
+            explanation: 'Single-step execution executes exactly one machine instruction at a time, enabling developers to observe real-time register updates, memory writes, and status flag changes step by step.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'm13',
+    title: 'Module 13: Semiconductor Memory Interfacing (RAM & ROM)',
+    slides: [
+      {
+        id: 'm13-s1',
+        title: '1. Semiconductor Memories Interfacing (RAM & ROM) 💾',
+        moduleTitle: 'Module 13: Semiconductor Memory Interfacing (RAM & ROM)',
+        moduleId: 'm13',
+        points: [
+          'Memory Interfacing Fundamentals: Primary memory interfacing involves connecting RAM (SRAM/DRAM for temporary data and stack) and ROM (EPROM/EEPROM/Flash for boot firmware) to the 8086 address, data, and control buses.',
+          '8086 Memory Address Space: The 8086 possesses a 20-bit address bus (A0-A19), allowing it to address up to 1 MB (1,048,576 bytes) of physical memory spanning from 00000H to FFFFFH.',
+          'Even and Odd Memory Banks: To achieve 16-bit wide data transfers, 1 MB memory is organized into two 512 KB banks: Even Bank (connected to D0-D7, selected by A0=0) and Odd Bank (connected to D8-D15, selected by BHE#=0).',
+          'Address Decoding Circuits: Higher-order address lines (e.g. A17-A19 or A14-A19) are decoded using 3-to-8 line decoders (such as IC 74LS138) to generate active-low Chip Select (CS# or CE#) signals for memory ICs.',
+          'Control Signal Matching: MPU control signals RD# (Read) and WR# (Write) are combined with memory enable lines (OE# - Output Enable, WE# - Write Enable) to gate data cleanly onto the system data bus.'
+        ]
+      },
+      {
+        id: 'm13-s2',
+        title: '2. Memory Map Design & Address Decoding 📐',
+        moduleTitle: 'Module 13: Semiconductor Memory Interfacing (RAM & ROM)',
+        moduleId: 'm13',
+        points: [
+          'Memory Mapping Concept: A memory map defines the exact start and end physical addresses assigned to each RAM and ROM chip within the 1 MB address space.',
+          'Calculating Memory Address Range: For a 64 KB memory chip (2^16 bytes), 16 address lines (A0-A15) are connected directly to the chip address pins, while the remaining 4 high address lines (A16-A19) connect to the address decoder.',
+          'ROM Address Mapping in 8086: Because the 8086 automatically starts instruction execution from physical address FFFF0H upon RESET, the system EPROM/ROM must be mapped to the top of memory space (ending at FFFFFH).',
+          'RAM Address Mapping in 8086: RAM is usually mapped at lower memory addresses starting at 00000H because the Interrupt Vector Table (IVT) occupies addresses 00000H to 003FFH.',
+          'Absolute vs Partial Decoding: Absolute decoding uses all unused address lines to ensure each memory byte has a unique address; Partial decoding ignores some high address lines to save hardware, resulting in mirror addresses.'
+        ]
+      },
+      {
+        id: 'm13-quiz',
+        title: 'Module 13 Recap Quiz',
+        moduleTitle: 'Module 13: Semiconductor Memory Interfacing (RAM & ROM)',
+        moduleId: 'm13',
+        interactiveType: 'quiz',
+        quizQuestions: [
+          {
+            question: 'Why is the 1 MB physical memory of the 8086 microprocessor divided into two 512 KB banks (Even Bank and Odd Bank)?',
+            options: [
+              'To allow simultaneous access to two independent programs',
+              'To enable 16-bit word transfers in a single bus cycle using 8-bit memory chips',
+              'To separate user data from operating system code',
+              'To reduce total power consumption during instruction fetching'
+            ],
+            correctAnswer: 1,
+            explanation: 'The 8086 data bus is 16 bits wide. Dividing memory into Even Bank (D0-D7, selected by A0=0) and Odd Bank (D8-D15, selected by BHE#=0) allows the 8086 to fetch either an 8-bit byte or a full 16-bit word in a single memory cycle.'
+          },
+          {
+            question: 'Where must system ROM (EPROM/Flash) containing boot code be mapped in the 8086 memory address space?',
+            options: [
+              'At address 00000H because IVT starts there',
+              'At address 80000H in the middle of memory',
+              'At the top of memory near FFFF0H because 8086 jumps to FFFF0H upon RESET',
+              'Anywhere in memory as long as CS# is connected to A0'
+            ],
+            correctAnswer: 2,
+            explanation: 'Upon hardware RESET, the 8086 automatically sets CS = FFFFH and IP = 0000H, yielding physical address FFFF0H. Boot code/ROM must reside at FFFF0H to execute startup code.'
+          },
+          {
+            question: 'Which integrated circuit (IC) is commonly used as a 3-to-8 line address decoder for generating Chip Select (CS#) signals in memory interfacing?',
+            options: ['74LS138', '74LS245', '74LS373', '8255 PPI'],
             correctAnswer: 0,
-            explanation: 'The stack grows downwards in physical memory. When PUSH is called, SP is decremented by 2 to allocate a 16-bit word on the stack, and then the register contents are written to the stack memory address CS:SP (or SS:SP).'
+            explanation: 'The 74LS138 is a 3-to-8 decoder with active-low outputs, ideal for decoding 3 address lines (e.g. A17-A19) into 8 distinct chip select (CS#) outputs.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'm14',
+    title: 'Module 14: Intel 8255 Programmable Peripheral Interface',
+    slides: [
+      {
+        id: 'm14-s1',
+        title: '1. Intel 8255 PPI Architecture & Pin Configuration 🔌',
+        moduleTitle: 'Module 14: Intel 8255 Programmable Peripheral Interface',
+        moduleId: 'm14',
+        points: [
+          'Overview of 8255 PPI: The Intel 8255 is a general-purpose programmable I/O device designed to interface parallel I/O devices (switches, LEDs, displays) to microprocessors.',
+          'Internal Port Structure: Features 24 I/O pins organized into three 8-bit ports: Port A (PA0-PA7), Port B (PB0-PB7), and Port C (PC0-PC7).',
+          'Port C Splitting: Port C is internally split into Port C Upper (PC4-PC7) and Port C Lower (PC0-PC3), which can act as independent 4-bit I/O ports or as handshake control lines for Ports A and B.',
+          'Group A and Group B Controls: Group A controls Port A and Port C Upper; Group B controls Port B and Port C Lower.',
+          'Bus Interface Signals: CS# (Chip Select), A0, A1 (Port selection lines), RD#, WR#, RESET, and bidirectional 8-bit Data Bus (D0-D7).'
+        ]
+      },
+      {
+        id: 'm14-s2',
+        title: '2. 8255 Operating Modes & Control Word Format ⚙️',
+        moduleTitle: 'Module 14: Intel 8255 Programmable Peripheral Interface',
+        moduleId: 'm14',
+        points: [
+          'Mode 0 (Basic I/O): All ports (A, B, C) operate as simple input or output ports without handshaking. Data is written or read directly.',
+          'Mode 1 (Strobed I/O): Ports A and B use Port C lines as handshake signals (STB#, IBF, ACK#, OBF#, INTR) to synchronize data transfer with peripheral devices.',
+          'Mode 2 (Strobed Bi-directional Bus I/O): Port A functions as a 8-bit bi-directional data bus with Port C supplying 5 handshake control lines. (Port B can operate in Mode 0 or 1).',
+          'I/O Mode Set Control Word: Written to Control Register when D7 = 1. Configures mode selection for Group A (D6,D5) and Group B (D2), and port directions (D4 for Port A, D3 for Port C Upper, D1 for Port B, D0 for Port C Lower).',
+          'BSR Mode (Bit Set/Reset): Activated when D7 = 0. Allows individual setting (1) or resetting (0) of any single bit in Port C without affecting other bits.'
+        ]
+      },
+      {
+        id: 'm14-quiz',
+        title: 'Module 14 Recap Quiz',
+        moduleTitle: 'Module 14: Intel 8255 Programmable Peripheral Interface',
+        moduleId: 'm14',
+        interactiveType: 'quiz',
+        quizQuestions: [
+          {
+            question: 'How many total programmable I/O pins are available on the Intel 8255 PPI chip?',
+            options: ['16 pins', '24 pins', '32 pins', '40 pins'],
+            correctAnswer: 1,
+            explanation: 'The 8255 PPI has 24 programmable I/O pins divided into Port A (8 bits), Port B (8 bits), and Port C (8 bits).'
+          },
+          {
+            question: 'Which 8255 mode enables Port A to act as a Strobed Bi-directional I/O bus using Port C pins for handshaking?',
+            options: ['Mode 0', 'Mode 1', 'Mode 2', 'BSR Mode'],
+            correctAnswer: 2,
+            explanation: 'Mode 2 is the Strobed Bi-directional Bus I/O mode, available exclusively on Port A of the 8255 PPI.'
+          },
+          {
+            question: 'What is the control byte value to configure Port A as Input, Port B as Output, and Port C as Output in Mode 0?',
+            options: ['90H', '80H', '82H', '92H'],
+            correctAnswer: 0,
+            explanation: 'D7=1 (I/O mode), D6D5=00 (Mode 0 for Group A), D4=1 (Port A Input), D3=0 (Port C Upper Output), D2=0 (Mode 0 for Group B), D1=0 (Port B Output), D0=0 (Port C Lower Output) -> Binary 10010000 = 90H.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'm15',
+    title: 'Module 15: Peripheral Interfacing (LEDs, Displays & Stepper Motor)',
+    slides: [
+      {
+        id: 'm15-s1',
+        title: '1. Interfacing Switches, LEDs & Seven Segment Displays 💡',
+        moduleTitle: 'Module 15: Peripheral Interfacing (LEDs, Displays & Stepper Motor)',
+        moduleId: 'm15',
+        points: [
+          'Switch Interfacing & Debouncing: Mechanical push switches generate contact bounce noise when pressed; hardware (SR flip-flops, RC filters) or software delays (~20 ms) resolve bounce.',
+          'LED Interfacing: LEDs require current-limiting resistors (220Ω - 330Ω). In Active-Low logic, MPU outputs 0 to light LED; in Active-High logic, MPU outputs 1.',
+          'Seven Segment Display Types: Common Anode (all anodes connected to +5V; active-low logic 0 turns on segment) and Common Cathode (all cathodes grounded; active-high logic 1 turns on segment).',
+          'Display Segment Mapping: 7 segments (a, b, c, d, e, f, g) plus Decimal Point (dp) are mapped to 8-bit port lines (D0-D7). For Common Cathode digit "0" (a,b,c,d,e,f ON), 7-segment code is 3FH.',
+          'Multiplexed Display System: Uses 8255 Port A to send segment data and Port C to drive digit select transistors sequentially for multi-digit displays.'
+        ]
+      },
+      {
+        id: 'm15-s2',
+        title: '2. Stepper Motor Architecture & Interfacing 🔄',
+        moduleTitle: 'Module 15: Peripheral Interfacing (LEDs, Displays & Stepper Motor)',
+        moduleId: 'm15',
+        points: [
+          'Stepper Motor Principle: Electromechanical device that converts electrical digital pulses into discrete mechanical angular movements (steps).',
+          'Step Angle Calculation: Step Angle (β) = 360° / (Number of Stator Phases × Rotor Teeth). Common step angles include 1.8° (200 steps/rev) and 7.5° (48 steps/rev).',
+          'Excitation Sequences: Wave Drive (one phase ON at a time: 11H -> 22H -> 44H -> 88H), Full-Step Drive (two phases ON: 33H -> 66H -> CCH -> 99H), and Half-Step Drive (alternating 1 and 2 phases for twice the angular resolution).',
+          'Driver IC (ULN2003 / L293D): Microprocessor pins cannot supply high inductive current (~500mA); high-current Darlington transistor array ICs (ULN2003) buffer 8255 port pins.',
+          '8086 Control Program: MPU outputs sequence bytes to 8255 Port A with software delay loops between step pulses to control motor speed and rotation direction.'
+        ]
+      },
+      {
+        id: 'm15-quiz',
+        title: 'Module 15 Recap Quiz',
+        moduleTitle: 'Module 15: Peripheral Interfacing (LEDs, Displays & Stepper Motor)',
+        moduleId: 'm15',
+        interactiveType: 'quiz',
+        quizQuestions: [
+          {
+            question: 'In a Common Anode 7-segment display, what logic level must be applied to an individual segment pin (e.g. segment "a") to turn it ON?',
+            options: [
+              'Logic HIGH (1 or +5V)',
+              'Logic LOW (0 or 0V)',
+              'High impedance state',
+              'Pulsed 1 kHz square wave'
+            ],
+            correctAnswer: 1,
+            explanation: 'In Common Anode displays, all anodes share +5V. To complete the circuit current path through an LED segment, the corresponding cathode pin must be pulled LOW (Logic 0).'
+          },
+          {
+            question: 'Why is a high-current driver IC like ULN2003 required between 8255 PPI ports and a stepper motor coil?',
+            options: [
+              'To invert the step control pulse frequency',
+              'Because 8255 I/O port pins cannot sink/source the high currents (hundreds of mA) required by stepper motor coils',
+              'To decode 3-bit step codes into 8-bit binary codes',
+              'To store the step position in non-volatile memory'
+            ],
+            correctAnswer: 1,
+            explanation: '8255 I/O pins provide max ~1.6 mA current, whereas stepper motor coils draw 100 mA to 1 A. ULN2003 Darlington array provides high current amplification and back-EMF diode protection.'
+          },
+          {
+            question: 'How many total full steps are required for a stepper motor with a 1.8° step angle to execute one complete 360° revolution?',
+            options: ['100 steps', '180 steps', '200 steps', '360 steps'],
+            correctAnswer: 2,
+            explanation: 'Total steps per revolution = 360° / Step Angle = 360° / 1.8° = 200 steps.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'm16',
+    title: 'Module 16: Analog Interfacing (A/D & D/A Converters)',
+    slides: [
+      {
+        id: 'm16-s1',
+        title: '1. Analog-to-Digital Converter (ADC 0808/0809) Interfacing 📊',
+        moduleTitle: 'Module 16: Analog Interfacing (A/D & D/A Converters)',
+        moduleId: 'm16',
+        points: [
+          'Need for A/D Conversion: Real-world sensors (temperature, pressure, light) produce continuous analog signals; ADCs convert these into digital binary values for 8086 processing.',
+          'ADC 0808 Features: 8-bit successive-approximation ADC with an internal 8-channel analog multiplexer, requiring no external zero/full-scale adjustment.',
+          'Control Signals for ADC 0808: ADD A, B, C (Channel Select), ALE (Address Latch Enable), START / SOC (Start of Conversion pulse), EOC (End of Conversion status signal), and OE (Output Enable to release tri-state outputs).',
+          'Conversion Steps in 8086 Program: 1. Output channel address and pulse ALE & START HIGH. 2. Monitor EOC pin until it goes HIGH (conversion complete). 3. Assert OE HIGH to read 8-bit digital output via 8255 Port A.',
+          'Resolution Calculation: Resolution = Vref / 2^n. For Vref = 5V and 8-bit ADC, resolution = 5V / 256 = 19.53 mV per LSB step.'
+        ]
+      },
+      {
+        id: 'm16-s2',
+        title: '2. Digital-to-Analog Converter (DAC 0800) & Waveform Generation 📈',
+        moduleTitle: 'Module 16: Analog Interfacing (A/D & D/A Converters)',
+        moduleId: 'm16',
+        points: [
+          'Need for D/A Conversion: Microprocessors produce digital outputs; DACs convert binary values into continuous analog voltages/currents to drive actuators, speakers, and motors.',
+          'DAC 0800 Architecture: High-speed 8-bit multiplying DAC utilizing an R-2R resistor ladder network to output proportional analog current (Iout).',
+          'Current-to-Voltage Op-Amp Stage: An external Operational Amplifier (e.g. LM741) in transimpedance configuration converts DAC output current into output voltage Vout = Vref × (Digital Data / 256).',
+          'Square Wave Generation: 8086 outputs 00H to 8255 Port A, delays, then outputs FFH, creating a square wave.',
+          'Sawtooth & Triangular Wave Generation: Sawtooth is generated by continuously incrementing port value from 00H to FFH in a loop; Triangular wave increments from 00H to FFH and then decrements back to 00H.'
+        ]
+      },
+      {
+        id: 'm16-quiz',
+        title: 'Module 16 Recap Quiz',
+        moduleTitle: 'Module 16: Analog Interfacing (A/D & D/A Converters)',
+        moduleId: 'm16',
+        interactiveType: 'quiz',
+        quizQuestions: [
+          {
+            question: 'What is the function of the EOC (End of Conversion) pin on the ADC 0808 chip during interfacing?',
+            options: [
+              'It signals the 8086 processor that digital conversion is finished and data is ready',
+              'It turns off the internal clock generator',
+              'It selects channel 0 on the 8-channel multiplexer',
+              'It resets the internal registers to 00H'
+            ],
+            correctAnswer: 0,
+            explanation: 'The EOC pin goes LOW when conversion begins and transitions HIGH when conversion completes, signaling the 8086/8255 that valid digital data is ready to be read.'
+          },
+          {
+            question: 'What is the voltage resolution of an 8-bit DAC with a reference voltage (Vref) of +5.0 Volts?',
+            options: ['1.0 V', '19.53 mV', '50.0 mV', '0.195 V'],
+            correctAnswer: 1,
+            explanation: 'Resolution = Vref / 2^8 = 5.0 V / 256 ≈ 0.01953 V = 19.53 mV.'
+          },
+          {
+            question: 'Which operational amplifier configuration is connected to the output pins of a DAC 0800 IC to produce a voltage output?',
+            options: [
+              'Non-inverting Voltage Amplifier',
+              'Transimpedance Current-to-Voltage Converter',
+              'Differential Voltage Comparator',
+              'Voltage Follower Buffer'
+            ],
+            correctAnswer: 1,
+            explanation: 'The DAC 0800 provides a complementary current output (Iout). An op-amp connected as a current-to-voltage converter converts Iout into a scaled output voltage.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'm17',
+    title: 'Module 17: Interrupt Systems & Intel 8259 Programmable Interrupt Controller',
+    slides: [
+      {
+        id: 'm17-s1',
+        title: '1. Software & Hardware Interrupt Applications in 8086 ⚡',
+        moduleTitle: 'Module 17: Interrupt Systems & Intel 8259 Programmable Interrupt Controller',
+        moduleId: 'm17',
+        points: [
+          'Interrupt Concept: An interrupt suspends normal program execution, forcing MPU to jump to a specific Interrupt Service Routine (ISR), and returns via IRET instruction.',
+          'Hardware Interrupt Pins: NMI (Non-Maskable Interrupt, edge-triggered, Type 2, highest hardware priority) and INTR (Maskable Interrupt, level-triggered, controlled by Interrupt Flag IF).',
+          'Software Interrupts: Triggered by instructions like INT n (e.g. INT 21H for DOS system calls), INTO (Interrupt on Overflow), and INT 3 (Breakpoint debugging).',
+          'Interrupt Vector Table (IVT): Occupies physical memory 00000H to 003FFH (1 KB). Stores 256 4-byte vectors containing CS:IP ISR entry addresses. Vector Address = Type Number × 4.',
+          'Dedicated Interrupt Types: Type 0 (Divide-by-zero), Type 1 (Single Step / Trap), Type 2 (NMI), Type 3 (Breakpoint INT 3), Type 4 (Overflow INTO).'
+        ]
+      },
+      {
+        id: 'm17-s2',
+        title: '2. Need for 8259 PIC & Internal Architecture 🧠',
+        moduleTitle: 'Module 17: Interrupt Systems & Intel 8259 Programmable Interrupt Controller',
+        moduleId: 'm17',
+        points: [
+          'Need for 8259 PIC: 8086 has only ONE hardware INTR pin. The 8259 PIC expands this single pin to manage up to 8 vectored hardware interrupt requests (IR0-IR7) with programmable priorities.',
+          'Cascading Capability: Master and Slave 8259 controllers can be cascaded via CAS0-CAS2 lines to manage up to 64 hardware interrupt requests.',
+          'Interrupt Request Register (IRR): Stores all incoming interrupt levels (IR0-IR7) requesting service.',
+          'In-Service Register (ISR): Stores the interrupt levels currently being serviced by the 8086 CPU.',
+          'Interrupt Mask Register (IMR): 8-bit register that stores mask bits; setting bit n to 1 disables/masks interrupt request IRn.',
+          'Priority Resolver (PR): Determines the highest priority request among unmasked bits in IRR and passes it to MPU.'
+        ]
+      },
+      {
+        id: 'm17-s3',
+        title: '3. 8259 Command Words (ICWs & OCWs) 📜',
+        moduleTitle: 'Module 17: Interrupt Systems & Intel 8259 Programmable Interrupt Controller',
+        moduleId: 'm17',
+        points: [
+          'Initialization Command Words (ICW1 - ICW4): Sent sequentially after hardware reset to configure fundamental 8259 operating parameters.',
+          'ICW1: Defines single/cascade mode, edge/level trigger mode, and indicates if ICW4 is needed.',
+          'ICW2: Sets the base Interrupt Vector Type (e.g. 08H for IR0-IR7 mapping to INT 08H - INT 0FH).',
+          'ICW3: Master/Slave cascade pin connection mapping (only needed if cascade mode selected in ICW1).',
+          'ICW4: Specifies 8086/8088 mode, Auto/Normal End of Interrupt (EOI), and buffered mode.',
+          'Operation Command Words (OCWs): Written during normal execution to dynamically control interrupt operation. OCW1 (sets IMR mask bits), OCW2 (sends EOI commands and priority rotation), OCW3 (reads IRR/ISR status).'
+        ]
+      },
+      {
+        id: 'm17-quiz',
+        title: 'Module 17 Recap Quiz',
+        moduleTitle: 'Module 17: Interrupt Systems & Intel 8259 Programmable Interrupt Controller',
+        moduleId: 'm17',
+        interactiveType: 'quiz',
+        quizQuestions: [
+          {
+            question: 'What is the physical starting memory address in the Interrupt Vector Table (IVT) for software interrupt INT 21H?',
+            options: ['00021H', '00084H', '00210H', '00400H'],
+            correctAnswer: 1,
+            explanation: 'IVT vector physical address = Type Number × 4 = 21H × 4 = 15H × 4 = 84 decimal = 00084H.'
+          },
+          {
+            question: 'Which internal register in the Intel 8259 PIC holds the hardware interrupt levels that are currently requesting service but not yet serviced?',
+            options: [
+              'Interrupt Request Register (IRR)',
+              'In-Service Register (ISR)',
+              'Interrupt Mask Register (IMR)',
+              'Priority Resolver (PR)'
+            ],
+            correctAnswer: 0,
+            explanation: 'The IRR (Interrupt Request Register) stores bits for all interrupt request lines (IR0-IR7) currently asserting a request.'
+          },
+          {
+            question: 'What is the maximum number of hardware interrupt request lines that can be managed by cascading 8259 PIC controllers?',
+            options: ['8 lines', '16 lines', '32 lines', '64 lines'],
+            correctAnswer: 3,
+            explanation: '1 Master 8259 connected to 8 Slave 8259 controllers yields 8 × 8 = 64 total hardware interrupt request lines.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'm18',
+    title: 'Module 18: Serial Communication & Intel 8251 USART',
+    slides: [
+      {
+        id: 'm18-s1',
+        title: '1. Serial Communication Fundamentals & 8251 Architecture 📡',
+        moduleTitle: 'Module 18: Serial Communication & Intel 8251 USART',
+        moduleId: 'm18',
+        points: [
+          'Parallel vs Serial Data Transfer: Parallel transfers entire 8/16-bit words simultaneously over short distances; Serial transmits bits sequentially over a single pair of wires over long distances.',
+          'Synchronous vs Asynchronous Serial Transmission: Asynchronous uses Start/Stop framing bits without a shared clock; Synchronous uses transmitter/receiver clock synchronization with sync characters.',
+          'Baud Rate Definition: Number of signal state changes or bits transmitted per second (e.g. 9600 Baud).',
+          'Overview of 8251 USART: Universal Synchronous Asynchronous Receiver Transmitter chip that converts MPU parallel data into serial format for transmission, and incoming serial data into parallel format.',
+          'Functional Blocks of 8251: Transmitter Buffer & Register, Receiver Buffer & Register, Data Bus Buffer, Read/Write Control Logic, Modem Control (RTS#, CTS#, DTR#, DSR#).'
+        ]
+      },
+      {
+        id: 'm18-s2',
+        title: '2. 8251 USART Programming & Control Register ⚙️',
+        moduleTitle: 'Module 18: Serial Communication & Intel 8251 USART',
+        moduleId: 'm18',
+        points: [
+          '8251 Control Logic & C/D# Pin: C/D# = 0 accesses Data Buffer; C/D# = 1 accesses Control/Status Register.',
+          'Mode Instruction Format: Sent first after RESET to select Asynchronous/Synchronous mode, baud rate factor (x1, x16, x64), character length (5-8 bits), parity enable/type, and stop bit count (1, 1.5, 2).',
+          'Command Instruction Format: Controls operational functions such as Transmit Enable (TXEN), Receive Enable (RXE), Error Reset (ER), and Internal Reset (IR).',
+          'Status Read Register: Reading 8251 with C/D# = 1 provides status flags: TxRDY (Transmitter Ready), RxRDY (Receiver Ready), TxEMPTY, Framing Error (FE), Overrun Error (OE), Parity Error (PE).',
+          'RS-232C Voltage Level Shifting: MPU TTL voltage levels (0V/5V) are converted to RS-232C bipolar standards (-12V / +12V) using line driver ICs like MAX232.'
+        ]
+      },
+      {
+        id: 'm18-quiz',
+        title: 'Module 18 Recap Quiz',
+        moduleTitle: 'Module 18: Serial Communication & Intel 8251 USART',
+        moduleId: 'm18',
+        interactiveType: 'quiz',
+        quizQuestions: [
+          {
+            question: 'In asynchronous serial data transmission, what is the purpose of adding Start and Stop bits around each character frame?',
+            options: [
+              'To increase bit transfer speed by 50%',
+              'To synchronize receiver bit-timing without requiring a shared continuous clock line',
+              'To encrypt data against bus snooping',
+              'To enable multi-master bus arbitration'
+            ],
+            correctAnswer: 1,
+            explanation: 'Asynchronous serial transmission uses a Start bit (logic 0) to signal character arrival and Stop bit(s) (logic 1) to mark frame end, allowing receiver clock resynchronization.'
+          },
+          {
+            question: 'Which status flag in the 8251 USART status register indicates that received serial data is ready in the Rx buffer to be read by the MPU?',
+            options: ['TxRDY', 'RxRDY', 'TxEMPTY', 'DSR'],
+            correctAnswer: 1,
+            explanation: 'RxRDY (Receiver Ready) goes HIGH when 8251 has assembled a complete serial character into the internal receive buffer and is ready for MPU read.'
+          },
+          {
+            question: 'Which driver IC is standardly used to convert 0V/5V TTL logic levels to ±12V RS-232C serial communication signal levels?',
+            options: ['MAX232', 'ULN2003', '74LS373', '8259 PIC'],
+            correctAnswer: 0,
+            explanation: 'The MAX232 IC features internal charge pump capacitors to convert 5V TTL levels to ±10V/12V RS-232 signal levels.'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'm19',
+    title: 'Module 19: Direct Memory Access & Intel 8237A DMA Controller',
+    slides: [
+      {
+        id: 'm19-s1',
+        title: '1. Direct Memory Access (DMA) & 8237A Architecture 🚀',
+        moduleTitle: 'Module 19: Direct Memory Access & Intel 8237A DMA Controller',
+        moduleId: 'm19',
+        points: [
+          'DMA Concept: Direct Memory Access transfers high-speed data directly between I/O peripherals and RAM without CPU intervention, bypassing MPU register fetch-execute cycles.',
+          'Bus Master Concept: During DMA, the DMA Controller takes control of the address, data, and control buses from the 8086 microprocessor.',
+          'Handshake Signals: HRQ (Hold Request sent by 8237 to 8086 HOLD pin) and HLDA (Hold Acknowledge sent by 8086 HLDA pin to 8237, signaling bus tri-stating).',
+          'Overview of 8237A DMAC: High-performance programmable DMA controller containing 4 independent DMA channels (Channel 0 - Channel 3).',
+          'Internal Channel Registers: Each channel contains a 16-bit Base Address Register, 16-bit Current Address Register, 16-bit Base Count Register, and 16-bit Current Count Register.'
+        ]
+      },
+      {
+        id: 'm19-s2',
+        title: '2. 8237A DMA Modes & Bus Transfer Types 🔄',
+        moduleTitle: 'Module 19: Direct Memory Access & Intel 8237A DMA Controller',
+        moduleId: 'm19',
+        points: [
+          'DMA Operating Modes: Single Transfer Mode (releases bus after 1 byte), Block Transfer Mode (transfers entire block until count reaches zero), Demand Transfer Mode (transfers continuously as long as DRQ remains active), Cascade Mode.',
+          'DMA Transfer Types: Memory-to-I/O Read, I/O-to-Memory Write, and Memory-to-Memory Transfer (using Channel 0 and Channel 1).',
+          'Peripheral Handshake Signals: DRQ0-DRQ3 (DMA Request inputs from peripherals) and DACK0-DACK3 (DMA Acknowledge outputs to peripherals).',
+          'Auto-initialization Feature: Automatically reloads base address and count values into current registers after block completion without CPU intervention.',
+          'Performance Impact: DMA increases data transfer speeds from ~100 KB/s (CPU-driven string loops) to multi-megabytes per second.'
+        ]
+      },
+      {
+        id: 'm19-quiz',
+        title: 'Module 19 Recap Quiz',
+        moduleTitle: 'Module 19: Direct Memory Access & Intel 8237A DMA Controller',
+        moduleId: 'm19',
+        interactiveType: 'quiz',
+        quizQuestions: [
+          {
+            question: 'What happens to the 8086 microprocessor system buses (address, data, control) when it asserts the HLDA (Hold Acknowledge) signal to the DMA controller?',
+            options: [
+              'The buses are forced to 0V ground',
+              'The buses are placed in high-impedance (tri-state) condition so the DMAC can drive them',
+              'The buses execute an internal memory refresh cycle',
+              'The buses latch the current instruction pointer IP'
+            ],
+            correctAnswer: 1,
+            explanation: 'In response to HOLD from 8237, the 8086 asserts HLDA and releases its address, data, and control lines into high-impedance (tri-state) so the 8237 can master the system bus.'
+          },
+          {
+            question: 'How many independent DMA channels are available on a single Intel 8237A DMA Controller IC?',
+            options: ['2 channels', '4 channels', '8 channels', '16 channels'],
+            correctAnswer: 1,
+            explanation: 'The Intel 8237A provides 4 independent DMA channels (Channel 0 to Channel 3).'
+          },
+          {
+            question: 'Which 8237A DMA transfer mode transfers data bytes continuously until the terminal count register reaches zero or EOP# is asserted?',
+            options: [
+              'Single Transfer Mode',
+              'Block Transfer Mode',
+              'Cycle Stealing Mode',
+              'Software Interrupt Mode'
+            ],
+            correctAnswer: 1,
+            explanation: 'In Block Transfer mode, once DRQ triggers the DMAC, data is transferred continuously until the Word Count register decrements to zero (Terminal Count).'
           }
         ]
       }

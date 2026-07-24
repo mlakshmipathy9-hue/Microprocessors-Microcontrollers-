@@ -117,6 +117,278 @@ const programTemplates: ProgramTemplate[] = [
     ]
   },
   {
+    name: '16-Bit Unsigned Subtraction',
+    description: 'Load minuend and subtrahend into AX and BX, compute SUB AX, BX, set borrow flag CF, and store difference to RAM.',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SI: 0x0000, DI: 0x0000, IP: 0x0000 },
+    initialRam: { 0x1000: 0x4A20, 0x1002: 0x1200, 0x1004: 0x0000 },
+    code: [
+      {
+        text: 'MOV AX, [1000H]',
+        comment: 'Load minuend (4A20H) into register AX',
+        execute: (regs, flags, ram) => {
+          const val = ram[0x1000] || 0;
+          return {
+            newRegs: { ...regs, AX: val, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: `MOV AX, [1000H] -> Loaded 4A20H into AX.`
+          };
+        }
+      },
+      {
+        text: 'MOV BX, [1002H]',
+        comment: 'Load subtrahend (1200H) into register BX',
+        execute: (regs, flags, ram) => {
+          const val = ram[0x1002] || 0;
+          return {
+            newRegs: { ...regs, BX: val, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: `MOV BX, [1002H] -> Loaded 1200H into BX.`
+          };
+        }
+      },
+      {
+        text: 'SUB AX, BX',
+        comment: 'Perform subtraction: AX = AX - BX',
+        execute: (regs, flags, ram) => {
+          const diff = regs.AX - regs.BX;
+          const result = (diff < 0 ? diff + 0x10000 : diff) & 0xFFFF;
+          const carry = regs.AX < regs.BX ? 1 : 0;
+          const zero = result === 0 ? 1 : 0;
+          const sign = (result & 0x8000) ? 1 : 0;
+          return {
+            newRegs: { ...regs, AX: result, IP: regs.IP + 1 },
+            newFlags: { ZF: zero, CF: carry, SF: sign },
+            newRam: { ...ram },
+            log: `SUB AX, BX -> Subtracted BX from AX. Difference is ${result.toString(16).toUpperCase().padStart(4, '0')}H. [ZF:${zero}, CF:${carry}, SF:${sign}]`
+          };
+        }
+      },
+      {
+        text: 'MOV [1004H], AX',
+        comment: 'Save difference into RAM offset 1004H',
+        execute: (regs, flags, ram) => {
+          const newRam = { ...ram, 0x1004: regs.AX };
+          return {
+            newRegs: { ...regs, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam,
+            log: `MOV [1004H], AX -> Saved difference (${regs.AX.toString(16).toUpperCase().padStart(4, '0')}H) to RAM location 1004H.`
+          };
+        }
+      },
+      {
+        text: 'HLT',
+        comment: 'Halt program execution',
+        execute: (regs, flags, ram) => {
+          return {
+            newRegs: { ...regs, IP: 0xFFFF },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: 'HLT -> Subtraction program completed successfully!'
+          };
+        }
+      }
+    ]
+  },
+  {
+    name: '16-Bit Unsigned Multiplication',
+    description: 'Perform 16-bit multiplication MUL BX (AX × BX). The 32-bit product is stored across DX (High Word) and AX (Low Word).',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SI: 0x0000, DI: 0x0000, IP: 0x0000 },
+    initialRam: { 0x1000: 0x0123, 0x1002: 0x0045, 0x1004: 0x0000, 0x1006: 0x0000 },
+    code: [
+      {
+        text: 'MOV AX, [1000H]',
+        comment: 'Load multiplicand (0123H = 291) into AX',
+        execute: (regs, flags, ram) => {
+          const val = ram[0x1000] || 0;
+          return {
+            newRegs: { ...regs, AX: val, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: `MOV AX, [1000H] -> Loaded multiplicand 0123H into AX.`
+          };
+        }
+      },
+      {
+        text: 'MOV BX, [1002H]',
+        comment: 'Load multiplier (0045H = 69) into BX',
+        execute: (regs, flags, ram) => {
+          const val = ram[0x1002] || 0;
+          return {
+            newRegs: { ...regs, BX: val, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: `MOV BX, [1002H] -> Loaded multiplier 0045H into BX.`
+          };
+        }
+      },
+      {
+        text: 'MUL BX',
+        comment: 'Multiply AX by BX: DX:AX = AX * BX',
+        execute: (regs, flags, ram) => {
+          const prod = regs.AX * regs.BX;
+          const lowWord = prod & 0xFFFF;
+          const highWord = (prod >> 16) & 0xFFFF;
+          const carry = highWord !== 0 ? 1 : 0;
+          return {
+            newRegs: { ...regs, AX: lowWord, DX: highWord, IP: regs.IP + 1 },
+            newFlags: { ...flags, CF: carry, ZF: prod === 0 ? 1 : 0 },
+            newRam: { ...ram },
+            log: `MUL BX -> Multiplied AX & BX. Product = ${prod.toString(16).toUpperCase()}H. DX (High Word) = ${highWord.toString(16).toUpperCase().padStart(4, '0')}H, AX (Low Word) = ${lowWord.toString(16).toUpperCase().padStart(4, '0')}H.`
+          };
+        }
+      },
+      {
+        text: 'MOV [1004H], AX',
+        comment: 'Save low word of product to 1004H',
+        execute: (regs, flags, ram) => {
+          const newRam = { ...ram, 0x1004: regs.AX };
+          return {
+            newRegs: { ...regs, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam,
+            log: `MOV [1004H], AX -> Saved product low word (${regs.AX.toString(16).toUpperCase().padStart(4, '0')}H) to RAM location 1004H.`
+          };
+        }
+      },
+      {
+        text: 'MOV [1006H], DX',
+        comment: 'Save high word of product to 1006H',
+        execute: (regs, flags, ram) => {
+          const newRam = { ...ram, 0x1006: regs.DX };
+          return {
+            newRegs: { ...regs, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam,
+            log: `MOV [1006H], DX -> Saved product high word (${regs.DX.toString(16).toUpperCase().padStart(4, '0')}H) to RAM location 1006H.`
+          };
+        }
+      },
+      {
+        text: 'HLT',
+        comment: 'Halt program execution',
+        execute: (regs, flags, ram) => {
+          return {
+            newRegs: { ...regs, IP: 0xFFFF },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: 'HLT -> Multiplication program completed successfully!'
+          };
+        }
+      }
+    ]
+  },
+  {
+    name: '16-Bit Unsigned Division',
+    description: 'Perform division DIV BX (DX:AX ÷ BX). Returns quotient in AX and remainder in DX.',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SI: 0x0000, DI: 0x0000, IP: 0x0000 },
+    initialRam: { 0x1000: 0x03E8, 0x1002: 0x0019, 0x1004: 0x0000, 0x1006: 0x0000 },
+    code: [
+      {
+        text: 'MOV AX, [1000H]',
+        comment: 'Load dividend (03E8H = 1000) into AX',
+        execute: (regs, flags, ram) => {
+          const val = ram[0x1000] || 0;
+          return {
+            newRegs: { ...regs, AX: val, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: `MOV AX, [1000H] -> Loaded dividend 03E8H (1000) into AX.`
+          };
+        }
+      },
+      {
+        text: 'XOR DX, DX',
+        comment: 'Clear high word DX = 0000H before division',
+        execute: (regs, flags, ram) => {
+          return {
+            newRegs: { ...regs, DX: 0x0000, IP: regs.IP + 1 },
+            newFlags: { ...flags, ZF: 1 },
+            newRam: { ...ram },
+            log: 'XOR DX, DX -> Cleared DX to 0000H to prepare 32-bit dividend DX:AX.'
+          };
+        }
+      },
+      {
+        text: 'MOV BX, [1002H]',
+        comment: 'Load divisor (0019H = 25) into BX',
+        execute: (regs, flags, ram) => {
+          const val = ram[0x1002] || 0;
+          return {
+            newRegs: { ...regs, BX: val, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: `MOV BX, [1002H] -> Loaded divisor 0019H (25) into BX.`
+          };
+        }
+      },
+      {
+        text: 'DIV BX',
+        comment: 'Divide DX:AX by BX -> Quotient in AX, Remainder in DX',
+        execute: (regs, flags, ram) => {
+          const dividend = ((regs.DX & 0xFFFF) * 0x10000) + (regs.AX & 0xFFFF);
+          const divisor = regs.BX;
+          if (divisor === 0) {
+            return {
+              newRegs: { ...regs, IP: 0xFFFF },
+              newFlags: { ...flags },
+              newRam: { ...ram },
+              log: 'DIV BX -> ERROR: Division by zero exception!'
+            };
+          }
+          const quotient = Math.floor(dividend / divisor) & 0xFFFF;
+          const remainder = (dividend % divisor) & 0xFFFF;
+          return {
+            newRegs: { ...regs, AX: quotient, DX: remainder, IP: regs.IP + 1 },
+            newFlags: { ...flags, ZF: quotient === 0 ? 1 : 0 },
+            newRam: { ...ram },
+            log: `DIV BX -> Divided ${dividend} by ${divisor}. Quotient (AX) = ${quotient.toString(16).toUpperCase().padStart(4, '0')}H (${quotient}), Remainder (DX) = ${remainder.toString(16).toUpperCase().padStart(4, '0')}H (${remainder}).`
+          };
+        }
+      },
+      {
+        text: 'MOV [1004H], AX',
+        comment: 'Save quotient to 1004H',
+        execute: (regs, flags, ram) => {
+          const newRam = { ...ram, 0x1004: regs.AX };
+          return {
+            newRegs: { ...regs, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam,
+            log: `MOV [1004H], AX -> Saved quotient (${regs.AX.toString(16).toUpperCase().padStart(4, '0')}H) to 1004H.`
+          };
+        }
+      },
+      {
+        text: 'MOV [1006H], DX',
+        comment: 'Save remainder to 1006H',
+        execute: (regs, flags, ram) => {
+          const newRam = { ...ram, 0x1006: regs.DX };
+          return {
+            newRegs: { ...regs, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam,
+            log: `MOV [1006H], DX -> Saved remainder (${regs.DX.toString(16).toUpperCase().padStart(4, '0')}H) to 1006H.`
+          };
+        }
+      },
+      {
+        text: 'HLT',
+        comment: 'Halt program execution',
+        execute: (regs, flags, ram) => {
+          return {
+            newRegs: { ...regs, IP: 0xFFFF },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: 'HLT -> Division program completed successfully!'
+          };
+        }
+      }
+    ]
+  },
+  {
     name: 'Find Maximum (Branching)',
     description: 'Compare AX and BX registers. Execute conditional JMP to skip instructions and keep the maximum value inside AX.',
     initialRegs: { AX: 0x007F, BX: 0x00A0, CX: 0x0000, DX: 0x0000, SI: 0x0000, DI: 0x0000, IP: 0x0000 },
@@ -280,6 +552,175 @@ const programTemplates: ProgramTemplate[] = [
         }
       }
     ]
+  },
+  {
+    name: 'XLAT Translation: Decimal to ASCII',
+    description: 'Demonstrates the XLAT instruction using BX as table offset and AL as index to convert raw decimal 05H into ASCII 35H (\'5\').',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SI: 0x0000, DI: 0x0000, IP: 0x0000 },
+    initialRam: {
+      0x0200: 0x30, // '0'
+      0x0201: 0x31, // '1'
+      0x0202: 0x32, // '2'
+      0x0203: 0x33, // '3'
+      0x0204: 0x34, // '4'
+      0x0205: 0x35, // '5'
+      0x0206: 0x36, // '6'
+      0x0207: 0x37, // '7'
+      0x0208: 0x38, // '8'
+      0x0209: 0x39  // '9'
+    },
+    code: [
+      {
+        text: 'MOV BX, 0200H',
+        comment: 'Load base address of ASCII lookup table into BX',
+        execute: (regs, flags, ram) => {
+          return {
+            newRegs: { ...regs, BX: 0x0200, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: 'MOV BX, 0200H -> Base offset pointer BX initialized to 0200H (start of ASCII table).'
+          };
+        }
+      },
+      {
+        text: 'MOV AL, 05H',
+        comment: 'Load decimal index 5 into register AL',
+        execute: (regs, flags, ram) => {
+          const newAX = (regs.AX & 0xFF00) | 0x05;
+          return {
+            newRegs: { ...regs, AX: newAX, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: 'MOV AL, 05H -> Loaded index 05H into AL register.'
+          };
+        }
+      },
+      {
+        text: 'XLAT',
+        comment: 'Translate AL: AL = RAM[BX + AL] -> Read address 0200H + 5 = 0205H',
+        execute: (regs, flags, ram) => {
+          const alIndex = regs.AX & 0xFF;
+          const targetAddr = regs.BX + alIndex;
+          const translatedByte = ram[targetAddr] ?? 0;
+          const newAX = (regs.AX & 0xFF00) | translatedByte;
+          const charStr = String.fromCharCode(translatedByte);
+          return {
+            newRegs: { ...regs, AX: newAX, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: `XLAT -> Memory lookup at DS:[${targetAddr.toString(16).toUpperCase().padStart(4, '0')}H]. Fetched ASCII byte ${translatedByte.toString(16).toUpperCase().padStart(2, '0')}H ('${charStr}'). AL updated to ${translatedByte.toString(16).toUpperCase().padStart(2, '0')}H!`
+          };
+        }
+      },
+      {
+        text: 'MOV [0300H], AL',
+        comment: 'Store converted ASCII byte into memory location 0300H',
+        execute: (regs, flags, ram) => {
+          const alByte = regs.AX & 0xFF;
+          const newRam = { ...ram, 0x0300: alByte };
+          return {
+            newRegs: { ...regs, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam,
+            log: `MOV [0300H], AL -> Stored converted ASCII code ${alByte.toString(16).toUpperCase().padStart(2, '0')}H ('${String.fromCharCode(alByte)}') at RAM location 0300H.`
+          };
+        }
+      },
+      {
+        text: 'HLT',
+        comment: 'Halt program execution',
+        execute: (regs, flags, ram) => {
+          return {
+            newRegs: { ...regs, IP: 0xFFFF },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: 'HLT -> XLAT translation complete! Decimal 5 converted to ASCII \'5\' (35H).'
+          };
+        }
+      }
+    ]
+  },
+  {
+    name: 'XLAT Translation: Hex to 7-Segment LED',
+    description: 'Uses XLAT with 7-segment display pattern table at 0200H to map hex digit 03H to segment control byte 4FH.',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SI: 0x0000, DI: 0x0000, IP: 0x0000 },
+    initialRam: {
+      0x0200: 0x3F, // '0'
+      0x0201: 0x06, // '1'
+      0x0202: 0x5B, // '2'
+      0x0203: 0x4F, // '3'
+      0x0204: 0x66, // '4'
+      0x0205: 0x6D  // '5'
+    },
+    code: [
+      {
+        text: 'MOV BX, 0200H',
+        comment: 'Load base address of 7-segment code table into BX',
+        execute: (regs, flags, ram) => {
+          return {
+            newRegs: { ...regs, BX: 0x0200, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: 'MOV BX, 0200H -> Base offset BX set to 0200H (start of 7-Segment lookup table).'
+          };
+        }
+      },
+      {
+        text: 'MOV AL, 03H',
+        comment: 'Load raw hex digit 03H into AL',
+        execute: (regs, flags, ram) => {
+          const newAX = (regs.AX & 0xFF00) | 0x03;
+          return {
+            newRegs: { ...regs, AX: newAX, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: 'MOV AL, 03H -> Index 03H loaded into AL.'
+          };
+        }
+      },
+      {
+        text: 'XLAT',
+        comment: 'Translate AL: AL = RAM[0200H + 3 = 0203H]',
+        execute: (regs, flags, ram) => {
+          const alIndex = regs.AX & 0xFF;
+          const targetAddr = regs.BX + alIndex;
+          const translatedByte = ram[targetAddr] ?? 0;
+          const newAX = (regs.AX & 0xFF00) | translatedByte;
+          return {
+            newRegs: { ...regs, AX: newAX, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: `XLAT -> Table lookup at DS:[${targetAddr.toString(16).toUpperCase().padStart(4, '0')}H]. Fetched 7-segment code ${translatedByte.toString(16).toUpperCase().padStart(2, '0')}H. AL updated to ${translatedByte.toString(16).toUpperCase().padStart(2, '0')}H.`
+          };
+        }
+      },
+      {
+        text: 'MOV [0300H], AL',
+        comment: 'Output segment pattern to display memory at 0300H',
+        execute: (regs, flags, ram) => {
+          const alByte = regs.AX & 0xFF;
+          const newRam = { ...ram, 0x0300: alByte };
+          return {
+            newRegs: { ...regs, IP: regs.IP + 1 },
+            newFlags: { ...flags },
+            newRam,
+            log: `MOV [0300H], AL -> Output 7-segment display control code ${alByte.toString(16).toUpperCase().padStart(2, '0')}H to memory location 0300H.`
+          };
+        }
+      },
+      {
+        text: 'HLT',
+        comment: 'Halt program execution',
+        execute: (regs, flags, ram) => {
+          return {
+            newRegs: { ...regs, IP: 0xFFFF },
+            newFlags: { ...flags },
+            newRam: { ...ram },
+            log: 'HLT -> 7-Segment XLAT translation complete! Display code ready for LED drivers.'
+          };
+        }
+      }
+    ]
   }
 ];
 
@@ -361,20 +802,33 @@ export default function AssemblerPlaygroundSimulator() {
             <p className="text-slate-550 text-xs">Write, step through, and emulate assembly instructions directly inside the browser</p>
           </div>
           
-          <div className="bg-slate-50 p-1 rounded-xl border border-slate-200 max-w-fit flex">
-            {programTemplates.map((p, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSelectProgram(idx)}
-                className={`px-3 py-1 text-[10px] font-bold rounded-lg cursor-pointer transition-all ${
-                  selectedProgIdx === idx 
-                    ? 'bg-indigo-600 text-white shadow-xs' 
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Template {idx + 1}
-              </button>
-            ))}
+          <div className="bg-slate-50 p-1 rounded-xl border border-slate-200 max-w-full flex flex-wrap gap-1">
+            {programTemplates.map((p, idx) => {
+              const shortNames = [
+                '1. Addition',
+                '2. Subtraction',
+                '3. Multiplication',
+                '4. Division',
+                '5. Find Max',
+                '6. Array Sum',
+                '7. XLAT'
+              ];
+              const label = shortNames[idx] || `Prog ${idx + 1}`;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => handleSelectProgram(idx)}
+                  title={p.name}
+                  className={`px-2.5 py-1 text-[10px] font-bold rounded-lg cursor-pointer transition-all ${
+                    selectedProgIdx === idx 
+                      ? 'bg-indigo-600 text-white shadow-xs' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 

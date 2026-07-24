@@ -19,7 +19,10 @@ import {
   ChevronLeft,
   BookOpen,
   Binary,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Code2,
+  ArrowDown,
+  ArrowUp
 } from 'lucide-react';
 import {
   SimulatorInstruction,
@@ -59,6 +62,13 @@ export default function InstructionDecoderSimulator() {
   const [xlatTable, setXlatTable] = useState<number[]>([
     0x00, 0x01, 0x03, 0x02, 0x06, 0x07, 0x05, 0x04, 0x0C, 0x0D, 0x0F, 0x0E, 0x0A, 0x0B, 0x09, 0x08
   ]);
+
+  // Interactive Stack Frames State
+  const [stackFrames, setStackFrames] = useState<Array<{ addr: number; value: number; label: string }>>([
+    { addr: 0xFFFC, value: 0x1234, label: 'AX (Pushed)' }
+  ]);
+
+
 
   const activeInstruction = mockInstructions[selectedIdx];
 
@@ -131,12 +141,69 @@ export default function InstructionDecoderSimulator() {
         };
       } else {
         result = activeInstruction.execute(captureRegs, captureFlags);
+        if (activeInstruction.opcode.startsWith('PUSH')) {
+          const pushVal = captureRegs.AX;
+          const targetAddr = (captureRegs.SP - 2) & 0xFFFF;
+          setStackFrames(prev => [
+            { addr: targetAddr, value: pushVal, label: `${activeInstruction.opcode.split(' ')[1] || 'AX'} (${hexFormat(pushVal)})` },
+            ...prev.filter(f => f.addr !== targetAddr)
+          ]);
+        } else if (activeInstruction.opcode.startsWith('POP')) {
+          const popAddr = captureRegs.SP;
+          setStackFrames(prev => prev.filter(f => f.addr !== popAddr));
+        }
       }
       setRegs(result.newRegs);
       setFlags(result.newFlags);
       setLastExplanation(result.mathExplanation);
       setExecutionState('done');
     }, 200);
+  };
+
+  const handlePushReg = (regName: string, regVal: number) => {
+    const currentSp = regs.SP;
+    const newSp = (currentSp - 2) & 0xFFFF;
+    setRegs(prev => ({ ...prev, SP: newSp }));
+    setStackFrames(prev => [
+      { addr: newSp, value: regVal, label: `${regName} (${hexFormat(regVal)})` },
+      ...prev.filter(f => f.addr !== newSp)
+    ]);
+    setExecutionState('done');
+    setLastExplanation(
+      `[STACK PUSH OPERATION]: Executed PUSH ${regName}.\n` +
+      `1. Stack Pointer decremented by 2: SP ← ${hexFormat(currentSp)} - 2 = ${hexFormat(newSp)}.\n` +
+      `2. 16-bit word ${hexFormat(regVal)} written to Stack Segment memory at SS:${hexFormat(newSp)}.\n` +
+      `   - Low Byte (${byteHexFormat(regVal & 0xFF)}) stored at SS:${hexFormat(newSp)}\n` +
+      `   - High Byte (${byteHexFormat((regVal >> 8) & 0xFF)}) stored at SS:${hexFormat((newSp + 1) & 0xFFFF)}`
+    );
+  };
+
+  const handlePopReg = (regName: string) => {
+    const currentSp = regs.SP;
+    if (currentSp >= 0xFFFE) {
+      setExecutionState('done');
+      setLastExplanation('[STACK UNDERFLOW WARNING]: Stack Pointer SP is at Base of Stack (FFFEH). Cannot pop from an empty stack!');
+      return;
+    }
+    const topFrame = stackFrames.find(f => f.addr === currentSp);
+    const popVal = topFrame ? topFrame.value : 0x5678;
+    const newSp = (currentSp + 2) & 0xFFFF;
+
+    setRegs(prev => ({ ...prev, [regName]: popVal, SP: newSp }));
+    setStackFrames(prev => prev.filter(f => f.addr !== currentSp));
+    setExecutionState('done');
+    setLastExplanation(
+      `[STACK POP OPERATION]: Executed POP ${regName}.\n` +
+      `1. 16-bit word ${hexFormat(popVal)} read from Stack Segment memory at SS:${hexFormat(currentSp)} into ${regName}.\n` +
+      `2. Stack Pointer incremented by 2: SP ← ${hexFormat(currentSp)} + 2 = ${hexFormat(newSp)}.`
+    );
+  };
+
+  const handleResetStack = () => {
+    setRegs(prev => ({ ...prev, SP: 0xFFFE }));
+    setStackFrames([]);
+    setExecutionState('idle');
+    setLastExplanation('Stack reset to initial empty state (SP = FFFEH).');
   };
 
   const handleReset = () => {
@@ -427,29 +494,33 @@ export default function InstructionDecoderSimulator() {
         </div>
 
         {/* Categories Tab Switcher */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1.5 border-b border-sky-100/80 scrollbar-thin scrollbar-thumb-sky-200/50">
-          {(['All', 'Data Transfer', 'Arithmetic', 'BCD & ASCII Adjust', 'Logical & Bitwise', 'Control, Flag & IO'] as const).map(tab => {
-            const isSel = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => {
-                  setActiveTab(tab);
-                  const firstMatch = mockInstructions.findIndex(inst => tab === 'All' || inst.category === tab);
-                  if (firstMatch !== -1) {
-                    handleSelectInstruction(firstMatch);
-                  }
-                }}
-                className={`px-3.5 py-2 text-[11px] font-sans font-bold rounded-xl border transition-all shrink-0 cursor-pointer ${
-                  isSel
-                    ? 'bg-gradient-to-r from-indigo-700 to-indigo-600 border-indigo-500 text-white shadow-md'
-                    : 'bg-white border-sky-100 text-slate-600 hover:text-indigo-950 hover:bg-sky-50'
-                }`}
-              >
-                {tab}
-              </button>
-            );
-          })}
+        <div className="flex gap-1.5 overflow-x-auto pb-1.5 border-b border-sky-100/80 scrollbar-thin scrollbar-thumb-sky-200/50 items-center justify-between">
+          <div className="flex gap-1.5 overflow-x-auto">
+            {(['All', 'Data Transfer', 'Arithmetic', 'BCD & ASCII Adjust', 'Logical & Bitwise', 'Control, Flag & IO'] as const).map(tab => {
+              const isSel = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setActiveTab(tab);
+                    const firstMatch = mockInstructions.findIndex(inst => tab === 'All' || inst.category === tab);
+                    if (firstMatch !== -1) {
+                      handleSelectInstruction(firstMatch);
+                    }
+                  }}
+                  className={`px-3.5 py-2 text-[11px] font-sans font-bold rounded-xl border transition-all shrink-0 cursor-pointer ${
+                    isSel
+                      ? 'bg-gradient-to-r from-indigo-700 to-indigo-600 border-indigo-500 text-white shadow-md'
+                      : 'bg-white border-sky-100 text-slate-600 hover:text-indigo-950 hover:bg-sky-50'
+                  }`}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </div>
+
+
         </div>
 
         {/* 3-Column Bento Laboratory Grid */}
@@ -703,6 +774,211 @@ export default function InstructionDecoderSimulator() {
 
             </div>
 
+            {/* Interactive Stack & PUSH/POP Memory Laboratory - Renders when PUSH or POP is selected */}
+            {(activeInstruction.opcode.includes('PUSH') || activeInstruction.opcode.includes('POP')) && (
+              <div className="bg-white border-2 border-indigo-200/80 rounded-2xl p-5 space-y-5 shadow-lg relative overflow-hidden">
+                {/* Background circuit board glow */}
+                <div className="absolute -right-20 -bottom-20 w-48 h-48 bg-indigo-100 rounded-full blur-3xl pointer-events-none" />
+                
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-indigo-600 animate-pulse" />
+                    <span className="text-sm font-extrabold uppercase text-slate-800 tracking-wider font-mono">
+                      8086 Stack Segment (SS:SP) & PUSH/POP Memory Laboratory
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-full font-bold">
+                      SS: {hexFormat(regs.SS)}
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full font-extrabold">
+                      SP: {hexFormat(regs.SP)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Subtitle description */}
+                <p className="text-xs text-slate-600 leading-relaxed font-sans">
+                  The 8086 stack is a LIFO (Last-In, First-Out) memory structure inside the Stack Segment (<code className="font-mono font-bold text-slate-800">SS</code>). The Stack Pointer (<code className="font-mono font-bold text-indigo-700">SP</code>) tracks the Top of Stack offset. <strong>Important:</strong> The 8086 stack grows <em>downward</em> from higher memory addresses to lower addresses!
+                </p>
+
+                {/* 2-Column Laboratory Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
+                  
+                  {/* Left Column: Stack Controls & Micro-step Rules (7 cols) */}
+                  <div className="md:col-span-7 space-y-4 bg-slate-50 border border-slate-150 p-4 rounded-xl flex flex-col justify-between">
+                    <div>
+                      <span className="text-[11px] font-bold font-mono text-indigo-950 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+                        <Terminal className="w-4 h-4 text-indigo-600" />
+                        8086 Stack Micro-Execution Rules:
+                      </span>
+
+                      <div className="space-y-2 text-xs font-mono">
+                        {/* PUSH Card */}
+                        <div className="p-3 bg-white border border-indigo-100 rounded-lg shadow-xs space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-extrabold text-indigo-700 text-xs">PUSH Operand (e.g. PUSH AX)</span>
+                            <span className="text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-bold">Decrements SP by 2</span>
+                          </div>
+                          <ol className="text-[11px] text-slate-600 space-y-0.5 list-decimal pl-4 pt-1 font-sans">
+                            <li><strong className="font-mono text-indigo-900">SP ← SP - 2</strong> (Allocates 2 bytes downward in SS)</li>
+                            <li><strong className="font-mono text-indigo-900">SS:[SP] ← 16-bit Word</strong> (Writes Low Byte to SS:[SP], High Byte to SS:[SP+1])</li>
+                          </ol>
+                        </div>
+
+                        {/* POP Card */}
+                        <div className="p-3 bg-white border border-emerald-100 rounded-lg shadow-xs space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-extrabold text-emerald-800 text-xs">POP Operand (e.g. POP DX)</span>
+                            <span className="text-[9px] bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded font-bold">Increments SP by 2</span>
+                          </div>
+                          <ol className="text-[11px] text-slate-600 space-y-0.5 list-decimal pl-4 pt-1 font-sans">
+                            <li><strong className="font-mono text-emerald-950">Dest ← SS:[SP]</strong> (Reads 16-bit word from current Top of Stack)</li>
+                            <li><strong className="font-mono text-emerald-950">SP ← SP + 2</strong> (Frees 2 bytes, moving SP upward)</li>
+                          </ol>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Interactive Push/Pop Buttons */}
+                    <div className="pt-2 border-t border-slate-200 space-y-2">
+                      <span className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-wider block">
+                        Interactive Stack Control Operations:
+                      </span>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button
+                          onClick={() => handlePushReg('AX', regs.AX)}
+                          className="px-2.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold font-mono transition-all shadow-xs active:scale-95 cursor-pointer flex items-center justify-center gap-1"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                          PUSH AX ({hexFormat(regs.AX)})
+                        </button>
+                        <button
+                          onClick={() => handlePushReg('BX', regs.BX)}
+                          className="px-2.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold font-mono transition-all shadow-xs active:scale-95 cursor-pointer flex items-center justify-center gap-1"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                          PUSH BX ({hexFormat(regs.BX)})
+                        </button>
+                        <button
+                          onClick={() => handlePopReg('DX')}
+                          className="px-2.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold font-mono transition-all shadow-xs active:scale-95 cursor-pointer flex items-center justify-center gap-1"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5" />
+                          POP DX
+                        </button>
+                        <button
+                          onClick={handleResetStack}
+                          className="px-2.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold font-mono transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                          Reset SP
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Physical Stack Memory Diagram (5 cols) */}
+                  <div className="md:col-span-5 bg-slate-900 text-slate-100 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-inner relative overflow-hidden">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
+                      <span className="text-[10px] font-bold font-mono uppercase text-indigo-400 tracking-wider">
+                        Stack Segment Memory (SS:{hexFormat(regs.SS)})
+                      </span>
+                      <span className="text-[9px] font-mono text-emerald-400 font-bold bg-emerald-950 border border-emerald-800 px-2 py-0.5 rounded">
+                        LIFO Stack
+                      </span>
+                    </div>
+
+                    {/* Stack Memory Cells (High Address FFFE to Low Address FFF4) */}
+                    <div className="space-y-1.5 font-mono text-xs my-2">
+                      {[0xFFFE, 0xFFFC, 0xFFFA, 0xFFF8, 0xFFF6].map((addr) => {
+                        const isTop = regs.SP === addr;
+                        const frame = stackFrames.find(f => f.addr === addr);
+                        const isBelowSp = addr < regs.SP;
+                        const isBOS = addr === 0xFFFE;
+
+                        return (
+                          <div 
+                            key={addr}
+                            className={`p-2 rounded-lg border transition-all flex items-center justify-between ${
+                              isTop 
+                                ? 'bg-indigo-900/90 border-indigo-400 text-white shadow-[0_0_12px_rgba(99,102,241,0.4)] scale-[1.02]' 
+                                : frame 
+                                ? 'bg-slate-800/90 border-slate-700 text-slate-200' 
+                                : 'bg-slate-950/60 border-slate-800/80 text-slate-500'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-indigo-300">
+                                {hexFormat(addr)}H:
+                              </span>
+                              {frame ? (
+                                <span className="font-extrabold text-emerald-400">
+                                  {hexFormat(frame.value)}
+                                </span>
+                              ) : isBOS ? (
+                                <span className="text-[10px] italic text-slate-400">
+                                  [Base of Stack]
+                                </span>
+                              ) : (
+                                <span className="text-[10px] italic text-slate-600">
+                                  {isBelowSp ? '[ Unallocated ]' : '[ Free Memory ]'}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              {frame && (
+                                <span className="text-[9px] bg-slate-700 text-indigo-200 px-1.5 py-0.5 rounded font-bold">
+                                  {frame.label}
+                                </span>
+                              )}
+                              {isTop && (
+                                <span className="text-[9px] bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-full font-extrabold animate-pulse">
+                                  👈 TOS (SP)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-800 text-[9.5px] font-mono text-slate-400 flex justify-between items-center">
+                      <span>↓ Growth: High → Low Addr</span>
+                      <span className="text-indigo-400 font-bold">SS:[SP] = Top Of Stack</span>
+                    </div>
+
+                  </div>
+
+                </div>
+
+                {/* Code Example */}
+                <div className="bg-slate-900 rounded-xl p-3.5 border border-slate-800 text-slate-100 font-mono text-xs">
+                  <div className="flex justify-between items-center pb-2 mb-2 border-b border-slate-800">
+                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Code2 className="w-3.5 h-3.5" />
+                      8086 Assembly Stack Sequence Example
+                    </span>
+                    <button
+                      onClick={() => handleExecute()}
+                      className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+                    >
+                      <Play className="w-3 h-3 fill-current" />
+                      Run {activeInstruction.opcode}
+                    </button>
+                  </div>
+                  <pre className="text-[11px] leading-relaxed text-emerald-300 bg-slate-950/80 p-2.5 rounded-lg overflow-x-auto border border-slate-800 font-mono">
+{`; --- 8086 Stack Memory PUSH & POP Sequence ---
+MOV AX, 1234H  ; Initialize AX with 1234H
+PUSH AX        ; SP ← SP - 2 (FFFC), writes 1234H to SS:FFFCH
+POP DX         ; Reads 1234H into DX, SP ← SP + 2 (FFFE)`}
+                  </pre>
+                </div>
+
+              </div>
+            )}
+
             {/* Interactive XLAT Conversion Laboratory - Renders when XLAT is selected */}
             {activeInstruction.opcode === 'XLAT' && (
               <div className="bg-white border-2 border-indigo-200/80 rounded-2xl p-5 space-y-5 shadow-lg relative overflow-hidden">
@@ -924,8 +1200,77 @@ export default function InstructionDecoderSimulator() {
 
                 </div>
 
+                {/* Assembly Code How-It-Is-Used Demonstration Box */}
+                <div className="mt-4 bg-slate-900 rounded-xl p-4 border border-slate-800 text-slate-100 font-mono text-xs">
+                  <div className="flex justify-between items-center pb-2 mb-2 border-b border-slate-800">
+                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Code2 className="w-3.5 h-3.5" />
+                      8086 Assembly Program Code ({xlatScenario === 'ascii_num' ? 'Decimal to ASCII Conversion' : xlatScenario === 'sevensegment' ? 'Hex to 7-Segment LED Conversion' : xlatScenario === 'gray' ? 'Binary to Gray Code Conversion' : 'Lowercase ASCII Mapping'})
+                    </span>
+                    <button
+                      onClick={() => handleExecute()}
+                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+                    >
+                      <Play className="w-3 h-3 fill-current" />
+                      Execute XLAT Step
+                    </button>
+                  </div>
+
+                  <pre className="text-[11px] leading-relaxed text-emerald-300 bg-slate-950/80 p-3 rounded-lg overflow-x-auto border border-slate-800 font-mono">
+{xlatScenario === 'ascii_num' ? `; --- Decimal to ASCII Conversion using XLAT ---
+.DATA
+  LOOKUP_TBL DB 30H, 31H, 32H, 33H, 34H, 35H, 36H, 37H, 38H, 39H ; ASCII '0'..'9'
+  INPUT_DEC  DB ${byteHexFormat(regs.AX & 0xFF)}                       ; Raw decimal digit (${regs.AX & 0xFF})
+
+.CODE
+  MOV AX, @DATA
+  MOV DS, AX
+  LEA BX, LOOKUP_TBL ; Load base address offset into BX (${hexFormat(regs.BX)})
+  MOV AL, INPUT_DEC  ; Load unsigned lookup index into AL (${byteHexFormat(regs.AX & 0xFF)})
+  XLAT               ; Executed: AL = DS:[BX + AL] -> AL becomes ${byteHexFormat(xlatTable[regs.AX & 0xFF] ?? 0)} ('${String.fromCharCode(xlatTable[regs.AX & 0xFF] ?? 32)}')`
+: xlatScenario === 'sevensegment' ? `; --- Hex to 7-Segment LED Display Conversion using XLAT ---
+.DATA
+  LED_TABLE  DB 3FH, 06H, 5BH, 4FH, 66H, 6DH, 7DH, 07H, 7FH, 6FH ; LED Control Bytes
+  INPUT_HEX  DB ${byteHexFormat(regs.AX & 0xFF)}                       ; Hex Digit (${regs.AX & 0xFF})
+
+.CODE
+  MOV AX, @DATA
+  MOV DS, AX
+  LEA BX, LED_TABLE  ; Load base address offset into BX (${hexFormat(regs.BX)})
+  MOV AL, INPUT_HEX  ; Load unsigned lookup index into AL (${byteHexFormat(regs.AX & 0xFF)})
+  XLAT               ; Executed: AL = DS:[BX + AL] -> AL becomes ${byteHexFormat(xlatTable[regs.AX & 0xFF] ?? 0)} (Display Code)`
+: xlatScenario === 'gray' ? `; --- Binary to Gray Code Conversion using XLAT ---
+.DATA
+  GRAY_TABLE DB 00H, 01H, 03H, 02H, 06H, 07H, 05H, 04H ; Gray Code Lookup
+  INPUT_BIN  DB ${byteHexFormat(regs.AX & 0xFF)}                       ; Binary index (${regs.AX & 0xFF})
+
+.CODE
+  MOV AX, @DATA
+  MOV DS, AX
+  LEA BX, GRAY_TABLE ; Load base address offset into BX (${hexFormat(regs.BX)})
+  MOV AL, INPUT_BIN  ; Load index into AL (${byteHexFormat(regs.AX & 0xFF)})
+  XLAT               ; Executed: AL = DS:[BX + AL] -> AL becomes ${byteHexFormat(xlatTable[regs.AX & 0xFF] ?? 0)}`
+: `; --- Lowercase ASCII Mapping using XLAT ---
+.DATA
+  CHAR_TABLE DB 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'
+  INPUT_IDX  DB ${byteHexFormat(regs.AX & 0xFF)}                       ; Index (${regs.AX & 0xFF})
+
+.CODE
+  MOV AX, @DATA
+  MOV DS, AX
+  LEA BX, CHAR_TABLE ; Load base offset into BX (${hexFormat(regs.BX)})
+  MOV AL, INPUT_IDX  ; Load index into AL (${byteHexFormat(regs.AX & 0xFF)})
+  XLAT               ; Executed: AL = DS:[BX + AL] -> AL becomes ${byteHexFormat(xlatTable[regs.AX & 0xFF] ?? 0)} ('${String.fromCharCode(xlatTable[regs.AX & 0xFF] ?? 32)}')`}
+                  </pre>
+                  <p className="text-[10px] text-slate-400 mt-2 italic font-sans">
+                    💡 Tip: Try changing the index slider above or clicking any cell in the lookup table to update the assembly code parameters in real time!
+                  </p>
+                </div>
+
               </div>
             )}
+
+
 
             {/* Dynamic Educational Help Tabs Panel */}
             <div className="bg-white border border-sky-150 rounded-2xl overflow-hidden flex flex-col shadow-sm">

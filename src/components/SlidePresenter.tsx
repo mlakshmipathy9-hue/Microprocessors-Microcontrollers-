@@ -20,6 +20,7 @@ import MinimumModeHardwareSimulator from './MinimumModeHardwareSimulator';
 import DevPipelineSimulator from './DevPipelineSimulator';
 import AddressingModesSimulator from './AddressingModesSimulator';
 import InstructionDecoderSimulator from './InstructionDecoderSimulator';
+import { InstructionBuilderSimulator } from './InstructionBuilderSimulator';
 import DirectiveSandboxSimulator from './DirectiveSandboxSimulator';
 import AssemblerPlaygroundSimulator from './AssemblerPlaygroundSimulator';
 import AssemblerPassSimulator from './AssemblerPassSimulator';
@@ -246,6 +247,8 @@ export default function SlidePresenter({
         return <AddressingModesSimulator />;
       case 'instruction-decoder':
         return <InstructionDecoderSimulator />;
+      case 'instruction-builder':
+        return <InstructionBuilderSimulator />;
       case 'directive-sandbox':
         return <DirectiveSandboxSimulator initialLabId={activeLabId} />;
       case 'assembler-playground':
@@ -389,7 +392,7 @@ export default function SlidePresenter({
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4.5 pr-1">
+                      <div className={`grid grid-cols-1 ${['m8-s1', 'm8-s4', 'm8-s5', 'm9-s1', 'm10-s1', 'm10-s2', 'm11-s1', 'm12-s1'].includes(slide.id) || ['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].includes(slide.moduleId) ? 'grid-cols-1' : 'md:grid-cols-2'} gap-4.5 pr-1`}>
                         {slide.points.map((pt, idx) => {
                           const isRevealed = !incrementalRevealEnabled || idx < revealedPointsCount;
                           if (!isRevealed) return null;
