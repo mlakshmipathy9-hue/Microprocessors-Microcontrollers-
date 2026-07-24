@@ -136,10 +136,8 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 2: 8086 Internal Architecture & Execution Unit',
         moduleId: 'm2',
         points: [
-          'The 8086 internal architecture is split into two independent functional units:',
-          '1. Bus Interface Unit (BIU): Responsible for external communication, instruction fetching, memory segmentation, and queueing.',
-          '2. Execution Unit (EU): Responsible for decoding instructions, coordinating internal execution, and performing ALU math.',
-          'Separating these units enables Pipelining - fetching instruction bytes from memory while executing previous ones.'
+          'Bus Interface Unit (BIU) fetches instructions, generates physical addresses, reads/writes memory, stores bytes in the prefetch queue, and handles bus operations.',
+          'Execution Unit (EU) takes bytes from the prefetch queue, decodes instructions, executes instructions, performs ALU operations, and updates registers/flags.'
         ]
       },
       {
@@ -148,10 +146,10 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 2: 8086 Internal Architecture & Execution Unit',
         moduleId: 'm2',
         points: [
-          'Parallel Operation: The 8086 is the first commercial processor to support Instruction Pipelining. While the Execution Unit (EU) is decoding and executing instruction n, the Bus Interface Unit (BIU) fetches instruction n+1 from memory in parallel.',
-          'BIU Prefetch Queue: The BIU contains a 6-byte first-in, first-out (FIFO) prefetch queue. Whenever there are 2 or more empty bytes in the queue, the BIU automatically executes memory fetch cycles to pre-populate the queue.',
-          'Throughput Speedup: Pipelining eliminates the time the CPU spends waiting for external memory fetch cycles (bus latency), greatly improving overall processing throughput.',
-          'Pipeline Flush (Branch Penalty): When a branch instruction (like JMP, JZ, CALL) is executed, the pre-fetched instructions in the queue are no longer valid. The queue is flushed (emptied), and the BIU must start fetching from the new target address, introducing a small delay.'
+          'Two MOV Instructions Pipelining Example: Consider two sequential instructions: MOV AX, 1234H (B8 34 12) and MOV BX, 5678H (BB 78 56).',
+          'Phase 1 (Fetch Instruction 1): The Bus Interface Unit (BIU) fetches the 3 bytes for MOV AX, 1234H from memory into the 6-byte FIFO Prefetch Queue.',
+          'Phase 2 (Parallel Overlap): While the Execution Unit (EU) decodes and executes MOV AX, 1234H (loading 1234H into AX), the BIU concurrently prefetches the 3 bytes for MOV BX, 5678H from memory into the queue.',
+          'Phase 3 (Zero Delay Execution): When MOV AX finishes, MOV BX, 5678H is already sitting in the queue. The EU executes it immediately with zero memory fetch delay (loading 5678H into BX).'
         ],
         interactiveType: 'pipelining'
       },
@@ -566,7 +564,8 @@ export const courseData: Module[] = [
           'Interrupt Service Routine (ISR): A custom program written to handle the specific interrupt event.',
           'Hardware Interrupts: NMI (Non-Maskable, Pin 17), INTR (Maskable, Pin 18).',
           'Software Interrupts: Triggered by executing INT instructions (e.g., INT 21H, INT 3).'
-        ]
+        ],
+        interactiveType: 'intro-interrupts'
       },
       {
         id: 'm6-s2',
@@ -946,28 +945,135 @@ export const courseData: Module[] = [
     slides: [
       {
         id: 'm10-s1',
-        title: 'Classification of 8086 Instructions',
+        title: '1. Introduction 📖',
         moduleTitle: 'Module 10: 8086 Instruction Set',
         moduleId: 'm10',
         points: [
-          'Data Transfer: Copy data between registers, memory, and ports (e.g., MOV, PUSH, POP, XCHG, IN, OUT, LEA). Crucially, these do NOT affect the flag register.',
-          'Arithmetic: ADD, SUB, INC, DEC, CMP, MUL, DIV, and decimal BCD adjustments (AAA, DAA). These directly modify ALU status flags.',
-          'Bit Manipulation: Perform logical operations (AND, OR, XOR, NOT, TEST) or bit shifts and rotations (SHL, SHR, SAR, ROL, ROR, RCL, RCR) to isolate or change bits.',
-          'String Operations: Process sequential bytes/words extremely fast (MOVSB/MOVSW, CMPS, SCAS, LODS, STOS) using direction flag DF and repeat prefix REP.',
-          'Program Flow & Control: Control branches and subroutines via jumps (unconditional JMP, conditional JZ/JNZ/JC), loops (LOOP), call/ret (CALL, RET), and interrupts.'
+          'Understand the 8086 instruction set and instruction structure.',
+          'Instruction: A command given to the microprocessor to perform a specific task or operation (e.g., addition, data movement, logic analysis).',
+          'Instruction Set: The complete list of instructions that a microprocessor is designed to recognize and execute. The 8086 supports more than 20,000 instruction variations!',
+          'Execution Flow: The 8086 decodes instruction bytes in its Execution Unit (EU) after the Bus Interface Unit (BIU) fetches them from memory into the prefetch queue.'
         ]
       },
       {
         id: 'm10-s2',
-        title: 'Instruction Execution & ALU Flag Lab',
+        title: '2. Instruction Format 🧩',
         moduleTitle: 'Module 10: 8086 Instruction Set',
         moduleId: 'm10',
         points: [
-          'ALU Status Flags: Automatically updated by the Execution Unit (EU) after executing arithmetic, logical, and shift instructions.',
-          'Zero Flag (ZF): Becomes 1 if the outcome of the instruction is exactly zero; otherwise 0. Critical for comparison and branching.',
-          'Carry Flag (CF): Becomes 1 if there is an unsigned overflow (a carry out of the most significant bit) after an addition or borrow after a subtraction.',
-          'Sign Flag (SF): Simply copies the MSB (sign bit) of the result to indicate positive (0) or negative (1).',
-          'Use the Interactive Instruction Decoder & ALU simulator on the right to run opcodes and inspect flags and registers in real-time.'
+          'Learn opcode, operands, instruction length, and machine code.',
+          'Length Variability: 8086 instructions are variable-length, ranging from 1 byte (e.g., NOP, CLC) up to 6 bytes (e.g., complex memory addressing with displacements).',
+          'Opcode (Operation Code): Specifies the type of operation to perform (e.g., 100010 for MOV). It is usually 6 bits, followed by D and W bits.',
+          'D (Direction) & W (Word/Byte) Bits: D = 1 means data flows to register (REG field); D = 0 means data flows to memory/reg (R/M field). W = 1 indicates a 16-bit word operation; W = 0 indicates an 8-bit byte operation.',
+          'MOD-REG-R/M Byte: Determines the addressing modes, registers, or memory displacements used as operands.'
+        ]
+      },
+      {
+        id: 'm10-s3',
+        title: '3. Data Transfer Instructions 🔄',
+        moduleTitle: 'Module 10: 8086 Instruction Set',
+        moduleId: 'm10',
+        points: [
+          'MOV: Moves (actually copies) byte or word from source to destination (e.g., MOV AX, BX). Note: Memory-to-Memory moves are illegal!',
+          'PUSH & POP: Manipulates the stack segment. PUSH decrements SP by 2 and writes a 16-bit word. POP reads a 16-bit word and increments SP by 2.',
+          'XCHG: Exchanges/swaps contents of two registers or register and memory (e.g., XCHG AX, BX). Segment registers are illegal here.',
+          'LEA (Load Effective Address): Calculates the 16-bit logical offset of a memory variable and loads it into a target register (e.g., LEA BX, [SI+4]).',
+          'Use the Interactive Simulator on the right to load and test Data Transfer instructions like MOV, PUSH, POP, and LEA.'
+        ],
+        interactiveType: 'instruction-decoder'
+      },
+      {
+        id: 'm10-s3b',
+        title: '3b. XLAT - Conversion & Translation 📟',
+        moduleTitle: 'Module 10: 8086 Instruction Set',
+        moduleId: 'm10',
+        points: [
+          'XLAT (Translate): A unique and powerful data transfer instruction that translates a byte value in AL using a memory-based lookup table.',
+          'Hardware Mechanism: It performs the memory read: AL ← DS:[BX + AL]. BX must be pre-loaded with the 16-bit offset of the table, and AL holds the index (0–255).',
+          'Decimal to ASCII Conversion: To convert a raw decimal number (0–9) in AL to its ASCII equivalent (30H–39H), load BX with a table of values [30H, 31H, ..., 39H]. Executing XLAT instantly updates AL to the correct ASCII code!',
+          'Hex to Seven-Segment LED Conversion: Extremely popular in embedded systems! Store the 7-segment binary active codes (e.g., 3FH for 0, 06H for 1) in a 16-byte table. XLAT maps the hex digit in AL (0-15) directly to its LED segments byte.',
+          'Try it out! Use the Interactive XLAT Conversion Laboratory in the simulator on the right. Select the XLAT instruction, adjust AL, choose a conversion scenario, and run the instruction to watch the CPU execute the lookup.'
+        ],
+        interactiveType: 'instruction-decoder'
+      },
+      {
+        id: 'm10-s4',
+        title: '4. Arithmetic Instructions ➕',
+        moduleTitle: 'Module 10: 8086 Instruction Set',
+        moduleId: 'm10',
+        points: [
+          'ADD & ADC: Adds source and destination. ADC (Add with Carry) also includes the current value of the Carry Flag, which is crucial for 32-bit or higher multi-word math.',
+          'SUB & SBB: Subtracts source from destination. SBB (Subtract with Borrow) also subtracts the Carry/Borrow flag.',
+          'INC & DEC: Increments or decrements a register/memory by 1 (e.g., INC CX). Note: INC/DEC do NOT affect the Carry Flag (CF)!',
+          'MUL & DIV: Performs unsigned multiplication and division. AX (and DX) are used implicitly. Division by zero triggers an instant Type 0 CPU Exception.',
+          'CMP: Subtracts source from destination but does NOT save the result; it only updates status flags (ZF, CF, SF) to compare values.'
+        ],
+        interactiveType: 'instruction-decoder'
+      },
+      {
+        id: 'm10-s5',
+        title: '5. Logical Instructions ⚙️',
+        moduleTitle: 'Module 10: 8086 Instruction Set',
+        moduleId: 'm10',
+        points: [
+          'AND & OR: Performs bitwise AND / OR operations. Useful for masking out bits (AND clears bits, OR sets bits). Affects CF, OF, ZF, PF, and SF.',
+          'XOR: Performs bitwise Exclusive-OR (e.g., XOR AX, AX). A classic, fast way to clear a register to 0000H with smaller machine code size than MOV AX, 0.',
+          "NOT: Inverts all bits of an operand (one's complement). Note: NOT does NOT affect any status flags!",
+          'TEST: Performs a logical AND on operands but does NOT store the result; only updates flags (ZF, SF, PF). Perfect for checking if a specific bit is set (e.g., TEST AL, 01H).'
+        ],
+        interactiveType: 'instruction-decoder'
+      },
+      {
+        id: 'm10-s6',
+        title: '6. Shift & Rotate Instructions 🔁',
+        moduleTitle: 'Module 10: 8086 Instruction Set',
+        moduleId: 'm10',
+        points: [
+          'SHL / SHR: Logical shift left and right. Moves bits left/right, inserting 0 into empty positions. The last bit shifted out enters the Carry Flag (CF).',
+          'SAR: Arithmetic shift right. Shifts bits right while preserving the sign bit (most significant bit). Critical for signed division by powers of 2.',
+          'ROL / ROR: Rotate left and right. Bits shifted out of one end wrap around and enter the other end, and are also copied into the Carry Flag (CF).',
+          'RCL / RCR: Rotate through Carry left and right. Bits are rotated through the Carry Flag, making the Carry Flag act as a 17th bit of the register.'
+        ],
+        interactiveType: 'instruction-decoder'
+      },
+      {
+        id: 'm10-s7',
+        title: '7. Branch & Control Transfer Instructions 🔀',
+        moduleTitle: 'Module 10: 8086 Instruction Set',
+        moduleId: 'm10',
+        points: [
+          'Unconditional Branch: JMP directs the Instruction Pointer (IP) immediately to a new memory offset address.',
+          'Conditional Jumps: Jumps are executed only if a specific status flag condition is met (e.g., JZ/JE jumps if ZF=1; JC/JB jumps if CF=1). They use an 8-bit relative displacement (-128 to +127 bytes).',
+          'LOOP: Automatically decrements CX by 1. If CX is not 0, it jumps to the specified target label. Avoids manually writing DEC CX followed by JNZ.',
+          'CALL & RET: Used for subroutines (procedures). CALL pushes the current IP (and CS for far calls) onto the stack and jumps; RET pops the saved IP back, returning to the caller.'
+        ],
+        interactiveType: 'instruction-decoder'
+      },
+      {
+        id: 'm10-s8',
+        title: '8. String Instructions 📦',
+        moduleTitle: 'Module 10: 8086 Instruction Set',
+        moduleId: 'm10',
+        points: [
+          'MOVS / MOVSB / MOVSW: Copies a byte or word from source string [DS:SI] to destination string [ES:DI]. SI and DI are automatically adjusted.',
+          'Direction Flag (DF): Cleared with CLD (auto-increment SI/DI by 1 or 2) or set with STD (auto-decrement SI/DI). Must always be initialized before string operations!',
+          'LODS & STOS: LODS loads AL/AX with string elements at [SI]; STOS stores AL/AX to string memory at [DI].',
+          'CMPS & SCAS: CMPS compares strings byte/word by byte/word; SCAS scans a string looking for a match with AL/AX.',
+          'REP / REPE / REPNE Prefix: Repeats the string instruction CX times, automatically decrementing CX and updating SI/DI on each iteration.'
+        ],
+        interactiveType: 'instruction-decoder'
+      },
+      {
+        id: 'm10-s9',
+        title: '9. Processor Control Instructions 🎛️',
+        moduleTitle: 'Module 10: 8086 Instruction Set',
+        moduleId: 'm10',
+        points: [
+          'Flag Clear & Set: CLI/STI clears/sets the Interrupt Enable Flag (IF) to disable/enable maskable interrupts. CLC/STC clears/sets Carry Flag (CF). CLD/STD clears/sets Direction Flag (DF).',
+          'HLT: Halts CPU execution. The CPU enters an idle state until a hardware interrupt or reset occurs.',
+          'NOP (No Operation): Takes 1 byte of space and 3 clock cycles of time, performing no operation. Frequently used for creating software time delays or patching machine code.',
+          'ESC (Escape): Provides an instruction prefix allowing external co-processors (like the 8087 Numeric Data Processor) to read data/instructions from the 8086 bus.',
+          'LOCK Prefix: Asserts the hardware LOCK pin to prevent other bus masters from taking control of the system bus during multi-processor shared resource operations.'
         ],
         interactiveType: 'instruction-decoder'
       },
@@ -979,30 +1085,46 @@ export const courseData: Module[] = [
         interactiveType: 'quiz',
         quizQuestions: [
           {
-            question: 'Consider the execution of the instructions "MOV AL, 7FH" followed by "ADD AL, 01H" in an 8086 microprocessor. What are the resulting values of the Carry Flag (CF) and the Overflow Flag (OF)?',
-            options: ['CF = 0, OF = 0', 'CF = 0, OF = 1', 'CF = 1, OF = 0', 'CF = 1, OF = 1'],
+            question: 'Which of the following instructions is physically illegal in the 8086 microprocessor architecture?',
+            options: ['MOV AX, [BX]', 'MOV [BX], [DI]', 'MOV DS, AX', 'MOV AL, [SI + 02H]'],
             correctAnswer: 1,
-            isGateQuestion: true,
-            gateYear: 'GATE 2004',
-            explanation: '7FH (01111111B) represents +127 signed. Adding 01H yields 80H (10000000B), which is -128 signed. There is no unsigned carry out of the MSB, so CF = 0. However, adding two positive numbers produced a negative result, which represents a signed arithmetic overflow. Thus, OF = 1.'
+            explanation: 'The 8086 does not support memory-to-memory data transfers directly. "MOV [BX], [DI]" is illegal because both operands cannot refer to memory locations in a single instruction. You must first load the source value into a register, then store it.'
           },
           {
-            question: 'Which of the following instructions does NOT modify any flags in the Flag Register?',
-            options: ['ADD AX, BX', 'CMP CX, DX', 'MOV SI, 1000H', 'AND AL, 0FH'],
+            question: 'What happens to the Carry Flag (CF) when the "INC CX" instruction is executed in an 8086 processor?',
+            options: ['CF is set to 1 if CX overflows from FFFFH to 0000H', 'CF is unaffected because INC and DEC instructions do not alter the Carry Flag', 'CF is always cleared to 0', 'CF is set to the value of the auxiliary carry flag'],
+            correctAnswer: 1,
+            explanation: 'In the 8086 instruction set, the INC (Increment) and DEC (Decrement) instructions do NOT affect the Carry Flag (CF). They do affect other status flags like ZF, SF, OF, PF, and AF, but the Carry Flag is explicitly preserved.'
+          },
+          {
+            question: 'Which of the following shift instructions preserves the sign bit (most significant bit) of the operand, allowing for signed division?',
+            options: ['SHL (Shift Left)', 'SHR (Shift Right)', 'SAR (Shift Arithmetic Right)', 'ROL (Rotate Left)'],
             correctAnswer: 2,
-            explanation: 'Data transfer instructions like MOV, PUSH, POP, LEA, and XCHG do not modify any ALU flags in the status register, preserving the current flags. Arithmetic (ADD, CMP) and logical (AND) instructions always alter flags.'
+            explanation: 'SAR (Shift Arithmetic Right) shifts bits to the right, but instead of inserting a 0 at the MSB (like SHR does), it duplicates the current sign bit (MSB). This preserves the arithmetic sign of signed numbers.'
           },
           {
-            question: 'What is the difference between the "SUB AX, BX" and "CMP AX, BX" instructions?',
-            options: ['SUB affects the register values, while CMP only updates flags without altering AX', 'SUB only updates flags, while CMP alters register values', 'SUB handles signed numbers, while CMP is strictly for unsigned numbers', 'There is no difference; they are synonymous'],
+            question: 'What are the default segment registers used by the source index (SI) and destination index (DI) in string instructions (like MOVSB)?',
+            options: ['SI uses DS; DI uses ES', 'SI uses DS; DI uses SS', 'SI uses CS; DI uses ES', 'SI uses ES; DI uses DS'],
             correctAnswer: 0,
-            explanation: 'Both instructions perform subtraction (AX - BX) and update the status flags (ZF, CF, SF, OF, PF) identically. However, "SUB AX, BX" overwrites AX with the subtraction result, whereas "CMP AX, BX" discards the arithmetic outcome, keeping AX unchanged.'
+            explanation: 'In 8086 string operations, the source operand is always pointed to by SI and is located in the Data Segment (DS) by default. The destination operand is always pointed to by DI and is strictly located in the Extra Segment (ES).'
           },
           {
-            question: 'Which instruction is used to multiply the AX register by a 16-bit operand and store the resulting 32-bit product across the combined DX and AX registers?',
-            options: ['MUL', 'IMUL', 'DIV', 'Both MUL (for unsigned) and IMUL (for signed)'],
-            correctAnswer: 3,
-            explanation: 'MUL (unsigned multiplication) and IMUL (signed multiplication) take a single 16-bit register or memory operand, multiply it by the AX accumulator, and store the 32-bit product across DX (upper 16 bits) and AX (lower 16 bits).'
+            question: 'Which instruction clears the Direction Flag (DF) to ensure that SI and DI increment automatically during string operations?',
+            options: ['STD', 'CLD', 'CLI', 'CLC'],
+            correctAnswer: 1,
+            explanation: 'CLD (Clear Direction Flag) sets DF = 0, which directs the 8086 string execution logic to automatically increment SI and DI after each step. STD sets DF = 1, which causes them to decrement.'
+          },
+          {
+            question: 'What occurs when the CPU attempts to execute a "DIV CX" instruction but the divisor in CX is 0000H?',
+            options: ['The instruction is ignored and the program continues', 'The division result is set to FFFFH and Carry is set', 'The CPU instantly triggers a Type 0 (Divide by Zero) hardware interrupt exception', 'The CPU halts execution permanently'],
+            correctAnswer: 2,
+            explanation: 'When a division by zero is attempted on the 8086, the processor automatically suspends normal execution and executes a Type 0 (Divide by Zero) interrupt exception handler to safely deal with the mathematical error.'
+          },
+          {
+            question: 'Which physical address formula does the 8086 CPU use to fetch the translated byte during the execution of the "XLAT" instruction?',
+            options: ['DS:[BX + AL]', 'ES:[SI + AL]', 'DS:[BP + AL]', 'SS:[SP + AL]'],
+            correctAnswer: 0,
+            explanation: 'The XLAT instruction calculates the lookup address by adding the unsigned index in AL to the base offset in BX, accessing the Data Segment (DS) by default. Therefore, the physical memory location accessed is DS:[BX + AL].'
           }
         ]
       }
@@ -1014,67 +1136,63 @@ export const courseData: Module[] = [
     slides: [
       {
         id: 'm11-s1',
-        title: 'Core Assembler Directives & Data Definitions',
+        title: 'Definition of Assembler Directives',
         moduleTitle: 'Module 11: Assembler Directives',
         moduleId: 'm11',
         points: [
-          'What are Assembler Directives?: Also called pseudo-instructions, these are special commands embedded in the source code meant solely for the assembler (MASM/TASM). They guide the compiler during translation and do NOT produce executable CPU machine codes or consume space in the code segment at runtime.',
-          'Data Definition Directives: Used to reserve physical memory in RAM and initialize data variables. Supported sizes include: DB (Define Byte - 1 byte / 8 bits), DW (Define Word - 2 bytes / 16 bits), DD (Define Doubleword - 4 bytes / 32 bits), DQ (Define Quadword - 8 bytes / 64 bits), and DT (Define Ten Bytes - 10 bytes / 80 bits).',
-          'Data Ordering (Little-Endian): For multi-byte declarations like DW and DD, the 8086 uses Little-Endian format: the least-significant byte (LSB) is stored at the lowest memory address offset, and the most-significant byte (MSB) at the highest address offset.',
-          'The DUP (Duplicate) Operator: Used inside data definition directives to allocate arrays or memory blocks initialized with recurring patterns. Format: COUNT DUP(Value). For example, "ARR DB 10 DUP(0)" allocates 10 bytes in memory, each initialized to 00H.',
-          'Symbolic Constants (EQU): The Equate directive creates a text or numeric alias (e.g., "MAX_LIMIT EQU 100"). The assembler replaces all instances of MAX_LIMIT with 100 at compile time. This is a compiler-only symbol and consumes zero bytes of RAM at runtime.'
+          'What are Assembler Directives?: Also called pseudo-instructions, these are special commands embedded in the source code meant solely for the assembler (MASM/TASM).',
+          'Purpose & Role: They guide the compiler during translation, controlling segment allocation, memory layout, symbol definitions, and assembly processes.',
+          'No Machine Code Generation: Unlike CPU instructions (e.g., MOV, ADD), assembler directives do NOT produce executable binary CPU opcodes or runtime machine instructions.',
+          'Assembly vs Directives: Instructions tell the 8086 processor what operations to execute at runtime, whereas directives tell the assembler software how to assemble the program at compile-time.'
         ]
       },
       {
         id: 'm11-s2',
-        title: 'The Three Assembly Programming Styles',
+        title: 'Types of Assembly Programming Styles',
         moduleTitle: 'Module 11: Assembler Directives',
         moduleId: 'm11',
         points: [
           '8086 Program Formats: 8086 assembly source code can be written in three distinct programming styles: 1) Standard Segment-Ends Style, 2) Simplified Dot-Model Style, and 3) Tiny .COM Program Style.',
-          'Standard Segment Style (EXE): Explicitly frames memory sections using logical "SEGMENT" and "ENDS" boundary identifiers. Requires the compile-time "ASSUME" directive to validate register bounds and manual runtime DS register loading via: MOV AX, DATA_SEG followed by MOV DS, AX.',
-          'Simplified Dot-Model Style (EXE): Replaces verbose wrappers with modern shortcuts (.MODEL, .STACK, .DATA, .CODE). Automatically pre-configures segment mappings based on model sizes (e.g., SMALL maps 64KB for code, 64KB for data). DS is initialized using the pre-defined @DATA segment constant.',
-          'Tiny .COM Style (Single Segment): Utilizes ".MODEL TINY" to merge the code, data, and stack into a single unified 64KB physical memory segment. Because of this unified mapping, the OS automatically sets CS = DS = SS = ES on launch, removing any need to manually initialize the DS register at runtime.',
-          'Origin Control (ORG 100H): In Tiny/COM programs, the executable binary is loaded directly as a memory image. The source code must begin with "ORG 100H" to bypass the first 256 bytes reserved by DOS for the Program Segment Prefix (PSP) block.'
+          '1. Standard Segment Style (EXE): Explicitly frames memory sections using logical "SEGMENT" and "ENDS" boundary identifiers. Requires the compile-time "ASSUME" directive to validate register bounds and manual runtime DS register loading via: MOV AX, DATA_SEG followed by MOV DS, AX.',
+          '2. Simplified Dot-Model Style (EXE): Replaces verbose wrappers with modern shortcuts (.MODEL, .STACK, .DATA, .CODE). Automatically pre-configures segment mappings based on model sizes (e.g., .MODEL SMALL maps 64KB for code, 64KB for data).',
+          '3. Tiny .COM Style (Single Segment): Utilizes ".MODEL TINY" to merge the code, data, and stack into a single unified 64KB physical memory segment. The OS automatically sets CS = DS = SS = ES upon loading.'
         ],
         interactiveType: 'directive-sandbox'
       },
       {
         id: 'm11-quiz',
-        title: 'Module 11 Recap Quiz',
+        title: 'Module 12 Recap Quiz',
         moduleTitle: 'Module 11: Assembler Directives',
         moduleId: 'm11',
         interactiveType: 'quiz',
         quizQuestions: [
           {
-            question: 'Which assembler directive is used to allocate 2 bytes of storage for a data variable, commonly representing a 16-bit word?',
-            options: ['DB (Define Byte)', 'DW (Define Word)', 'DD (Define Doubleword)', 'DQ (Define Quadword)'],
+            question: 'What is the primary difference between an 8086 CPU instruction (like MOV or ADD) and an Assembler Directive?',
+            options: [
+              'Instructions guide the assembler at compile time, while directives execute in the ALU at runtime',
+              'Directives are pseudo-instructions that guide the assembler during compilation and do NOT produce CPU machine code, whereas instructions produce executable opcodes',
+              'Directives are executed by the 8087 math co-processor',
+              'There is no difference between instructions and directives'
+            ],
             correctAnswer: 1,
-            explanation: 'The DW (Define Word) directive directs the assembler to allocate 2 bytes (16 bits) of consecutive memory space for the associated variable.'
+            explanation: 'Assembler directives (pseudo-instructions) are directives for the assembler software (e.g. MASM/TASM) during translation and produce no executable CPU machine code, whereas CPU instructions are translated directly into binary opcodes.'
           },
           {
-            question: 'What is the purpose of the ASSUME directive in 8086 MASM programs?',
-            options: ['To initialize physical segment registers with segment starting addresses', 'To tell the assembler which logical segment belongs to which physical segment register (CS, DS, SS, ES) during code compilation', 'To perform addition inside the ALU', 'To define constants'],
-            correctAnswer: 1,
-            explanation: 'ASSUME is a compiler-only directive. It informs the assembler about the association between segment registers and logical segments, so the compiler can generate appropriate segment override prefixes if necessary. It does NOT load the segment registers with addresses at runtime (that must be done using MOV instructions).'
-          },
-          {
-            question: 'How many bytes of physical memory are allocated by the directive "ARR DB 5 DUP(1, 2)"?',
-            options: ['5 bytes', '10 bytes', '15 bytes', '2 bytes'],
-            correctAnswer: 1,
-            explanation: 'The DUP (Duplicate) operator duplicates the nested pattern. The pattern contains two bytes: (1, 2), which is 2 bytes wide. Duplicating this pattern 5 times allocates exactly 5 * 2 = 10 bytes of memory.'
-          },
-          {
-            question: 'Which of the following directives defines a constant value that does NOT consume any physical space in the resulting executable program?',
-            options: ['ORG', 'EQU', 'DB', 'ENDS'],
-            correctAnswer: 1,
-            explanation: 'The EQU (Equate) directive defines a compile-time constant alias. The assembler replaces all occurrences of the equated symbol with its value during compilation, consuming zero physical space in the compiled binary.'
-          },
-          {
-            question: 'In which 8086 programming style is manual runtime initialization of the Data Segment (DS) register NOT required?',
-            options: ['Standard Segment Style (explicit SEGMENT/ENDS)', 'Simplified Dot-Model Style (.MODEL SMALL)', 'Tiny .COM Style (.MODEL TINY)', 'None of the above; DS must always be initialized manually'],
+            question: 'Which of the following programming styles merges code, data, and stack into a single 64KB physical segment where CS = DS = SS = ES?',
+            options: ['Standard Segment Style (explicit SEGMENT/ENDS)', 'Simplified Dot-Model Style (.MODEL SMALL)', 'Tiny .COM Style (.MODEL TINY)', 'None of the above'],
             correctAnswer: 2,
-            explanation: 'In Tiny .COM style (.MODEL TINY), code, data, and stack all share a single 64KB physical segment. When the operating system loads the executable, it automatically points all segment registers (CS, DS, SS, ES) to the same base address, making manual DS register initialization unnecessary.'
+            explanation: 'In Tiny .COM style (.MODEL TINY), code, data, and stack all share a single unified 64KB physical segment, and the operating system automatically sets CS, DS, SS, and ES to the same base address upon loading.'
+          },
+          {
+            question: 'What are the three primary assembly programming styles in 8086 software development?',
+            options: [
+              'RISC Style, CISC Style, and Microcode Style',
+              'Standard Segment-Ends Style, Simplified Dot-Model Style, and Tiny .COM Program Style',
+              'Direct Style, Indirect Style, and Relative Style',
+              'High-Level Style, Low-Level Style, and Machine Style'
+            ],
+            correctAnswer: 1,
+            explanation: 'The three programming styles for 8086 programs are Standard Segment-Ends Style (explicit SEGMENT/ENDS), Simplified Dot-Model Style (.MODEL shortcuts), and Tiny .COM Program Style (.MODEL TINY).'
           }
         ]
       }

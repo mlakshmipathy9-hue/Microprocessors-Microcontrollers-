@@ -106,4 +106,21 @@
   font-size: 13px !important;
 }
 
+/* Explicit style for active-low signal overlines */
+.overline {
+  text-decoration: overline !important;
+  text-decoration-thickness: 1.5px !important;
+}
+
+/* Highly targeted style for the overline on the selected RD element in the pin configuration simulator */
+div#root:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > main:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div#interactive-bento-card:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > button:nth-of-type(18) > span:nth-of-type(1) > span:nth-of-type(1) {
+  text-decoration: overline !important;
+  text-decoration-line: overline !important;
+  text-decoration-thickness: 1.5px !important;
+  display: inline-block !important;
+  line-height: normal !important;
+  overflow: visible !important;
+  padding-top: 2px !important;
+}
+
 

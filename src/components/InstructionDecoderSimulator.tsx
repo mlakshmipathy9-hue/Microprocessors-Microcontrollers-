@@ -4,702 +4,61 @@ import {
   Play, 
   Cpu, 
   Settings, 
-  HelpCircle, 
   CheckCircle2, 
-  AlertCircle,
-  TrendingUp,
-  RefreshCw,
-  ArrowRight,
-  Sparkles,
-  Info,
-  List,
-  Terminal,
-  ArrowLeftRight,
-  Layers,
+  RefreshCw, 
+  ArrowRight, 
+  Sparkles, 
+  Info, 
+  Terminal, 
+  ArrowLeftRight, 
+  Layers, 
   Database,
-  ShieldAlert
+  ChevronRight,
+  HelpCircle,
+  Sliders,
+  ChevronLeft,
+  BookOpen,
+  Binary,
+  ArrowRightLeft
 } from 'lucide-react';
-
-interface SimulatorInstruction {
-  opcode: string;
-  category: 'Data Transfer' | 'Arithmetic' | 'BCD & ASCII Adjust' | 'Logical & Bitwise' | 'Control, Flag & IO';
-  desc: string;
-  setupDesc: string;
-  initialRegs: Record<string, number>;
-  initialFlags: Record<string, number>;
-  execute: (regs: Record<string, number>, flags: Record<string, number>) => {
-    newRegs: Record<string, number>;
-    newFlags: Record<string, number>;
-    mathExplanation: string;
-  };
-}
-
-const mockInstructions: SimulatorInstruction[] = [
-  // ================= CATEGORY: DATA TRANSFER =================
-  {
-    opcode: 'MOV CX, 037AH',
-    category: 'Data Transfer',
-    desc: 'Copies the 16-bit immediate value 037AH directly into register CX.',
-    setupDesc: 'Initializes CX = 0000H to show immediate data loading. Does not affect any flags.',
-    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const newRegs = { ...regs, CX: 0x037A, IP: regs.IP + 3 };
-      return {
-        newRegs,
-        newFlags: { ...flags },
-        mathExplanation: 'The immediate value 037AH is moved directly into CX. Note that data transfer instructions (MOV, XCHG, LEA, etc.) NEVER modify any status flags on the 8086 CPU. The Instruction Pointer (IP) is incremented by 3 bytes to account for the size of the compiled instruction in memory.'
-      };
-    }
-  },
-  {
-    opcode: 'XCHG AX, BX',
-    category: 'Data Transfer',
-    desc: 'Exchanges the contents of the AX and BX registers.',
-    setupDesc: 'Initializes AX = 1234H and BX = ABCDH to demonstrate register-to-register exchange.',
-    initialRegs: { AX: 0x1234, BX: 0xABCD, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const newRegs = { ...regs, AX: regs.BX, BX: regs.AX, IP: regs.IP + 2 };
-      return {
-        newRegs,
-        newFlags: { ...flags },
-        mathExplanation: `AX (1234H) and BX (ABCDH) are swapped. At the end of the exchange, AX contains ABCDH and BX contains 1234H. Standard exchange operations consume zero physical flags but are extremely useful for sorting and buffer operations.`
-      };
-    }
-  },
-  {
-    opcode: 'XLAT',
-    category: 'Data Transfer',
-    desc: 'Translates a byte in AL using a lookup table in memory starting at DS:BX.',
-    setupDesc: 'Initializes AL = 03H (offset) and BX = 0300H (table start offset). We simulate translating to binary Gray Code.',
-    initialRegs: { AX: 0x0003, BX: 0x0300, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      // Look up table at 0300H contains gray codes: 00=00, 01=01, 02=03, 03=02
-      // So index 3 should yield 02
-      const newAL = 0x02;
-      const newAX = (regs.AX & 0xFF00) | newAL;
-      const newRegs = { ...regs, AX: newAX, IP: regs.IP + 1 };
-      return {
-        newRegs,
-        newFlags: { ...flags },
-        mathExplanation: 'XLAT adds the index in AL (03H) to the base offset in BX (0300H) to fetch DS:[0303H]. The lookup table at this memory address contains the Gray Code corresponding to 3, which is 02H. The value is loaded back into AL. Flags are completely unaffected.'
-      };
-    }
-  },
-  {
-    opcode: 'LEA BX, PRICES',
-    category: 'Data Transfer',
-    desc: 'Loads the Effective Address (offset) of a memory variable directly into the target 16-bit register.',
-    setupDesc: 'Initializes BX = 0000H. The variable "PRICES" is located at offset offset 20A0H in the Data Segment.',
-    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const newRegs = { ...regs, BX: 0x20A0, IP: regs.IP + 4 };
-      return {
-        newRegs,
-        newFlags: { ...flags },
-        mathExplanation: 'LEA (Load Effective Address) computes the logical offset of the source variable "PRICES" (which is 20A0H) and moves that offset directly into BX. Notice that it does NOT fetch the contents stored inside PRICES; it only copies the coordinate address itself. No flags are affected.'
-      };
-    }
-  },
-  {
-    opcode: 'LDS SI, SPTR',
-    category: 'Data Transfer',
-    desc: 'Loads a doubleword (32-bit far pointer) from memory, copying the first word into SI and the second word into DS.',
-    setupDesc: 'Initializes SI = 0000H, DS = 2000H. Memory contains an offset (4326H) and segment (5000H).',
-    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x0000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const newRegs = { ...regs, SI: 0x4326, DS: 0x5000, IP: regs.IP + 4 };
-      return {
-        newRegs,
-        newFlags: { ...flags },
-        mathExplanation: 'LDS (Load Data Segment Register) reads 4 bytes starting at SPTR. The lower 2 bytes (containing target offset 4326H) are loaded into SI, and the higher 2 bytes (containing segment 5000H) are loaded into DS. This allows DS:SI to point directly to a new block of data.'
-      };
-    }
-  },
-  {
-    opcode: 'PUSH AX',
-    category: 'Data Transfer',
-    desc: 'Decrements the Stack Pointer (SP) by 2 and copies AX onto the stack.',
-    setupDesc: 'Initializes AX = 1122H, SP = FFFEH to demonstrate pushing onto the CPU stack.',
-    initialRegs: { AX: 0x1122, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const newRegs = { ...regs, SP: 0xFFFC, IP: regs.IP + 1 };
-      return {
-        newRegs,
-        newFlags: { ...flags },
-        mathExplanation: 'PUSH AX decrements the Stack Pointer (SP) by 2 (changing SP from FFFEH to FFFCH) and copies the 16-bit content of AX (1122H) into the stack memory location pointed to by SS:FFFCH. Stack operations do not affect CPU status flags.'
-      };
-    }
-  },
-  {
-    opcode: 'POP DX',
-    category: 'Data Transfer',
-    desc: 'Copies the word at the top of the stack into DX and then increments SP by 2.',
-    setupDesc: 'Initializes SP = FFFCH (stack holds 1122H from a previous PUSH). DX is currently 0000H.',
-    initialRegs: { AX: 0x1122, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFC, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const newRegs = { ...regs, DX: 0x1122, SP: 0xFFFE, IP: regs.IP + 1 };
-      return {
-        newRegs,
-        newFlags: { ...flags },
-        mathExplanation: 'POP DX copies the 16-bit word (1122H) currently pointed to by SS:SP (FFFCH) directly into DX. It then automatically increments the Stack Pointer (SP) by 2 (returning SP to FFFEH), releasing that stack frame.'
-      };
-    }
-  },
-
-  // ================= CATEGORY: ARITHMETIC =================
-  {
-    opcode: 'ADD AL, 01H',
-    category: 'Arithmetic',
-    desc: 'Adds 1 to the 8-bit register AL, updating status flags.',
-    setupDesc: 'Initializes AL = 7FH (+127 signed) to demonstrate a signed arithmetic overflow.',
-    initialRegs: { AX: 0x007F, BX: 0x0001, CX: 0x0005, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const al = regs.AX & 0xFF;
-      const result = (al + 1) & 0xFF;
-      const newAX = (regs.AX & 0xFF00) | result;
-      
-      const newRegs = { ...regs, AX: newAX, IP: regs.IP + 2 };
-      const newFlags = {
-        ZF: result === 0 ? 1 : 0,
-        CF: al === 0xFF ? 1 : 0, // Unsigned overflow
-        SF: (result & 0x80) ? 1 : 0, // MSB is 1
-        OF: al === 0x7F ? 1 : 0, // +127 + 1 = -128 (Signed overflow!)
-        AF: (al & 0x0F) === 0x0F ? 1 : 0, // Auxiliary Carry
-        PF: 1 // Even parity (80H has 1 set bit, wait, 80H has odd parity. Parity is even if count of 1s is even. 80H contains one '1' bit, so PF is 0)
-      };
-      newFlags.PF = (result.toString(2).split('1').length - 1) % 2 === 0 ? 1 : 0;
-
-      return {
-        newRegs,
-        newFlags,
-        mathExplanation: 'AL contained 7FH (01111111B = +127 signed). Adding 01H results in 80H (10000000B = -128 signed). Because adding two positive numbers produced a negative result, a signed Arithmetic Overflow occurred: OF is set to 1. No unsigned carry was produced out of the 8th bit, so CF remains 0. The Sign Flag (SF) is set to 1 because the MSB of the result is 1.'
-      };
-    }
-  },
-  {
-    opcode: 'ADC AX, BX',
-    category: 'Arithmetic',
-    desc: 'Adds AX, BX, and the Carry Flag (CF), saving the result in AX.',
-    setupDesc: 'Initializes AX = 00FFH, BX = 0001H, and CF = 1 to show a double-carry propagate addition cycle.',
-    initialRegs: { AX: 0x00FF, BX: 0x0001, CX: 0x0005, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 1, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const sum = regs.AX + regs.BX + 1; // CF is 1
-      const result = sum & 0xFFFF;
-      const newRegs = { ...regs, AX: result, IP: regs.IP + 2 };
-      
-      const newFlags = {
-        ZF: result === 0 ? 1 : 0,
-        CF: sum > 0xFFFF ? 1 : 0,
-        SF: (result & 0x8000) ? 1 : 0,
-        OF: 0,
-        AF: 1, // propagation across hex digit
-        PF: 1
-      };
-      newFlags.PF = (result & 0xFF).toString(2).split('1').length % 2 === 1 ? 1 : 0; // standard 8086 parity tracks low-byte
-
-      return {
-        newRegs,
-        newFlags,
-        mathExplanation: `ADC adds AX + BX + Carry. AX (00FFH) + BX (0001H) + CF (1) = 0101H (257 in decimal). The carry propagates smoothly. Zero flag ZF = 0 because the result is non-zero, and CF becomes 0 because the sum fits inside a 16-bit word.`
-      };
-    }
-  },
-  {
-    opcode: 'SUB AX, BX',
-    category: 'Arithmetic',
-    desc: 'Subtracts BX register value from AX, updating AX and setting status flags.',
-    setupDesc: 'Initializes AX = 1000H, BX = 0200H.',
-    initialRegs: { AX: 0x1000, BX: 0x0200, CX: 0x0005, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const result = (regs.AX - regs.BX) & 0xFFFF;
-      const newRegs = { ...regs, AX: result, IP: regs.IP + 2 };
-      const newFlags = {
-        ZF: result === 0 ? 1 : 0,
-        CF: regs.AX < regs.BX ? 1 : 0, // borrow
-        SF: (result & 0x8000) ? 1 : 0,
-        OF: 0,
-        AF: 0,
-        PF: 1
-      };
-      newFlags.PF = (result & 0xFF).toString(2).split('1').length % 2 === 1 ? 1 : 0;
-
-      return {
-        newRegs,
-        newFlags,
-        mathExplanation: `AX contained 1000H, BX contained 0200H. Subtracting: 1000H - 0200H = 0E00H (3584 in decimal). The result is non-zero, so ZF = 0. AX was greater than BX, so no borrow was required, meaning CF = 0. The MSB is 0, so SF = 0. This is a standard unsigned arithmetic subtraction.`
-      };
-    }
-  },
-  {
-    opcode: 'SBB AX, BX',
-    category: 'Arithmetic',
-    desc: 'Subtracts BX and Carry (CF/Borrow) from AX, updating AX.',
-    setupDesc: 'Initializes AX = 0010H, BX = 0005H, CF = 1.',
-    initialRegs: { AX: 0x0010, BX: 0x0005, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 1, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const result = (regs.AX - regs.BX - 1) & 0xFFFF;
-      const newRegs = { ...regs, AX: result, IP: regs.IP + 2 };
-      const newFlags = {
-        ZF: result === 0 ? 1 : 0,
-        CF: regs.AX < (regs.BX + 1) ? 1 : 0,
-        SF: (result & 0x8000) ? 1 : 0,
-        OF: 0,
-        AF: 0,
-        PF: 1
-      };
-      newFlags.PF = (result & 0xFF).toString(2).split('1').length % 2 === 1 ? 1 : 0;
-
-      return {
-        newRegs,
-        newFlags,
-        mathExplanation: 'SBB computes AX - BX - CF. AX (0010H) - BX (0005H) - CF (1) = 000AH (10 in decimal). No borrow was propagated beyond this point, so CF is updated to 0. ZF = 0 because the result is non-zero.'
-      };
-    }
-  },
-  {
-    opcode: 'MUL BH',
-    category: 'Arithmetic',
-    desc: 'Performs unsigned multiplication: AX = AL * BH.',
-    setupDesc: 'Initializes AL = 05H and BH = 10H (16 in decimal) to perform 8-bit unsigned multiplication.',
-    initialRegs: { AX: 0x0005, BX: 0x1000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const al = regs.AX & 0xFF;
-      const bh = (regs.BX & 0xFF00) >> 8;
-      const product = al * bh;
-      const newRegs = { ...regs, AX: product, IP: regs.IP + 2 };
-      // For 8-bit MUL, if upper half of product (AH) is 0, CF & OF are cleared; else set.
-      const ah = (product & 0xFF00) >> 8;
-      const cf_of = ah !== 0 ? 1 : 0;
-      
-      const newFlags = {
-        ...flags,
-        CF: cf_of,
-        OF: cf_of,
-        ZF: product === 0 ? 1 : 0
-      };
-      return {
-        newRegs,
-        newFlags,
-        mathExplanation: `MUL BH multiplies AL (05H = 5) * BH (10H = 16) resulting in 0050H (80 decimal) which is loaded into AX. Because the upper byte of the product (AH) is 00H, the Carry (CF) and Overflow (OF) flags are cleared to 0.`
-      };
-    }
-  },
-  {
-    opcode: 'DIV BL',
-    category: 'Arithmetic',
-    desc: 'Performs unsigned division: AX divided by BL. Quotient saved in AL, Remainder in AH.',
-    setupDesc: 'Initializes AX = 0019H (25 in decimal) and BL = 05H to perform 8-bit unsigned division.',
-    initialRegs: { AX: 0x0019, BX: 0x0005, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const ax = regs.AX;
-      const bl = regs.BX & 0xFF;
-      const quotient = Math.floor(ax / bl) & 0xFF;
-      const remainder = (ax % bl) & 0xFF;
-      const newAX = (remainder << 8) | quotient;
-      const newRegs = { ...regs, AX: newAX, IP: regs.IP + 2 };
-      return {
-        newRegs,
-        newFlags: { ...flags }, // Division flags are undefined on 8086
-        mathExplanation: `DIV BL divides AX (0019H = 25) by BL (05H = 5). Quotient = 5 (05H) goes into AL, and Remainder = 0 (00H) goes into AH, updating AX to 0005H. Status flags are technically undefined after execution.`
-      };
-    }
-  },
-  {
-    opcode: 'INC CX',
-    category: 'Arithmetic',
-    desc: 'Increments the CX register by 1. Affects status flags except Carry (CF).',
-    setupDesc: 'Initializes CX = FFFFH to demonstrate register wrap-around. Carry flag CF is unaffected.',
-    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0xFFFF, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const result = (regs.CX + 1) & 0xFFFF;
-      const newRegs = { ...regs, CX: result, IP: regs.IP + 1 };
-      const newFlags = {
-        ...flags,
-        ZF: result === 0 ? 1 : 0,
-        SF: (result & 0x8000) ? 1 : 0,
-        OF: regs.CX === 0x7FFF ? 1 : 0,
-        AF: (regs.CX & 0x0F) === 0x0F ? 1 : 0
-      };
-      // CF remains unchanged for INC and DEC instructions
-      return {
-        newRegs,
-        newFlags,
-        mathExplanation: 'CX (FFFFH) is incremented by 1, wrapping around to 0000H. Because the result is zero, ZF is set to 1. Crucially, the Carry Flag (CF) is NOT affected by INC/DEC, so CF remains 0.'
-      };
-    }
-  },
-  {
-    opcode: 'CMP AX, BX',
-    category: 'Arithmetic',
-    desc: 'Compares AX and BX by performing AX - BX, but does NOT save the subtraction result.',
-    setupDesc: 'Initializes AX = 0500H and BX = 0500H to simulate an exact match comparison.',
-    initialRegs: { AX: 0x0500, BX: 0x0500, CX: 0x0005, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const result = (regs.AX - regs.BX) & 0xFFFF;
-      const newFlags = {
-        ZF: result === 0 ? 1 : 0,
-        CF: regs.AX < regs.BX ? 1 : 0,
-        SF: (result & 0x8000) ? 1 : 0,
-        OF: 0,
-        AF: 0,
-        PF: 1
-      };
-      return {
-        newRegs: { ...regs, IP: regs.IP + 2 }, // unchanged registers!
-        newFlags,
-        mathExplanation: 'The CMP instruction performs a subtraction internally: AX (0500H) - BX (0500H) = 0000H. The subtraction results in exactly zero, which triggers the Zero Flag (ZF) to 1. No borrow was required (CF = 0) and the sign is positive (SF = 0). Crucially, the AX register value remains completely unmodified!'
-      };
-    }
-  },
-
-  // ================= CATEGORY: BCD & ASCII ADJUST =================
-  {
-    opcode: 'DAA',
-    category: 'BCD & ASCII Adjust',
-    desc: 'Decimal Adjust after Addition. Adjusts AL to be a valid packed BCD number.',
-    setupDesc: 'Initializes AL = 8EH (from adding packed BCDs 59 and 35: 59H + 35H = 8EH). AF and CF are 0.',
-    initialRegs: { AX: 0x008E, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      // 8EH has lower nibble E > 9, so add 06H -> 8E + 6 = 94H
-      const result = 0x94;
-      const newAX = (regs.AX & 0xFF00) | result;
-      const newFlags = {
-        ...flags,
-        CF: 0,
-        ZF: 0,
-        SF: 0,
-        AF: 1
-      };
-      return {
-        newRegs: { ...regs, AX: newAX, IP: regs.IP + 1 },
-        newFlags,
-        mathExplanation: 'DAA inspects AL (8EH). The lower nibble (EH) is greater than 9, so DAA adds 06H to AL: 8EH + 06H = 94H. The upper nibble (9) is valid (<= 9), so no further correction is needed. The final BCD result is 94H, representing the sum 94 in packed BCD. AF is set to 1.'
-      };
-    }
-  },
-  {
-    opcode: 'DAS',
-    category: 'BCD & ASCII Adjust',
-    desc: 'Decimal Adjust after Subtraction. Adjusts AL to be a valid packed BCD number.',
-    setupDesc: 'Initializes AL = D7H (subtracting packed BCDs: 49 BCD - 72 BCD yields D7H). CF is 0.',
-    initialRegs: { AX: 0x00D7, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      // D7H has upper nibble > 9, so subtract 60H -> D7H - 60H = 77H, set CF = 1
-      const result = 0x77;
-      const newAX = (regs.AX & 0xFF00) | result;
-      const newFlags = {
-        ...flags,
-        CF: 1,
-        ZF: 0,
-        SF: 0,
-        AF: 0
-      };
-      return {
-        newRegs: { ...regs, AX: newAX, IP: regs.IP + 1 },
-        newFlags,
-        mathExplanation: 'DAS inspects AL (D7H). The upper nibble (DH) is greater than 9, so DAS subtracts 60H from AL: D7H - 60H = 77H, and sets the Carry Flag (CF = 1) to indicate a BCD borrow. The final packed BCD result is 77H with CF = 1 (borrow active).'
-      };
-    }
-  },
-  {
-    opcode: 'AAM',
-    category: 'BCD & ASCII Adjust',
-    desc: 'ASCII Adjust after Multiplication. Converts a product in AL into two unpacked BCD digits in AH and AL.',
-    setupDesc: 'Initializes AL = 2DH (45 decimal, which is 5 * 9). AAM will convert it to unpacked BCD.',
-    initialRegs: { AX: 0x002D, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const al = regs.AX & 0xFF;
-      const ah = Math.floor(al / 10);
-      const newAl = al % 10;
-      const newAX = (ah << 8) | newAl;
-      const newFlags = {
-        ...flags,
-        ZF: newAl === 0 ? 1 : 0,
-        SF: (ah & 0x80) ? 1 : 0
-      };
-      return {
-        newRegs: { ...regs, AX: newAX, IP: regs.IP + 2 },
-        newFlags,
-        mathExplanation: 'AAM divides AL (2DH = 45) by 10. The quotient (4) goes into AH (representing the tens digit), and the remainder (5) goes into AL (representing the ones digit). AX becomes 0405H, which is the exact unpacked BCD of 45.'
-      };
-    }
-  },
-  {
-    opcode: 'AAD',
-    category: 'BCD & ASCII Adjust',
-    desc: 'ASCII Adjust before Division. Converts unpacked BCD in AH and AL to a single binary value in AL.',
-    setupDesc: 'Initializes AH = 02H and AL = 05H (unpacked BCD representing 25).',
-    initialRegs: { AX: 0x0205, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const ah = (regs.AX & 0xFF00) >> 8;
-      const al = regs.AX & 0xFF;
-      const binary = (ah * 10) + al;
-      const newAX = binary & 0xFF; // AH cleared
-      const newFlags = {
-        ...flags,
-        ZF: newAX === 0 ? 1 : 0,
-        SF: (newAX & 0x80) ? 1 : 0
-      };
-      return {
-        newRegs: { ...regs, AX: newAX, IP: regs.IP + 2 },
-        newFlags,
-        mathExplanation: 'AAD multiplies AH (02H = 2) by 10 and adds AL (05H = 5), clearing AH to 00H. The resulting binary value 25 (19H) is loaded into AL. This prepares the MPU for a division instruction.'
-      };
-    }
-  },
-
-  // ================= CATEGORY: LOGICAL & BITWISE =================
-  {
-    opcode: 'XOR AX, AX',
-    category: 'Logical & Bitwise',
-    desc: 'Performs bitwise XOR of AX with itself, clearing AX to 0.',
-    setupDesc: 'Initializes AX = FFFFH. Logical instructions always clear Carry (CF) and Overflow (OF).',
-    initialRegs: { AX: 0xFFFF, BX: 0x0020, CX: 0x0005, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const newRegs = { ...regs, AX: 0, IP: regs.IP + 2 };
-      const newFlags = {
-        ZF: 1, // Zero flag set to 1
-        CF: 0, // Logic instructions clear CF
-        SF: 0, 
-        OF: 0,  // Logic instructions clear OF
-        AF: 0,
-        PF: 1
-      };
-      return {
-        newRegs,
-        newFlags,
-        mathExplanation: 'XORing any value with itself yields exactly zero (e.g., FFFFH XOR FFFFH = 0000H). This is a standard optimization to clear registers. By default design, logical instructions automatically clear CF and OF to 0 and update ZF, SF, and PF.'
-      };
-    }
-  },
-  {
-    opcode: 'AND AL, 0FH',
-    category: 'Logical & Bitwise',
-    desc: 'Logical bitwise AND of AL with immediate constant 0FH to isolate the lower nibble.',
-    setupDesc: 'Initializes AL = A5H. Logical operations clear CF and OF.',
-    initialRegs: { AX: 0x00A5, BX: 0x0010, CX: 0x0005, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 1, SF: 0, OF: 1, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const al = regs.AX & 0xFF;
-      const result = al & 0x0F;
-      const newAX = (regs.AX & 0xFF00) | result;
-      
-      const newRegs = { ...regs, AX: newAX, IP: regs.IP + 2 };
-      const newFlags = {
-        ZF: result === 0 ? 1 : 0,
-        CF: 0, 
-        SF: (result & 0x80) ? 1 : 0,
-        OF: 0,
-        AF: 0,
-        PF: (result.toString(2).split('1').length - 1) % 2 === 0 ? 1 : 0
-      };
-      return {
-        newRegs,
-        newFlags,
-        mathExplanation: 'AL is ANDed with 0FH: A5H (10100101B) AND 0FH (00001111B) = 05H (00000101B). This masks out (clears) the high nibble (A), keeping only the low nibble (5). The result (05H) is non-zero, so ZF = 0. Logical operations always force CF = 0 and OF = 0.'
-      };
-    }
-  },
-  {
-    opcode: 'OR AH, CL',
-    category: 'Logical & Bitwise',
-    desc: 'Performs logical bitwise OR between registers AH and CL, saving the result in AH.',
-    setupDesc: 'Initializes AH = 50H and CL = 0FH.',
-    initialRegs: { AX: 0x5000, BX: 0x0000, CX: 0x000F, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const ah = (regs.AX & 0xFF00) >> 8;
-      const cl = regs.CX & 0xFF;
-      const result = ah | cl;
-      const newAX = (regs.AX & 0x00FF) | (result << 8);
-      const newRegs = { ...regs, AX: newAX, IP: regs.IP + 2 };
-      return {
-        newRegs,
-        newFlags: { ...flags, ZF: result === 0 ? 1 : 0, CF: 0, OF: 0, SF: (result & 0x80) ? 1 : 0 },
-        mathExplanation: 'ORs AH (50H = 01010000B) with CL (0FH = 00001111B), resulting in 5FH (01011111B) in AH. CF and OF are forced to 0. ZF = 0 because the result is non-zero.'
-      };
-    }
-  },
-  {
-    opcode: 'NOT BX',
-    category: 'Logical & Bitwise',
-    desc: 'Performs bit-by-bit complement (NOT) of register BX.',
-    setupDesc: 'Initializes BX = 0000H. Crucially, the NOT instruction does NOT modify any flags!',
-    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const result = (~regs.BX) & 0xFFFF;
-      const newRegs = { ...regs, BX: result, IP: regs.IP + 2 };
-      return {
-        newRegs,
-        newFlags: { ...flags },
-        mathExplanation: 'NOT BX complements all bits of BX from 0000H (all zeros) to FFFFH (all ones). In the 8086 architecture, the NOT instruction is unique among logical operations because it does NOT alter any status flags in the flag register.'
-      };
-    }
-  },
-  {
-    opcode: 'NEG BL',
-    category: 'Logical & Bitwise',
-    desc: 'Performs 2\'s complement negation of register BL.',
-    setupDesc: 'Initializes BL = 02H. NEG updates all condition code flags (CF is set to 1 if source is non-zero).',
-    initialRegs: { AX: 0x0000, BX: 0x0002, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const bl = regs.BX & 0xFF;
-      const result = (-bl) & 0xFF;
-      const newBX = (regs.BX & 0xFF00) | result;
-      const newRegs = { ...regs, BX: newBX, IP: regs.IP + 2 };
-      return {
-        newRegs,
-        newFlags: { ...flags, ZF: result === 0 ? 1 : 0, CF: bl !== 0 ? 1 : 0, SF: (result & 0x80) ? 1 : 0, OF: bl === 0x80 ? 1 : 0 },
-        mathExplanation: 'NEG BL negates BL (02H) by computing its 2\'s complement: -2 in decimal is FEH (11111110B). FEH is loaded back into BL. Because the input was non-zero, the Carry Flag (CF) is set to 1. SF = 1 because the MSB of FEH is 1.'
-      };
-    }
-  },
-  {
-    opcode: 'SHL CX, 1',
-    category: 'Logical & Bitwise',
-    desc: 'Shifts CX left by 1 bit position. Equivalent to multiplying CX by 2.',
-    setupDesc: 'Initializes CX = 4000H to show a left shift where the sign bit changes.',
-    initialRegs: { AX: 0x0012, BX: 0x0010, CX: 0x4000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const beforeVal = regs.CX;
-      const result = (regs.CX << 1) & 0xFFFF;
-      const newRegs = { ...regs, CX: result, IP: regs.IP + 2 };
-      
-      const carryOut = (beforeVal & 0x8000) ? 1 : 0;
-      const beforeSign = (beforeVal & 0x8000) ? 1 : 0;
-      const afterSign = (result & 0x8000) ? 1 : 0;
-
-      const newFlags = {
-        ZF: result === 0 ? 1 : 0,
-        CF: carryOut,
-        SF: afterSign,
-        OF: beforeSign !== afterSign ? 1 : 0,
-        AF: 0,
-        PF: 1
-      };
-      return {
-        newRegs,
-        newFlags,
-        mathExplanation: `SHL CX, 1 shifts the bits of CX (4000H = 0100000000000000B) left by one, yielding 8000H (1000000000000000B). The value doubled from 16384 to 32768 in decimal. Because the sign bit (MSB) flipped from 0 to 1, the Overflow Flag (OF) is set to 1. CF = 0 because the bit shifted out of the MSB was 0.`
-      };
-    }
-  },
-
-  // ================= CATEGORY: CONTROL, FLAG & IO =================
-  {
-    opcode: 'STC',
-    category: 'Control, Flag & IO',
-    desc: 'Sets the Carry Flag (CF) to 1.',
-    setupDesc: 'Initializes CF = 0.',
-    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      return {
-        newRegs: { ...regs, IP: regs.IP + 1 },
-        newFlags: { ...flags, CF: 1 },
-        mathExplanation: 'STC (Set Carry Flag) is a direct flag manipulation instruction. It forces the Carry Flag (CF) bit to 1, regardless of any previous mathematical outcomes. Very useful before executing ADC or SBB instructions.'
-      };
-    }
-  },
-  {
-    opcode: 'LAHF',
-    category: 'Control, Flag & IO',
-    desc: 'Loads the AH register with the low byte of the Flag register (SF, ZF, AF, PF, CF).',
-    setupDesc: 'Initializes AH = 00H, and sets ZF = 1, CF = 1 to show bits transfer.',
-    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 1, CF: 1, SF: 0, OF: 0, AF: 1, PF: 0 },
-    execute: (regs, flags) => {
-      // Flag register lower 8 bits on 8086: SF:ZF:0:AF:0:PF:1:CF
-      // ZF=1, CF=1, AF=1 -> 01010011B = 53H
-      const flagByte = 0x53;
-      const newAX = (regs.AX & 0x00FF) | (flagByte << 8);
-      return {
-        newRegs: { ...regs, AX: newAX, IP: regs.IP + 1 },
-        newFlags: { ...flags },
-        mathExplanation: 'LAHF copies the five 8086 status flags (SF, ZF, AF, PF, CF) into specific bit positions of the AH register (forming the byte 53H due to active ZF, AF, CF). This was historically used to easily store flag status during subroutine context saving.'
-      };
-    }
-  },
-  {
-    opcode: 'IN AL, 0C8H',
-    category: 'Control, Flag & IO',
-    desc: 'Reads an 8-bit byte from physical fixed I/O port 0C8H into AL.',
-    setupDesc: 'Initializes AL = 00H. The external fixed port 0C8H holds the peripheral data value 39H.',
-    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const newAX = (regs.AX & 0xFF00) | 0x39;
-      return {
-        newRegs: { ...regs, AX: newAX, IP: regs.IP + 2 },
-        newFlags: { ...flags },
-        mathExplanation: 'The IN instruction copies 1 byte of hardware data (39H) directly from physical fixed port 0C8H into the AL register. Port addresses from 00H to FFH can be queried directly like this in fixed port addressing.'
-      };
-    }
-  },
-  {
-    opcode: 'OUT DX, AL',
-    category: 'Control, Flag & IO',
-    desc: 'Outputs the byte in AL to the variable port address contained in DX.',
-    setupDesc: 'Initializes DX = 0FFF8H (port address) and AL = A5H (data to output).',
-    initialRegs: { AX: 0x00A5, BX: 0x0000, CX: 0x0000, DX: 0xFFF8, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      return {
-        newRegs: { ...regs, IP: regs.IP + 2 },
-        newFlags: { ...flags },
-        mathExplanation: 'The OUT instruction copies the data byte in AL (A5H) to the variable I/O port address stored in DX (0FFF8H). Because DX is 16-bit, variable port addressing can access up to 65,536 sequential hardware registers (from 0000H to FFFFH).'
-      };
-    }
-  },
-  {
-    opcode: 'LOCK XCHG [SI], AL',
-    category: 'Control, Flag & IO',
-    desc: 'Asserts the bus LOCK prefix before performing an exchange with shared memory.',
-    setupDesc: 'Initializes AL = 01H (semaphore request token). SI holds the shared resource offset address.',
-    initialRegs: { AX: 0x0001, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const newAX = (regs.AX & 0xFF00) | 0x00; // memory had 0x00 (resource free)
-      return {
-        newRegs: { ...regs, AX: newAX, IP: regs.IP + 3 },
-        newFlags: { ...flags },
-        mathExplanation: 'The LOCK prefix forces the physical microprocessor to assert its external lock pin, preventing other processors on the system bus from reading/writing memory until the atomic exchange finishes. AL changes from 01H to 00H, successfully acquiring the semaphore.'
-      };
-    }
-  }
-];
+import {
+  SimulatorInstruction,
+  mockInstructions,
+  eceSlides,
+  getSlideIndexForOpcode,
+  getInstructionFormat,
+  EceSlide,
+  InstructionFormatInfo
+} from '../data/instructionDecoderData';
 
 export default function InstructionDecoderSimulator() {
   const [activeTab, setActiveTab] = useState<'All' | 'Data Transfer' | 'Arithmetic' | 'BCD & ASCII Adjust' | 'Logical & Bitwise' | 'Control, Flag & IO'>('All');
   const [selectedIdx, setSelectedIdx] = useState<number>(0);
+  
+  // Simulated hardware state
   const [regs, setRegs] = useState<Record<string, number>>(mockInstructions[0].initialRegs);
   const [flags, setFlags] = useState<Record<string, number>>(mockInstructions[0].initialFlags);
-  const [executionState, setExecutionState] = useState<'idle' | 'fetching' | 'decoding' | 'alu' | 'done'>('idle');
+  const [beforeRegs, setBeforeRegs] = useState<Record<string, number>>(mockInstructions[0].initialRegs);
+  const [beforeFlags, setBeforeFlags] = useState<Record<string, number>>(mockInstructions[0].initialFlags);
+  
+  // Execution Status
+  const [executionState, setExecutionState] = useState<'idle' | 'executing' | 'done'>('idle');
   const [lastExplanation, setLastExplanation] = useState<string>('');
-  const [hoveredStage, setHoveredStage] = useState<number | null>(null);
+  const [labHelpTab, setLabHelpTab] = useState<'slide' | 'format' | 'transfer' | 'xlat'>('slide');
+  const [slideIndex, setSlideIndex] = useState<number>(3); // Initialized directly to MOV Slide
+  const [transferDemo, setTransferDemo] = useState<'mov' | 'push' | 'pop' | 'lea'>('mov');
+
+  // Register editing
+  const [editingReg, setEditingReg] = useState<string | null>(null);
+  const [tempRegVal, setTempRegVal] = useState<string>('');
+
+  // Interactive XLAT translation scenario
+  const [xlatScenario, setXlatScenario] = useState<'gray' | 'sevensegment' | 'ascii_num' | 'ascii_case' | 'custom'>('gray');
+  const [xlatAlVal, setXlatAlVal] = useState<number>(3);
+
+  const [xlatTable, setXlatTable] = useState<number[]>([
+    0x00, 0x01, 0x03, 0x02, 0x06, 0x07, 0x05, 0x04, 0x0C, 0x0D, 0x0F, 0x0E, 0x0A, 0x0B, 0x09, 0x08
+  ]);
 
   const activeInstruction = mockInstructions[selectedIdx];
 
@@ -711,36 +70,80 @@ export default function InstructionDecoderSimulator() {
     setSelectedIdx(idx);
     setRegs(mockInstructions[idx].initialRegs);
     setFlags(mockInstructions[idx].initialFlags);
+    setBeforeRegs(mockInstructions[idx].initialRegs);
+    setBeforeFlags(mockInstructions[idx].initialFlags);
     setExecutionState('idle');
     setLastExplanation('');
+    
+    const targetSlide = getSlideIndexForOpcode(mockInstructions[idx].opcode);
+    setSlideIndex(targetSlide);
+    setLabHelpTab('slide'); // Jump to corresponding presentation slide
+
+    // Synchronize XLAT index if XLAT instruction selected
+    if (mockInstructions[idx].opcode === 'XLAT') {
+      setXlatAlVal(mockInstructions[idx].initialRegs.AX & 0xFF);
+    }
   };
 
   const handleExecute = () => {
-    setExecutionState('fetching');
+    const captureRegs = { ...regs };
+    const captureFlags = { ...flags };
+    setBeforeRegs(captureRegs);
+    setBeforeFlags(captureFlags);
 
-    // Pipeline Stage 1: Fetch (1000ms)
-    setTimeout(() => {
-      setExecutionState('decoding');
-    }, 800);
+    setExecutionState('executing');
 
-    // Pipeline Stage 2: Decode (1000ms)
     setTimeout(() => {
-      setExecutionState('alu');
-    }, 1600);
+      let result;
+      if (activeInstruction.opcode === 'XLAT') {
+        const alVal = captureRegs.AX & 0xFF;
+        const lookupVal = xlatTable[Math.min(15, alVal)] ?? 0;
+        const newAX = (captureRegs.AX & 0xFF00) | lookupVal;
+        
+        const scenarioNames = {
+          gray: 'Binary-to-Gray Code Conversion',
+          sevensegment: 'Hex-to-Seven-Segment LED Conversion',
+          ascii_num: 'Decimal-to-ASCII Character Conversion',
+          ascii_case: 'Lowercase ASCII Alphabet Case Mapping',
+          custom: 'Custom Table Mapping'
+        };
+        
+        const scenarioMeanings = {
+          gray: `the Gray Code pattern binary equivalent ${byteHexFormat(lookupVal)}`,
+          sevensegment: `the Seven-Segment LED display control code ${byteHexFormat(lookupVal)} (which physically lights up the corresponding LED segments)`,
+          ascii_num: `the ASCII code ${byteHexFormat(lookupVal)} for character '${String.fromCharCode(lookupVal)}'`,
+          ascii_case: `the ASCII code ${byteHexFormat(lookupVal)} for lowercase character '${String.fromCharCode(lookupVal)}'`,
+          custom: `the mapped lookup byte ${byteHexFormat(lookupVal)}`
+        };
 
-    // Pipeline Stage 3: ALU & Writeback
-    setTimeout(() => {
-      const result = activeInstruction.execute(regs, flags);
+        const explanation = `[XLAT EXECUTION SYSTEM]:\n` +
+          `1. CPU reads base register BX = ${hexFormat(captureRegs.BX)} as the start offset of the lookup table in the Data Segment.\n` +
+          `2. CPU reads AL = ${byteHexFormat(alVal)} (decimal ${alVal}) as the lookup index.\n` +
+          `3. Effective Address calculation: DS:[BX + AL] = DS:[${hexFormat(captureRegs.BX + alVal)}].\n` +
+          `4. CPU fetches the translated byte ${byteHexFormat(lookupVal)} from that memory location.\n` +
+          `5. AL is updated from ${byteHexFormat(alVal)} to ${byteHexFormat(lookupVal)} (representing ${scenarioMeanings[xlatScenario]}).\n\n` +
+          `Status flags are unaffected by the XLAT instruction.`;
+
+        result = {
+          newRegs: { ...captureRegs, AX: newAX, IP: captureRegs.IP + 1 },
+          newFlags: { ...captureFlags },
+          mathExplanation: explanation
+        };
+      } else {
+        result = activeInstruction.execute(captureRegs, captureFlags);
+      }
       setRegs(result.newRegs);
       setFlags(result.newFlags);
       setLastExplanation(result.mathExplanation);
       setExecutionState('done');
-    }, 2400);
+    }, 200);
   };
 
   const handleReset = () => {
     setRegs(activeInstruction.initialRegs);
     setFlags(activeInstruction.initialFlags);
+    setBeforeRegs(activeInstruction.initialRegs);
+    setBeforeFlags(activeInstruction.initialFlags);
     setExecutionState('idle');
     setLastExplanation('');
   };
@@ -749,87 +152,282 @@ export default function InstructionDecoderSimulator() {
     return val.toString(16).toUpperCase().padStart(4, '0') + 'H';
   };
 
+  const byteHexFormat = (val: number): string => {
+    return val.toString(16).toUpperCase().padStart(2, '0') + 'H';
+  };
+
   // Safe manual adjustments for students to experiment
   const adjustRegister = (reg: string, delta: number) => {
     if (executionState !== 'idle' && executionState !== 'done') return;
     setRegs(prev => {
       const newVal = (prev[reg] + delta + 0x10000) & 0xFFFF;
+      setBeforeRegs(b => ({ ...b, [reg]: newVal }));
+      if (reg === 'AX' && activeInstruction.opcode === 'XLAT') {
+        setXlatAlVal(newVal & 0xFF);
+      }
       return { ...prev, [reg]: newVal };
     });
   };
 
-  const toggleFlag = (flag: string) => {
+  // Direct manual value setting
+  const startEditing = (reg: string) => {
     if (executionState !== 'idle' && executionState !== 'done') return;
-    setFlags(prev => ({
-      ...prev,
-      [flag]: prev[flag] === 1 ? 0 : 1
-    }));
+    setEditingReg(reg);
+    setTempRegVal((regs[reg] ?? 0).toString(16).toUpperCase());
   };
 
-  const stageMetadata = [
-    {
-      num: 1,
-      name: 'FETCH',
-      key: 'fetching',
-      icon: Database,
-      title: 'Stage 1: FETCH (Instruction Fetch)',
-      desc: 'The Bus Interface Unit (BIU) fetches instruction bytes from physical memory (CS:IP segment-offset) and places them into the 6-byte instruction queue.',
-      colorClass: 'from-blue-500/10 to-indigo-500/5 border-indigo-200 text-indigo-700',
-      activeColor: 'bg-indigo-600 border-indigo-500 text-white shadow-[0_0_12px_rgba(79,70,229,0.3)]'
-    },
-    {
-      num: 2,
-      name: 'DECODE',
-      key: 'decoding',
-      icon: Settings,
-      title: 'Stage 2: DECODE (Instruction Decode)',
-      desc: 'The Execution Unit (EU) Control System decodes the instruction bytes to determine the exact operation (opcode), registers, or memory addressing modes needed.',
-      colorClass: 'from-purple-500/10 to-pink-500/5 border-purple-200 text-purple-700',
-      activeColor: 'bg-purple-600 border-purple-500 text-white shadow-[0_0_12px_rgba(147,51,234,0.3)]'
-    },
-    {
-      num: 3,
-      name: 'ALU OP',
-      key: 'alu',
-      icon: Cpu,
-      title: 'Stage 3: ALU OP (Execution Unit ALU Operation)',
-      desc: 'The Arithmetic Logic Unit (ALU) performs the designated arithmetic, logical, shift, or comparison operation on operands retrieved from registers/memory.',
-      colorClass: 'from-amber-500/10 to-orange-500/5 border-amber-200 text-amber-700',
-      activeColor: 'bg-amber-600 border-amber-500 text-white shadow-[0_0_12px_rgba(217,119,6,0.3)]'
-    },
-    {
-      num: 4,
-      name: 'WRITEBACK',
-      key: 'done',
-      icon: CheckCircle2,
-      title: 'Stage 4: WRITEBACK (Register Save & Flag Update)',
-      desc: 'The final result is saved back into the target registers or memory segment, and the Flag Register is updated with the new arithmetic condition codes (ZF, CF, SF, etc.).',
-      colorClass: 'from-emerald-500/10 to-teal-500/5 border-emerald-200 text-emerald-700',
-      activeColor: 'bg-emerald-600 border-emerald-500 text-white shadow-[0_0_12px_rgba(5,150,105,0.3)]'
+  const saveEditing = (reg: string) => {
+    setEditingReg(null);
+    let cleanVal = tempRegVal.trim().toUpperCase();
+    if (cleanVal.endsWith('H')) {
+      cleanVal = cleanVal.slice(0, -1);
     }
-  ];
+    let parsed = parseInt(cleanVal, 16);
+    if (isNaN(parsed)) {
+      parsed = parseInt(cleanVal, 10);
+    }
+    if (!isNaN(parsed)) {
+      const newVal = parsed & 0xFFFF;
+      setRegs(prev => ({ ...prev, [reg]: newVal }));
+      setBeforeRegs(prev => ({ ...prev, [reg]: newVal }));
+      if (reg === 'AX' && activeInstruction.opcode === 'XLAT') {
+        setXlatAlVal(newVal & 0xFF);
+      }
+    }
+  };
+
+  const toggleFlag = (flag: string) => {
+    if (executionState !== 'idle' && executionState !== 'done') return;
+    setFlags(prev => {
+      const newVal = prev[flag] === 1 ? 0 : 1;
+      setBeforeFlags(b => ({ ...b, [flag]: newVal }));
+      return { ...prev, [flag]: newVal };
+    });
+  };
+
+  const handleXlatScenarioChange = (scenario: 'gray' | 'sevensegment' | 'ascii_num' | 'ascii_case' | 'custom') => {
+    setXlatScenario(scenario);
+    if (scenario === 'gray') {
+      setXlatTable([0x00, 0x01, 0x03, 0x02, 0x06, 0x07, 0x05, 0x04, 0x0C, 0x0D, 0x0F, 0x0E, 0x0A, 0x0B, 0x09, 0x08]);
+    } else if (scenario === 'sevensegment') {
+      setXlatTable([0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71]);
+    } else if (scenario === 'ascii_num') {
+      setXlatTable([0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46]);
+    } else if (scenario === 'ascii_case') {
+      setXlatTable([0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F, 0x70]);
+    } else {
+      setXlatTable([0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0x00]);
+    }
+  };
+
+  const updateXlatAlVal = (val: number) => {
+    const cleanVal = Math.min(15, Math.max(0, val));
+    setXlatAlVal(cleanVal);
+    if (activeInstruction?.opcode === 'XLAT') {
+      setRegs(prev => {
+        const currentAx = prev.AX ?? 0;
+        const newAx = (currentAx & 0xFF00) | cleanVal;
+        setBeforeRegs(b => ({ ...b, AX: newAx }));
+        return { ...prev, AX: newAx };
+      });
+    }
+  };
+
+  const renderSegmentedBits = (label: string, bits: string) => {
+    if (bits.length !== 8) {
+      return (
+        <div className="flex gap-0.5">
+          {bits.split('').map((b, bi) => (
+            <span key={bi} className="w-5 h-5 rounded bg-slate-900 text-slate-300 border border-slate-800/80 flex items-center justify-center font-mono text-[9px] font-bold shadow-xs">
+              {b}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    if (label === 'Opcode') {
+      const base = bits.substring(0, 6);
+      const d = bits.substring(6, 7);
+      const w = bits.substring(7, 8);
+      return (
+        <div className="flex items-center gap-1 font-mono">
+          <div className="flex flex-col items-center">
+            <div className="flex gap-0.5">
+              {base.split('').map((b, bi) => (
+                <span key={bi} className="w-4.5 h-4.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-900/60 flex items-center justify-center text-[9px] font-bold shadow-xs" title="Opcode base bits">
+                  {b}
+                </span>
+              ))}
+            </div>
+            <span className="text-[7.5px] text-indigo-400 font-bold uppercase mt-1 tracking-wider">Opcode</span>
+          </div>
+
+          <div className="w-[1px] h-6 bg-slate-800 self-center mx-0.5" />
+
+          <div className="flex flex-col items-center">
+            <span className="w-4.5 h-4.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-900/60 flex items-center justify-center text-[9px] font-bold shadow-xs" title="D bit: Direction (0 = Source is Reg, 1 = Dest is Reg)">
+              {d}
+            </span>
+            <span className="text-[7.5px] text-emerald-400 font-bold uppercase mt-1 tracking-wider">D</span>
+          </div>
+
+          <div className="w-[1px] h-6 bg-slate-800 self-center mx-0.5" />
+
+          <div className="flex flex-col items-center">
+            <span className="w-4.5 h-4.5 rounded bg-amber-950 text-amber-400 border border-amber-900/60 flex items-center justify-center text-[9px] font-bold shadow-xs" title="W bit: Size (0 = 8-bit, 1 = 16-bit)">
+              {w}
+            </span>
+            <span className="text-[7.5px] text-amber-400 font-bold uppercase mt-1 tracking-wider">W</span>
+          </div>
+        </div>
+      );
+    }
+
+    if (label === 'ModR/M') {
+      const mod = bits.substring(0, 2);
+      const reg = bits.substring(2, 5);
+      const rm = bits.substring(5, 8);
+      return (
+        <div className="flex items-center gap-1 font-mono">
+          <div className="flex flex-col items-center">
+            <div className="flex gap-0.5">
+              {mod.split('').map((b, bi) => (
+                <span key={bi} className="w-4.5 h-4.5 rounded bg-sky-950 text-sky-400 border border-sky-900/60 flex items-center justify-center text-[9px] font-bold shadow-xs" title="MOD: Addressing Mode">
+                  {b}
+                </span>
+              ))}
+            </div>
+            <span className="text-[7.5px] text-sky-400 font-bold uppercase mt-1 tracking-wider">MOD</span>
+          </div>
+
+          <div className="w-[1px] h-6 bg-slate-800 self-center mx-0.5" />
+
+          <div className="flex flex-col items-center">
+            <div className="flex gap-0.5">
+              {reg.split('').map((b, bi) => (
+                <span key={bi} className="w-4.5 h-4.5 rounded bg-pink-950 text-pink-400 border border-pink-900/60 flex items-center justify-center text-[9px] font-bold shadow-xs" title="REG: Register Index">
+                  {b}
+                </span>
+              ))}
+            </div>
+            <span className="text-[7.5px] text-pink-400 font-bold uppercase mt-1 tracking-wider">REG</span>
+          </div>
+
+          <div className="w-[1px] h-6 bg-slate-800 self-center mx-0.5" />
+
+          <div className="flex flex-col items-center">
+            <div className="flex gap-0.5">
+              {rm.split('').map((b, bi) => (
+                <span key={bi} className="w-4.5 h-4.5 rounded bg-violet-950 text-violet-400 border border-violet-900/60 flex items-center justify-center text-[9px] font-bold shadow-xs" title="R/M: Register or Memory operand">
+                  {b}
+                </span>
+              ))}
+            </div>
+            <span className="text-[7.5px] text-violet-400 font-bold uppercase mt-1 tracking-wider">R/M</span>
+          </div>
+        </div>
+      );
+    }
+
+    const col = label.includes('LOCK') 
+      ? 'bg-rose-950 text-rose-400 border-rose-900/60' 
+      : label.includes('Immediate') || label.includes('Port') 
+      ? 'bg-amber-950 text-amber-400 border-amber-900/60' 
+      : 'bg-indigo-950 text-indigo-400 border-indigo-900/60';
+
+    return (
+      <div className="flex flex-col items-center font-mono">
+        <div className="flex gap-0.5">
+          {bits.split('').map((b, bi) => (
+            <span key={bi} className={`w-4.5 h-4.5 rounded ${col} border flex items-center justify-center text-[9px] font-bold shadow-xs`} title={label}>
+              {b}
+            </span>
+          ))}
+        </div>
+        <span className="text-[7.5px] text-slate-500 font-bold uppercase mt-1 tracking-wider">
+          {label.length > 6 ? label.substring(0, 5) + '.' : label}
+        </span>
+      </div>
+    );
+  };
+
+  const getActiveStateLabel = () => {
+    switch (executionState) {
+      case 'executing':
+        return { text: 'EU: EXECUTING INSTRUCTION...', color: 'text-amber-800', border: 'border-amber-300 bg-amber-50/80' };
+      case 'done':
+        return { text: 'EU: EXECUTION COMPLETED & REGISTER WRITEBACK OK', color: 'text-emerald-800 border-emerald-300 bg-emerald-50/80', border: 'border-emerald-300 bg-emerald-50/80' };
+      default:
+        return { text: 'SYSTEM STANDBY / EMULATION IDLE', color: 'text-indigo-800/90', border: 'border-sky-200/80 bg-sky-100/50' };
+    }
+  };
+
+  const stateDetails = getActiveStateLabel();
+  const formatInfo = getInstructionFormat(activeInstruction.opcode);
 
   return (
-    <div id="instruction-decoder-simulator" className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 min-h-[520px] text-slate-800 flex flex-col justify-between shadow-xs">
-      <div className="space-y-4">
-        {/* Header Banner */}
-        <div className="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-bold font-display text-indigo-700 flex items-center gap-2">
-              <Cpu className="w-5.5 h-5.5 text-indigo-600 animate-pulse" />
-              8086 Execution Unit & ALU Flag Lab
-            </h2>
-            <p className="text-slate-500 text-xs mt-0.5">
-              Interact with individual CPU registers and witness how arithmetic/logic instructions affect flags in real-time.
-            </p>
+    <div id="instruction-decoder-simulator" className="bg-[#eef6ff] border border-sky-200/80 rounded-3xl p-6 text-slate-800 flex flex-col justify-between shadow-2xl relative overflow-hidden w-full shadow-indigo-950/5">
+      {/* Background Neon Orbits */}
+      <div className="absolute top-0 right-1/4 w-96 h-96 bg-indigo-200/30 rounded-full blur-3xl pointer-events-none animate-pulse" />
+      <div className="absolute bottom-0 left-10 w-96 h-96 bg-sky-200/30 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="space-y-6 relative z-10">
+        
+        {/* Dynamic Micro-Controller Header */}
+        <div className="border-b border-sky-200/60 pb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-white border border-sky-100 rounded-2xl shadow-inner text-indigo-600 flex items-center justify-center">
+              <Cpu className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-xl font-extrabold font-sans tracking-tight text-slate-900 flex items-center gap-2">
+                8086 Instruction & ALU Execution Laboratory
+                <span className="text-xs bg-indigo-100 border border-indigo-200/80 text-indigo-700 font-bold px-2 py-0.5 rounded-full font-mono uppercase">
+                  Unit II
+                </span>
+              </h2>
+              <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
+                <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                <span>Intel 8086 Silicon Instruction Emulation Suite</span>
+              </div>
+            </div>
           </div>
-          <span className="text-[10px] font-mono bg-indigo-50 text-indigo-700 border border-indigo-100/60 px-3 py-1 rounded-full font-bold self-start sm:self-auto shadow-2xs">
-            Assoc. Prof. Dr. M Lakshmipathy
-          </span>
+          
+          <div className="flex items-center gap-2.5 self-start md:self-auto">
+            <div className="px-4 py-2 bg-white border border-sky-100 rounded-xl text-right">
+              <span className="text-[10px] text-slate-400 block uppercase font-mono tracking-wider">Lecture Companion</span>
+              <span className="text-xs text-indigo-600 font-bold block leading-none mt-1">Dr. M Lakshmipathy</span>
+            </div>
+          </div>
         </div>
 
-        {/* Category Tabs Switcher */}
-        <div className="flex gap-1 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-indigo-100 border-b border-slate-100">
+        {/* Global Hardware Status Monitor */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className={`md:col-span-3 px-4 py-3 rounded-2xl border transition-all duration-300 flex items-center justify-between ${stateDetails.border}`}>
+            <div className="flex items-center gap-3">
+              <span className={`w-2.5 h-2.5 rounded-full transition-colors ${
+                executionState === 'executing' 
+                  ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse' 
+                  : executionState === 'done' 
+                  ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' 
+                  : 'bg-slate-400'
+              }`} />
+              <span className={`text-xs font-mono font-bold tracking-wider ${stateDetails.color}`}>
+                {stateDetails.text}
+              </span>
+            </div>
+            <span className="text-[10px] font-mono bg-white px-2.5 py-1 rounded-md text-slate-600 border border-sky-100 shadow-sm">CS:IP = 1000:0100H</span>
+          </div>
+
+          <div className="px-4 py-3 bg-white border border-sky-100 rounded-2xl flex items-center justify-between shadow-sm">
+            <span className="text-xs text-slate-500 font-sans font-bold uppercase tracking-wider">Instruction Format:</span>
+            <span className="text-xs font-mono text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/60">{formatInfo.machineCode}</span>
+          </div>
+        </div>
+
+        {/* Categories Tab Switcher */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1.5 border-b border-sky-100/80 scrollbar-thin scrollbar-thumb-sky-200/50">
           {(['All', 'Data Transfer', 'Arithmetic', 'BCD & ASCII Adjust', 'Logical & Bitwise', 'Control, Flag & IO'] as const).map(tab => {
             const isSel = activeTab === tab;
             return (
@@ -837,16 +435,15 @@ export default function InstructionDecoderSimulator() {
                 key={tab}
                 onClick={() => {
                   setActiveTab(tab);
-                  // Auto-select first matching instruction to avoid empty screens
                   const firstMatch = mockInstructions.findIndex(inst => tab === 'All' || inst.category === tab);
                   if (firstMatch !== -1) {
                     handleSelectInstruction(firstMatch);
                   }
                 }}
-                className={`px-3 py-1.5 text-[11px] font-sans font-bold rounded-lg border transition-all shrink-0 cursor-pointer ${
+                className={`px-3.5 py-2 text-[11px] font-sans font-bold rounded-xl border transition-all shrink-0 cursor-pointer ${
                   isSel
-                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-xs'
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    ? 'bg-gradient-to-r from-indigo-700 to-indigo-600 border-indigo-500 text-white shadow-md'
+                    : 'bg-white border-sky-100 text-slate-600 hover:text-indigo-950 hover:bg-sky-50'
                 }`}
               >
                 {tab}
@@ -855,16 +452,18 @@ export default function InstructionDecoderSimulator() {
           })}
         </div>
 
-        {/* Content Workspace Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        {/* 3-Column Bento Laboratory Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           
-          {/* Column A: Specific Instruction Selector & Play Console */}
-          <div className="lg:col-span-4 flex flex-col justify-between bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-4">
+          {/* COLUMN 1: Code Selection & Operation Core */}
+          <div className="lg:col-span-4 flex flex-col justify-between bg-white border border-sky-150 rounded-2xl p-5 space-y-5 shadow-sm">
+            
             <div className="space-y-3">
-              <span className="text-[10px] font-bold text-indigo-700 font-mono block uppercase tracking-widest">
-                Select Instruction to Load:
+              <span className="text-xs font-bold text-slate-700 font-mono block uppercase tracking-widest flex items-center gap-1.5">
+                <Terminal className="w-4 h-4 text-indigo-600 animate-pulse" />
+                Instruction Stream:
               </span>
-              <div className="space-y-1.5 max-h-[190px] overflow-y-auto pr-1 scrollbar-thin">
+              <div className="space-y-1.5 overflow-y-auto max-h-[300px] pr-1.5 scrollbar-thin scrollbar-thumb-sky-200/50">
                 {filteredInstructions.map(({ inst, index }) => {
                   const isSelected = selectedIdx === index;
                   return (
@@ -872,20 +471,25 @@ export default function InstructionDecoderSimulator() {
                       key={index}
                       onClick={() => handleSelectInstruction(index)}
                       disabled={executionState !== 'idle' && executionState !== 'done'}
-                      className={`w-full text-left p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex justify-between items-center ${
+                      className={`w-full text-left px-3.5 py-3 rounded-xl border text-xs cursor-pointer transition-all flex justify-between items-center ${
                         isSelected
-                          ? 'bg-indigo-700 border-indigo-600 text-white font-bold scale-[1.01] shadow-xs'
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-indigo-50/10'
+                          ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 border-indigo-500 text-white font-extrabold shadow-md relative overflow-hidden'
+                          : 'bg-slate-50 border-slate-100 text-slate-700 hover:bg-sky-50/50 hover:text-indigo-950 hover:border-sky-200/60'
                       }`}
                     >
+                      {isSelected && (
+                        <span className="absolute left-0 top-0 bottom-0 w-1 bg-white" />
+                      )}
                       <div>
-                        <p className="font-mono text-[11.5px]">{inst.opcode}</p>
-                        <p className={`text-[9px] mt-0.5 font-sans font-medium ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>
+                        <p className={`font-mono text-xs tracking-wide ${isSelected ? 'text-white' : 'text-slate-800 font-semibold'}`}>{inst.opcode}</p>
+                        <p className={`text-[9px] mt-1 font-sans font-semibold uppercase tracking-wider ${isSelected ? 'text-indigo-200' : 'text-slate-500'}`}>
                           {inst.category}
                         </p>
                       </div>
-                      {isSelected && (
-                        <Sparkles className="w-3.5 h-3.5 text-indigo-200 shrink-0" />
+                      {isSelected ? (
+                        <div className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                       )}
                     </button>
                   );
@@ -893,253 +497,610 @@ export default function InstructionDecoderSimulator() {
               </div>
             </div>
 
-            {/* Parameter & Setup Box */}
-            <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
-              <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase font-mono">
-                <Settings className="w-3.5 h-3.5 text-slate-400" />
-                Lesson Parameters
+            {/* Instruction Context & Micro-code Details */}
+            <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl space-y-3">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-700 uppercase font-mono tracking-wider border-b border-slate-150 pb-2">
+                <Sliders className="w-4 h-4 text-indigo-600" />
+                Setup parameters:
               </div>
-              <p className="text-[10.5px] text-slate-600 leading-normal">
+              <p className="text-xs text-slate-600 leading-relaxed font-sans">
                 {activeInstruction.setupDesc}
               </p>
-              <div className="text-[9.5px] text-slate-400 leading-snug border-t border-slate-100 pt-1.5">
-                <span className="font-bold text-indigo-600">Desc: </span>{activeInstruction.desc}
+              <div className="text-[11px] text-slate-500 leading-normal border-t border-slate-150 pt-2 flex flex-col gap-1.5 font-mono">
+                <div><span className="font-bold text-slate-400">Addressing Mode: </span><span className="text-slate-700">{formatInfo.addressing}</span></div>
+                <div><span className="font-bold text-slate-400">Assembly Syntax: </span><span className="text-indigo-700 font-semibold">{formatInfo.syntax}</span></div>
               </div>
             </div>
 
-            {/* Run Console Buttons */}
-            <div className="flex gap-2">
+            {/* Hardware Console Buttons */}
+            <div className="grid grid-cols-2 gap-2.5 pt-2">
               <button
-                disabled={executionState !== 'idle' && executionState !== 'done'}
                 onClick={handleExecute}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                disabled={executionState !== 'idle' && executionState !== 'done'}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-45 disabled:cursor-not-allowed text-white text-xs font-bold font-sans rounded-xl transition-all shadow-md active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border border-indigo-500/30"
               >
-                <Play className="w-3.5 h-3.5" />
-                {executionState === 'idle' ? 'Run Pipeline' : executionState === 'done' ? 'Execute Again' : 'Executing...'}
+                <Play className="w-4 h-4 fill-white" />
+                Run Instruction
               </button>
               <button
                 onClick={handleReset}
-                className="bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 text-xs font-bold py-2.5 px-3.5 rounded-xl transition-all cursor-pointer shadow-2xs"
-                title="Reset values to preset default values"
+                className="w-full py-3 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold font-sans rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border border-slate-200 shadow-sm"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
+                <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                Reset CPU
               </button>
             </div>
+
           </div>
 
-          {/* Column B: Interactive Hardware Panel (Pipeline, Register File, and Flags) */}
-          <div className="lg:col-span-8 flex flex-col justify-between space-y-4">
+          {/* COLUMN 2 & 3: Visual CPU Registers Grid & Interactive Classroom Tabs */}
+          <div className="lg:col-span-8 flex flex-col gap-6 justify-between">
             
-            {/* 4-Stage Hardware Pipeline Tracker */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4.5 space-y-3.5 shadow-3xs transition-all">
-              <div className="flex justify-between items-center text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider">
-                <span className="flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
-                  Intel 8086 Instruction Execution Pipeline
-                </span>
-                <span className="text-slate-400 font-sans font-medium text-[9px] hidden sm:inline">
-                  💡 Hover or click any stage to explore details
-                </span>
-              </div>
+            {/* The Silicon Register File & Flags */}
+            <div className="bg-white border border-sky-150 rounded-2xl p-5 space-y-4 shadow-sm">
               
-              <div className="grid grid-cols-4 gap-2">
-                {stageMetadata.map((stage) => {
-                  const isCurrentActive = executionState === stage.key;
-                  const isHovered = hoveredStage === stage.num;
-                  const StageIcon = stage.icon;
-                  
+              {/* Register File Title Banner */}
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Database className="w-4.5 h-4.5 text-emerald-600 animate-pulse" />
+                  <span className="text-xs font-extrabold uppercase text-slate-800 tracking-wider font-mono">
+                    8086 CPU Execution Unit (EU) Registers
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-400 uppercase">Standby Read-Write State</span>
+              </div>
+
+              {/* Glowing Register Matrices - Twin Cell Split Register Files */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {['AX', 'BX', 'CX', 'DX', 'SP', 'BP', 'SI', 'DI'].map(reg => {
+                  const val = regs[reg] ?? 0;
+                  const prevVal = beforeRegs[reg] ?? 0;
+                  const isModified = val !== prevVal && executionState === 'done';
+                  const isCurrentEditing = editingReg === reg;
+
+                  // High and Low sub-register calculations (only applicable to AX, BX, CX, DX)
+                  const hasSubRegs = ['AX', 'BX', 'CX', 'DX'].includes(reg);
+                  const highByteVal = (val >> 8) & 0xFF;
+                  const lowByteVal = val & 0xFF;
+
                   return (
-                    <div
-                      key={stage.num}
-                      onMouseEnter={() => setHoveredStage(stage.num)}
-                      onMouseLeave={() => setHoveredStage(null)}
-                      onClick={() => setHoveredStage(stage.num)}
-                      className={`p-2.5 rounded-xl border transition-all duration-300 cursor-pointer text-center relative select-none flex flex-col justify-between ${
-                        isCurrentActive
-                          ? `${stage.activeColor} scale-[1.03] z-10 font-bold`
-                          : isHovered
-                          ? 'bg-slate-100 border-slate-400 text-slate-900 shadow-2xs font-semibold'
-                          : 'bg-white border-slate-200 text-slate-500 hover:border-slate-350 hover:bg-slate-50/50'
+                    <div 
+                      key={reg} 
+                      className={`relative group bg-slate-50 border rounded-2xl p-3.5 transition-all duration-300 ${
+                        isModified 
+                          ? 'border-emerald-300 shadow-sm bg-emerald-50/40' 
+                          : 'border-slate-150 hover:border-indigo-200/60'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-1 mb-1">
-                        <span className={`text-[7.5px] sm:text-[8px] uppercase tracking-wider font-sans font-bold block ${
-                          isCurrentActive ? 'text-white/90' : 'text-slate-400'
-                        }`}>
-                          Stage {stage.num}
-                        </span>
-                        <StageIcon className={`w-3.5 h-3.5 ${
-                          isCurrentActive ? 'text-white' : 'text-slate-400'
-                        }`} />
+                      {/* Register Name */}
+                      <span className="text-xs font-mono text-indigo-700 font-extrabold block">{reg}</span>
+
+                      {/* OLED Display Area */}
+                      <div className="mt-2 flex items-center justify-between">
+                        {isCurrentEditing ? (
+                          <input
+                            type="text"
+                            value={tempRegVal}
+                            autoFocus
+                            onChange={(e) => setTempRegVal(e.target.value)}
+                            onBlur={() => saveEditing(reg)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveEditing(reg);
+                              if (e.key === 'Escape') setEditingReg(null);
+                            }}
+                            className="w-full bg-white text-emerald-800 font-mono text-sm px-2 py-1 rounded-lg border border-indigo-500 focus:outline-none"
+                          />
+                        ) : (
+                          <div 
+                            onClick={() => startEditing(reg)}
+                            className="font-mono text-base font-bold text-emerald-700 tracking-wider cursor-pointer hover:bg-slate-200/50 px-1.5 py-0.5 rounded-lg transition-all flex items-baseline gap-1.5"
+                            title="Click to edit raw Hex value"
+                          >
+                            <span>{hexFormat(val)}</span>
+                            {isModified && (
+                              <span className="text-[10px] text-slate-400 line-through font-normal">{hexFormat(prevVal)}</span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Adjust Buttons */}
+                        <div className="flex flex-col gap-0.5 opacity-40 group-hover:opacity-100 transition-all">
+                          <button 
+                            onClick={() => adjustRegister(reg, 1)}
+                            disabled={executionState !== 'idle' && executionState !== 'done'}
+                            className="text-[10px] text-slate-500 hover:text-indigo-600 disabled:opacity-20 cursor-pointer font-bold leading-none p-0.5 hover:bg-slate-200 rounded"
+                          >
+                            ▲
+                          </button>
+                          <button 
+                            onClick={() => adjustRegister(reg, -1)}
+                            disabled={executionState !== 'idle' && executionState !== 'done'}
+                            className="text-[10px] text-slate-500 hover:text-indigo-600 disabled:opacity-20 cursor-pointer font-bold leading-none p-0.5 hover:bg-slate-200 rounded"
+                          >
+                            ▼
+                          </button>
+                        </div>
                       </div>
-                      <span className="text-[10px] sm:text-[11px] font-mono tracking-tight font-extrabold block">
-                        {stage.name}
-                      </span>
+
+                      {/* Twin Cell Split Sub-Registers visual indicator */}
+                      {hasSubRegs && (
+                        <div className="mt-2.5 pt-2 border-t border-slate-200 flex justify-between font-mono text-[9px] text-slate-500">
+                          <div>
+                            <span className="text-indigo-600 font-semibold">{reg[0]}H:</span>{' '}
+                            <span className="text-emerald-700 font-bold">{byteHexFormat(highByteVal)}</span>
+                          </div>
+                          <div className="w-[1px] bg-slate-200" />
+                          <div>
+                            <span className="text-indigo-600 font-semibold">{reg[0]}L:</span>{' '}
+                            <span className="text-emerald-700 font-bold">{byteHexFormat(lowByteVal)}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Small Indicator Tag */}
+                      {isModified && (
+                        <span className="absolute -top-1.5 right-2 bg-emerald-600 text-white text-[8px] font-bold px-1.5 rounded-full uppercase leading-none py-1 tracking-wider shadow-sm">
+                          Delta
+                        </span>
+                      )}
                     </div>
                   );
                 })}
               </div>
 
-              {/* Dynamic explanations for the stages */}
-              <AnimatePresence mode="wait">
-                {(() => {
-                  let displayedStageNum = hoveredStage;
-                  if (displayedStageNum === null) {
-                    const currentStageIndex = stageMetadata.findIndex(s => executionState === s.key);
-                    if (currentStageIndex !== -1) {
-                      displayedStageNum = currentStageIndex + 1;
-                    }
-                  }
+              {/* ALU Segment Register Pins (Visual Bus Interface Unit - BIU representation) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-250/50">
+                {['CS', 'DS', 'SS', 'ES'].map(seg => (
+                  <div key={seg} className="flex items-center justify-between font-mono px-3 py-1.5 bg-white rounded-xl border border-slate-200/60 shadow-xs">
+                    <span className="text-[10px] text-slate-500 font-bold">{seg} Segment</span>
+                    <span className="text-xs text-slate-800 font-bold">{hexFormat(regs[seg] ?? 0)}</span>
+                  </div>
+                ))}
+              </div>
 
-                  const stage = stageMetadata.find(s => s.num === displayedStageNum);
-                  
-                  return (
-                    <motion.div
-                      key={displayedStageNum ?? 'default'}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.15 }}
-                      className="bg-white border border-slate-150 p-2.5 rounded-xl text-[11.5px] shadow-3xs"
-                    >
-                      {stage ? (
-                        <div className="space-y-1 font-sans">
-                          <strong className="text-indigo-700 font-bold flex items-center gap-1 text-[11px] uppercase tracking-wider">
-                            <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                            {stage.title}
-                          </strong>
-                          <p className="text-slate-600 leading-relaxed font-medium">
-                            {stage.desc}
-                          </p>
-                          {activeInstruction.opcode.includes('DIV') && (
-                            <p className="text-[10px] text-amber-700 bg-amber-50/40 p-1.5 rounded border border-amber-100/50 mt-1.5 font-medium leading-relaxed">
-                              📝 <strong>Division Context:</strong> For <code>{activeInstruction.opcode}</code>, this stage handles the complex 8-bit quotient and remainder logic.
-                            </p>
+              {/* Status Flag Breadboard Pins - Styled as Physical Switches */}
+              <div className="border-t border-slate-100 pt-4">
+                <span className="text-xs font-mono text-slate-500 uppercase font-bold block mb-3 tracking-wider">
+                  Intel 8086 ALU Status Flags:
+                </span>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3.5">
+                  {['ZF', 'CF', 'SF', 'OF', 'AF', 'PF'].map(flag => {
+                    const isSet = flags[flag] === 1;
+                    const prevFlag = beforeFlags[flag] ?? 0;
+                    const isMod = flags[flag] !== prevFlag && executionState === 'done';
+
+                    return (
+                      <div 
+                        key={flag}
+                        onClick={() => toggleFlag(flag)}
+                        className={`cursor-pointer group flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
+                          isSet 
+                            ? 'bg-indigo-50 border-indigo-200 shadow-xs text-indigo-950' 
+                            : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200'
+                        }`}
+                        title="Click to toggle flag status"
+                      >
+                        <span className="text-xs font-mono font-extrabold group-hover:text-indigo-700">{flag}</span>
+                        
+                        {/* LED Light */}
+                        <div className="mt-2 relative flex items-center justify-center">
+                          <span className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                            isSet 
+                              ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]' 
+                              : 'bg-slate-200'
+                          }`} />
+                          {isMod && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                           )}
                         </div>
-                      ) : (
-                        <div className="text-slate-500 italic flex items-center gap-2 text-[11px] py-1 justify-center font-sans font-medium">
-                          <HelpCircle className="w-4 h-4 text-indigo-400 shrink-0 animate-bounce" />
-                          <span>Hover over or click any pipeline stage to see its deep microprocessor function &amp; timing analysis.</span>
-                        </div>
-                      )}
-                    </motion.div>
-                  );
-                })()}
-              </AnimatePresence>
-            </div>
 
-            {/* Registers and Flags Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-              
-              {/* Register File (12-cols -> 7-cols) */}
-              <div className="md:col-span-7 bg-slate-50 border border-slate-200 rounded-2xl p-4.5 space-y-3 shadow-3xs">
-                <div className="flex justify-between items-center border-b border-slate-200 pb-1.5">
-                  <span className="text-[10px] font-bold text-slate-600 font-mono block uppercase tracking-widest">
-                    Register File (16-bit)
-                  </span>
-                  <span className="text-[9px] text-slate-400 italic">Click arrows to manually edit</span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                  {['AX', 'BX', 'CX', 'DX', 'SP', 'SI', 'DI', 'DS'].map(regName => (
-                    <div key={regName} className="bg-white border border-slate-200 px-2.5 py-1.5 rounded-xl flex justify-between items-center shadow-3xs group">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-indigo-600 font-extrabold">{regName}:</span>
-                        <span className="text-slate-800 font-extrabold text-[12.5px] mt-0.5">{hexFormat(regs[regName] ?? 0)}</span>
+                        <span className="text-[10px] font-mono mt-1.5 font-bold">{flags[flag]}</span>
                       </div>
-                      <div className="flex flex-col gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => adjustRegister(regName, 1)} 
-                          className="p-0.5 hover:bg-slate-100 rounded text-indigo-600 font-bold text-[9px] cursor-pointer"
-                        >
-                          ▲
-                        </button>
-                        <button 
-                          onClick={() => adjustRegister(regName, -1)} 
-                          className="p-0.5 hover:bg-slate-100 rounded text-indigo-600 font-bold text-[9px] cursor-pointer"
-                        >
-                          ▼
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Status Flag register (12-cols -> 5-cols) */}
-              <div className="md:col-span-5 bg-slate-50 border border-slate-200 rounded-2xl p-4.5 space-y-3 shadow-3xs flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-center border-b border-slate-200 pb-1.5">
-                    <span className="text-[10px] font-bold text-slate-600 font-mono block uppercase tracking-widest">
-                      ALU Status Flags
-                    </span>
-                    <span className="text-[9px] text-slate-400 italic">Click to flip</span>
-                  </div>
+            </div>
 
-                  <div className="grid grid-cols-3 gap-2 text-center font-mono mt-3">
-                    {['ZF', 'CF', 'SF', 'OF', 'AF', 'PF'].map(flagName => {
-                      const isActive = flags[flagName] === 1;
+            {/* Interactive XLAT Conversion Laboratory - Renders when XLAT is selected */}
+            {activeInstruction.opcode === 'XLAT' && (
+              <div className="bg-white border-2 border-indigo-200/80 rounded-2xl p-5 space-y-5 shadow-lg relative overflow-hidden">
+                {/* Background circuit board glow */}
+                <div className="absolute -right-20 -bottom-20 w-48 h-48 bg-indigo-100 rounded-full blur-3xl pointer-events-none" />
+                
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <ArrowRightLeft className="w-5 h-5 text-indigo-600 animate-pulse" />
+                    <span className="text-sm font-extrabold uppercase text-slate-800 tracking-wider font-mono">
+                      XLAT Translate & Conversion Laboratory
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full font-bold">
+                    DS:[BX + AL] Translation Engine
+                  </span>
+                </div>
+
+                {/* Subtitle description */}
+                <p className="text-xs text-slate-600 leading-relaxed font-sans">
+                  The <code className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 font-mono text-[11px] rounded-md font-bold">XLAT</code> instruction uses the contents of the <code className="font-mono font-bold text-slate-700">BX</code> register as the start address of a lookup table in memory, and <code className="font-mono font-bold text-slate-700">AL</code> as the unsigned offset index into this table. It retrieves the table's entry and overwrites <code className="font-mono font-bold text-slate-700">AL</code> with it.
+                </p>
+
+                {/* Conversion Mode Selection Tabs */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-wider block">
+                    Choose Conversion Table (Simulation Scenario):
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'ascii_num', label: 'Decimal to ASCII', desc: '0-15 → ASCII Character' },
+                      { id: 'sevensegment', label: 'Hex to 7-Segment', desc: '0-F → LED Display Byte' },
+                      { id: 'gray', label: 'Binary to Gray Code', desc: 'Binary → Gray Code Pattern' },
+                      { id: 'ascii_case', label: 'Lowercase Mapping', desc: '0-15 → lowercase ascii' }
+                    ].map(sc => {
+                      const isSel = xlatScenario === sc.id;
                       return (
                         <button
-                          key={flagName}
-                          onClick={() => toggleFlag(flagName)}
-                          className={`p-2 rounded-xl border transition-all cursor-pointer flex flex-col items-center justify-between h-[50px] shadow-3xs ${
-                            isActive 
-                              ? 'bg-indigo-600 border-indigo-500 text-white font-bold scale-[1.02]' 
-                              : 'bg-white border-slate-200 text-slate-400 hover:border-indigo-300'
+                          key={sc.id}
+                          onClick={() => handleXlatScenarioChange(sc.id as any)}
+                          className={`px-3 py-2 text-left rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                            isSel
+                              ? 'bg-indigo-50 border-indigo-300 shadow-xs'
+                              : 'bg-slate-50/50 border-slate-150 hover:bg-slate-50 hover:border-slate-300'
                           }`}
                         >
-                          <span className={`block text-[9px] font-bold ${isActive ? 'text-indigo-200' : 'text-slate-400'}`}>{flagName}</span>
-                          <span className="text-[11px] font-mono leading-none">{flags[flagName] ?? 0}</span>
+                          <span className={`text-[11px] font-bold ${isSel ? 'text-indigo-800' : 'text-slate-700'}`}>{sc.label}</span>
+                          <span className="text-[8.5px] text-slate-400 font-mono mt-0.5">{sc.desc}</span>
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
-                <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-2.5 text-[9.5px] text-indigo-800 leading-normal font-sans mt-3">
-                  <span className="font-bold uppercase tracking-wider block mb-0.5">Flags Guide:</span>
-                  <span className="font-semibold">ZF</span> (Zero), <span className="font-semibold">CF</span> (Carry), <span className="font-semibold">SF</span> (Sign), <span className="font-semibold">OF</span> (Overflow), <span className="font-semibold">AF</span> (Aux Carry), <span className="font-semibold">PF</span> (Parity).
+                {/* Main Visual Workspace: Table + Interactive Hardware Element */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
+                  
+                  {/* Left: Memory Table Visualizer (8 Cols) */}
+                  <div className="md:col-span-8 bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-[10px] font-bold font-mono text-indigo-950 uppercase tracking-wider">
+                        Memory Lookup Table (DS:BX = {hexFormat(regs.BX)})
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        Total Size: 16 Bytes (00H - 0FH)
+                      </span>
+                    </div>
+
+                    {/* Table Matrix (16 Cells) */}
+                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+                      {Array.from({ length: 16 }).map((_, i) => {
+                        const cellVal = xlatTable[i] ?? 0;
+                        const isActive = (regs.AX & 0xFF) === i;
+
+                        // Display visualizer based on scenario
+                        let displayChar = '';
+                        if (xlatScenario === 'ascii_num') {
+                          displayChar = String.fromCharCode(cellVal);
+                        } else if (xlatScenario === 'ascii_case') {
+                          displayChar = String.fromCharCode(cellVal);
+                        }
+
+                        return (
+                          <div
+                            key={i}
+                            onClick={() => updateXlatAlVal(i)}
+                            className={`p-2 rounded-lg border text-center font-mono cursor-pointer transition-all flex flex-col justify-between select-none relative ${
+                              isActive
+                                ? 'bg-indigo-600 border-indigo-700 text-white shadow-md scale-105 z-10 font-bold'
+                                : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/10 text-slate-800'
+                            }`}
+                            title={`Click to set AL to index ${byteHexFormat(i)}`}
+                          >
+                            <span className={`text-[8px] font-extrabold ${isActive ? 'text-indigo-200' : 'text-slate-400'}`}>
+                              +{byteHexFormat(i)}
+                            </span>
+                            <span className="text-xs font-bold block my-1">
+                              {byteHexFormat(cellVal)}
+                            </span>
+                            <span className={`text-[8.5px] truncate font-bold leading-none ${isActive ? 'text-emerald-300' : 'text-indigo-600'}`}>
+                              {xlatScenario === 'sevensegment' ? (
+                                `led`
+                              ) : displayChar ? (
+                                `'${displayChar}'`
+                              ) : (
+                                `val`
+                              )}
+                            </span>
+                            {isActive && (
+                              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[5px] border-b-white" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Address calculation helper */}
+                    <div className="mt-4 p-2.5 bg-white border border-slate-150 rounded-lg flex flex-col sm:flex-row justify-between items-center text-xs font-mono text-slate-600 gap-2">
+                      <div className="flex items-center gap-1">
+                        <span className="font-bold text-slate-400">Memory Cell: </span>
+                        <span className="text-slate-800 font-extrabold bg-slate-100 px-1.5 py-0.5 rounded">
+                          DS:[{hexFormat(regs.BX)} + {byteHexFormat(regs.AX & 0xFF)}] = DS:[{hexFormat(regs.BX + (regs.AX & 0xFF))}]
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-indigo-700 font-bold">
+                        <span>Stored Content: </span>
+                        <span className="bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 font-extrabold">
+                          {byteHexFormat(xlatTable[regs.AX & 0xFF] ?? 0)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Tactile Physical Simulator Outlet (4 Cols) */}
+                  <div className="md:col-span-4 bg-slate-900 text-indigo-50 border border-slate-800 rounded-xl p-4 flex flex-col justify-between items-center shadow-inner relative overflow-hidden">
+                    {/* Retro Grid background */}
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:10px_10px] opacity-10" />
+                    
+                    <div className="w-full text-center relative z-10 shrink-0 mb-2">
+                      <span className="text-[9px] font-bold font-mono uppercase text-indigo-400 tracking-widest block">
+                        Hardware Display Unit
+                      </span>
+                      <span className="text-[10px] text-slate-300 font-medium font-sans">
+                        Real-time Output
+                      </span>
+                    </div>
+
+                    {/* Dynamic Graphic Board depending on scenario */}
+                    <div className="w-full flex-grow flex items-center justify-center py-2 relative z-10 min-h-[110px]">
+                      {xlatScenario === 'sevensegment' ? (
+                        /* Beautiful Seven-Segment LED Graphic */
+                        <SevenSegmentDisplay hexValue={xlatTable[regs.AX & 0xFF] ?? 0} />
+                      ) : xlatScenario === 'ascii_num' || xlatScenario === 'ascii_case' ? (
+                        /* Glowing CRT ASCII Character Box */
+                        <div className="flex flex-col items-center justify-center bg-slate-950 border border-emerald-500/30 w-24 h-24 rounded-xl shadow-inner shadow-emerald-900/40">
+                          <span className="text-[9px] font-mono font-bold text-emerald-500/60 uppercase tracking-widest leading-none mb-2">
+                            CRT TERM
+                          </span>
+                          <span className="text-3xl font-mono font-extrabold text-emerald-400 animate-pulse drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]">
+                            {String.fromCharCode(xlatTable[regs.AX & 0xFF] ?? 32)}
+                          </span>
+                          <span className="text-[9px] font-mono text-emerald-500/60 mt-2">
+                            ASCII: {byteHexFormat(xlatTable[regs.AX & 0xFF] ?? 0)}
+                          </span>
+                        </div>
+                      ) : (
+                        /* Binary pattern visualizer for Gray Code */
+                        <div className="flex flex-col items-center gap-1 w-full px-2">
+                          <div className="text-center">
+                            <p className="text-[9px] text-slate-400 font-mono">Index AL Binary:</p>
+                            <div className="flex gap-0.5 justify-center mt-1">
+                              {(regs.AX & 0xFF).toString(2).padStart(4, '0').split('').map((bit, idx) => (
+                                <span key={idx} className="w-5 h-5 rounded bg-slate-800 border border-slate-700 flex items-center justify-center font-mono text-[10px] font-bold text-indigo-300">
+                                  {bit}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div className="my-1.5 text-indigo-500 text-xs font-bold">▼ XLAT ▼</div>
+
+                          <div className="text-center">
+                            <p className="text-[9px] text-emerald-400 font-mono font-bold">Gray Code Output Binary:</p>
+                            <div className="flex gap-0.5 justify-center mt-1">
+                              {(xlatTable[regs.AX & 0xFF] ?? 0).toString(2).padStart(4, '0').split('').map((bit, idx) => (
+                                <span key={idx} className="w-5 h-5 rounded bg-emerald-950 border border-emerald-500/40 flex items-center justify-center font-mono text-[10px] font-bold text-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.3)] animate-pulse">
+                                  {bit}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Index adjustment helper */}
+                    <div className="w-full relative z-10 mt-2">
+                      <div className="flex justify-between items-center text-[10px] font-mono text-indigo-300 mb-1">
+                        <span>Select Input Index (AL):</span>
+                        <span className="font-bold text-white bg-indigo-800/80 px-1.5 py-0.5 rounded">
+                          {regs.AX & 0xFF} ({byteHexFormat(regs.AX & 0xFF)})
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="15"
+                        value={regs.AX & 0xFF}
+                        onChange={(e) => updateXlatAlVal(parseInt(e.target.value))}
+                        className="w-full accent-indigo-500 bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[8px] font-mono text-indigo-400 mt-1">
+                        <span>Min (00H)</span>
+                        <span>Max (0FH)</span>
+                      </div>
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {/* Dynamic Educational Help Tabs Panel */}
+            <div className="bg-white border border-sky-150 rounded-2xl overflow-hidden flex flex-col shadow-sm">
+              
+              {/* Direct Header */}
+              <div className="flex bg-slate-50 border-b border-slate-200/80 px-4 py-3 justify-between items-center">
+                <span className="text-xs font-bold font-mono text-indigo-950 uppercase tracking-widest flex items-center gap-2">
+                  <Binary className="w-4 h-4 text-indigo-600" />
+                  Machine Code & Instruction Analyzer
+                </span>
+                <span className="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md border border-indigo-200">
+                  {formatInfo.machineCode}
+                </span>
+              </div>
+
+              {/* Display Area */}
+              <div className="p-5 bg-slate-50/20 text-xs leading-relaxed space-y-4">
+                <div>
+                  <h4 className="text-xs font-bold font-mono text-indigo-950 uppercase tracking-widest flex items-center gap-1.5">
+                    <Binary className="w-4 h-4 text-indigo-600" />
+                    Instruction Byte Stream Parser ({activeInstruction.opcode})
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    {activeInstruction.desc}
+                  </p>
+                </div>
+
+                {/* Visual Binary Breakdowns */}
+                <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 shadow-inner">
+                  {formatInfo.bytesBreakdown.map((b, bi) => (
+                    <div key={bi} className="flex items-center gap-3">
+                      <div className="p-2.5 bg-white border border-slate-200 rounded-xl shadow-xs text-center">
+                        <span className="text-[9px] font-mono text-indigo-700 uppercase font-extrabold block mb-1">{b.label}</span>
+                        <div>
+                          {renderSegmentedBits(b.label, b.bits)}
+                        </div>
+                        <span className="text-xs font-mono text-emerald-700 font-extrabold block mt-1.5">{b.hex}</span>
+                      </div>
+                      {bi < formatInfo.bytesBreakdown.length - 1 && (
+                        <span className="text-slate-400 font-bold text-sm">+</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Hex Details Table */}
+                <div className="space-y-1.5 font-mono text-xs pt-1">
+                  <div className="text-[10px] uppercase text-slate-400 font-bold border-b border-slate-150 pb-1 flex justify-between">
+                    <span>Field / Hex Byte</span>
+                    <span>Machine Meaning</span>
+                  </div>
+                  {formatInfo.bytesBreakdown.map((b, bi) => (
+                    <div key={bi} className="flex justify-between border-b border-slate-100 pb-1 text-slate-700 text-[11px]">
+                      <span className="font-bold text-indigo-700">{b.label} ({b.hex}):</span>
+                      <span className="text-slate-500 text-right">{b.desc}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* Explanation box */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-4 text-[11px] sm:text-xs font-sans min-h-[96px] leading-relaxed shadow-3xs">
-              <AnimatePresence mode="wait">
-                {lastExplanation ? (
-                  <motion.div
-                    key={selectedIdx + '_' + executionState}
-                    initial={{ opacity: 0, y: 3 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="space-y-1"
-                  >
-                    <span className="text-[10px] font-mono font-bold text-indigo-700 block uppercase tracking-wide flex items-center gap-1">
-                      <Terminal className="w-3.5 h-3.5 text-indigo-600" />
-                      ALU Mathematical Analysis & Writeback:
-                    </span>
-                    <p className="text-slate-600 leading-relaxed text-justify">{lastExplanation}</p>
-                  </motion.div>
-                ) : (
-                  <div className="text-slate-400 italic text-center py-4 flex flex-col items-center justify-center gap-1.5">
-                    <Info className="w-5 h-5 text-indigo-300" />
-                    <span>Select an instruction, set registers or flags if desired, and click "Run Pipeline".</span>
-                  </div>
-                )}
-              </AnimatePresence>
+            {/* Live Logs Terminal & Math Explanation Section */}
+            <div className="bg-white border border-sky-150 rounded-2xl p-5 space-y-4 shadow-sm">
+              <span className="text-xs font-mono font-bold text-slate-700 block uppercase tracking-wider flex items-center gap-2">
+                <Terminal className="w-5 h-5 text-indigo-600 animate-pulse" />
+                Silicon execution analyzer logs:
+              </span>
+              <div className="min-h-[80px] bg-slate-50 p-4 rounded-xl border border-slate-200 text-slate-700 font-mono text-xs leading-relaxed relative shadow-inner">
+                <AnimatePresence mode="wait">
+                  {executionState === 'done' ? (
+                    <motion.div
+                      key="explain-done"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="space-y-2"
+                    >
+                      <p className="text-emerald-700 font-bold uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        [CPU CORE]: Instruction retirement successful
+                      </p>
+                      <p className="text-slate-600 pl-4 leading-relaxed text-justify">{lastExplanation}</p>
+                    </motion.div>
+                  ) : executionState !== 'idle' ? (
+                    <motion.div 
+                      key="explain-executing"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="space-y-1.5"
+                    >
+                      <p className="text-indigo-700 animate-pulse uppercase tracking-wider text-[10px] font-bold">[CPU CORE]: Executing instruction...</p>
+                      <p className="text-slate-500 pl-4">Updating register files and processor flags state</p>
+                    </motion.div>
+                  ) : (
+                    <div className="text-slate-400 italic text-center py-2.5 flex flex-col items-center justify-center gap-1.5">
+                      <Info className="w-5 h-5 text-indigo-600/50" />
+                      <span className="text-xs text-slate-500">Select an instruction, adjust registers if needed, then click "Run Instruction" to execute.</span>
+                    </div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
+
           </div>
+
         </div>
+
       </div>
 
-      <div className="text-[10px] text-slate-400 font-mono text-right pt-4 border-t border-slate-100 shrink-0 mt-4 flex justify-between items-center">
-        <span className="text-left text-[9px] text-slate-400">
-          * Real instructions are simulated based on authentic Intel 8086 micro-architecture execution results.
-        </span>
-        <span>Interactive Instruction Laboratory</span>
+      {/* Footer System Details */}
+      <div className="text-[10px] text-slate-400 font-mono text-right pt-4 border-t border-sky-150 shrink-0 mt-6 flex justify-between items-center">
+        <span>* Emulated instructions strictly match standard Intel 8086 physical states.</span>
+        <span>Interactive Instruction Laboratory v2.5 (ECE Micro)</span>
       </div>
+    </div>
+  );
+}
+
+// Helper component for active-high seven segment LED display
+function SevenSegmentDisplay({ hexValue }: { hexValue: number }) {
+  const isLit = (mask: number) => (hexValue & mask) !== 0;
+
+  // Real LED red glow vs dark dim red
+  const activeColor = "fill-rose-500 drop-shadow-[0_0_6px_rgba(244,63,94,0.95)]";
+  const inactiveColor = "fill-rose-950/15";
+
+  return (
+    <div className="flex flex-col items-center justify-center p-3 bg-neutral-950 border-2 border-neutral-800 rounded-xl shadow-inner w-28 h-36">
+      <svg
+        viewBox="0 0 100 130"
+        className="w-16 h-24 select-none"
+        style={{ transform: "skewX(-6deg)" }}
+      >
+        {/* Segment a */}
+        <polygon
+          points="20,10 70,10 65,18 25,18"
+          className={`transition-all duration-250 ${isLit(0x01) ? activeColor : inactiveColor}`}
+        />
+        {/* Segment f */}
+        <polygon
+          points="13,14 21,21 21,57 13,63"
+          className={`transition-all duration-250 ${isLit(0x20) ? activeColor : inactiveColor}`}
+        />
+        {/* Segment b */}
+        <polygon
+          points="79,14 79,63 71,57 71,21"
+          className={`transition-all duration-250 ${isLit(0x02) ? activeColor : inactiveColor}`}
+        />
+        {/* Segment g */}
+        <polygon
+          points="20,60 70,60 75,65 70,70 20,70 15,65"
+          className={`transition-all duration-250 ${isLit(0x40) ? activeColor : inactiveColor}`}
+        />
+        {/* Segment e */}
+        <polygon
+          points="13,67 21,73 21,109 13,116"
+          className={`transition-all duration-250 ${isLit(0x10) ? activeColor : inactiveColor}`}
+        />
+        {/* Segment c */}
+        <polygon
+          points="79,67 79,116 71,109 71,73"
+          className={`transition-all duration-250 ${isLit(0x04) ? activeColor : inactiveColor}`}
+        />
+        {/* Segment d */}
+        <polygon
+          points="25,112 65,112 70,120 20,120"
+          className={`transition-all duration-250 ${isLit(0x08) ? activeColor : inactiveColor}`}
+        />
+        {/* DP (Decimal point) */}
+        <circle
+          cx="87"
+          cy="116"
+          r="4.5"
+          className={`transition-all duration-250 ${isLit(0x80) ? activeColor : inactiveColor}`}
+        />
+      </svg>
     </div>
   );
 }

@@ -394,7 +394,7 @@ export default function MinimumModeHardwareSimulator() {
                     <strong className="text-slate-800 font-mono text-[11px]">{signals.den}</strong>
                   </div>
                   <div className="bg-white p-2 rounded border border-slate-200">
-                    <span className="text-slate-400 font-mono text-[9px] block">DT/R (Data Transmit/Receive)</span>
+                    <span className="text-slate-400 font-mono text-[9px] block">DT/<span className="overline">R</span> (Data Transmit/Receive)</span>
                     <strong className="text-slate-800 font-mono text-[11px]">{signals.dtr}</strong>
                   </div>
                   <div className="bg-white p-2 rounded border border-slate-200">

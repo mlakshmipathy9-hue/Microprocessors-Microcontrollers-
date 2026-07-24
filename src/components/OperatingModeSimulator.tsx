@@ -84,6 +84,55 @@ export default function OperatingModeSimulator() {
     }
   ];
 
+  const renderPinName = (pinName: string) => {
+    if (pinName === 'M/IO') {
+      return (
+        <span className="inline-flex items-center">
+          <span>M/</span>
+          <span className="overline font-semibold">IO</span>
+        </span>
+      );
+    }
+    if (pinName === 'BHE/S7') {
+      return (
+        <span className="inline-flex items-center">
+          <span className="overline font-semibold">BHE</span>
+          <span>/S7</span>
+        </span>
+      );
+    }
+    if (pinName === 'DT/R') {
+      return (
+        <span className="inline-flex items-center">
+          <span>DT/</span>
+          <span className="overline font-semibold">R</span>
+        </span>
+      );
+    }
+    if (['RD', 'WR', 'DEN', 'LOCK', 'INTA', 'TEST', 'S0', 'S1', 'S2'].includes(pinName)) {
+      return <span className="overline font-semibold">{pinName}</span>;
+    }
+    if (pinName === 'RQ/GT0') {
+      return (
+        <span className="inline-flex items-center">
+          <span className="overline font-semibold">RQ</span>
+          <span>/</span>
+          <span className="overline font-semibold">GT0</span>
+        </span>
+      );
+    }
+    if (pinName === 'RQ/GT1') {
+      return (
+        <span className="inline-flex items-center">
+          <span className="overline font-semibold">RQ</span>
+          <span>/</span>
+          <span className="overline font-semibold">GT1</span>
+        </span>
+      );
+    }
+    return <span>{pinName}</span>;
+  };
+
   const selectedMode = activeMode !== 'comparison' ? modeData[activeMode] : null;
 
   return (
@@ -248,9 +297,9 @@ export default function OperatingModeSimulator() {
                     <div className="font-bold text-slate-800 uppercase text-[13px] mb-1">Active Mode Pins on CPU (Pins 24-31)</div>
                     <div className="grid grid-cols-2 gap-1">
                       {selectedMode?.pins.map(pin => (
-                        <div key={pin} className="flex items-center gap-1.5">
+                        <div key={pin} className="flex items-center gap-1.5 font-mono">
                           <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 inline-block"></span>
-                          <strong>{pin}</strong>
+                          <strong className="text-[13px]">{renderPinName(pin)}</strong>
                         </div>
                       ))}
                     </div>

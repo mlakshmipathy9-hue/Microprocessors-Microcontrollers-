@@ -1,69 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { labExperiments, labManualPagesData } from '../data/labExperimentsData';
-
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Info, 
-  HelpCircle, 
   BookOpen, 
-  CheckCircle2, 
+  Code2, 
+  Database, 
   Layers, 
-  Database,
-  Cpu,
-  TrendingUp,
-  Tag,
+  Copy, 
+  Check, 
+  Info, 
+  Sparkles, 
+  Binary, 
+  CheckCircle2, 
+  FileCode, 
+  Terminal, 
+  Cpu, 
   ArrowRight,
-  Code2,
-  ChevronRight,
-  ChevronDown,
-  Sparkles,
-  RefreshCw,
-  FileCode,
-  Compass,
-  Copy,
-  Check,
-  ChevronLeft,
-  AlertTriangle,
-  Key,
-  Thermometer,
-  HardDrive,
-  Terminal,
-  ClipboardList,
-  Calculator,
-  Award,
-  Sliders
+  Shield,
+  LayoutGrid
 } from 'lucide-react';
 
 interface DirectiveInfo {
   id: string;
   name: string;
   fullForm: string;
-  category: 'Data Definition' | 'Segment Control' | 'General Symbol' | 'Procedure';
+  category: 'Segment Control' | 'Data Definition' | 'Procedure & Scope' | 'General Symbol';
   bytesAllocated: string;
   desc: string;
   example: string;
   styleAffiliation: 'Standard Style' | 'Simplified Style' | 'Both Styles';
 }
 
-const directivesData: Record<string, DirectiveInfo> = {
+const directivesCatalog: Record<string, DirectiveInfo> = {
   'SEGMENT': {
     id: 'SEGMENT',
     name: 'SEGMENT & ENDS',
-    fullForm: 'Segment Boundaries Definition',
+    fullForm: 'Segment Boundaries Declaration',
     category: 'Segment Control',
     bytesAllocated: '0 Bytes (Compiler Directive)',
-    desc: 'Defines the starting and ending boundaries of a logical segment block (e.g., Code, Data, Stack) in Standard programming. Guides the assembler to organize code into memory sections.',
-    example: 'DATA SEGMENT\n  ; variables go here\nDATA ENDS',
+    desc: 'Defines the starting and ending boundaries of a logical segment block (Code, Data, Stack) in Standard Segment programming style.',
+    example: 'DATA_SEG SEGMENT\n  NUM1 DB 25H\nDATA_SEG ENDS',
     styleAffiliation: 'Standard Style'
   },
   'ASSUME': {
     id: 'ASSUME',
     name: 'ASSUME',
-    fullForm: 'Assume Segment Association',
+    fullForm: 'Segment Register Association Directive',
     category: 'Segment Control',
     bytesAllocated: '0 Bytes (Compiler Directive)',
-    desc: 'Tells the assembler which physical segment register (CS, DS, SS, ES) should point to which logical segment at runtime. This is purely for compile-time syntax check and does NOT load segment registers with addresses (which must be done manually with MOV instructions).',
-    example: 'ASSUME CS:CODE, DS:DATA',
+    desc: 'Informs the assembler which segment register (CS, DS, SS, ES) corresponds to which logical segment at compile time for label offset validation.',
+    example: 'ASSUME CS:CODE_SEG, DS:DATA_SEG',
     styleAffiliation: 'Standard Style'
   },
   'MODEL': {
@@ -72,98 +57,88 @@ const directivesData: Record<string, DirectiveInfo> = {
     fullForm: 'Memory Model Directive',
     category: 'Segment Control',
     bytesAllocated: '0 Bytes (Compiler Directive)',
-    desc: 'Pre-configures standard segment settings based on the selected memory model (SMALL, MEDIUM, COMPACT, LARGE, FLAT). Eliminates the need for explicit SEGMENT/ENDS boundaries and the ASSUME directive.',
-    example: '.MODEL SMALL  ; code fits in 64KB, data in 64KB',
+    desc: 'Pre-configures standard segment sizing parameters (e.g. SMALL, TINY, MEDIUM) in Simplified programming style, eliminating explicit SEGMENT/ENDS blocks.',
+    example: '.MODEL SMALL  ; Code in 64KB, Data in 64KB',
     styleAffiliation: 'Simplified Style'
   },
   'STACK': {
     id: 'STACK',
     name: '.STACK',
-    fullForm: 'Stack Allocation Directive',
+    fullForm: 'Stack Segment Allocation',
     category: 'Segment Control',
-    bytesAllocated: 'User-specified size (e.g., 256 bytes)',
-    desc: 'Allocates a designated stack segment space in memory with the given size. In standard style, you would have to define a STACK segment explicitly.',
-    example: '.STACK 100H  ; reserves 256 bytes for stack',
+    bytesAllocated: 'User-specified size (e.g. 256 Bytes)',
+    desc: 'Allocates a dedicated Stack Segment with a designated size in Simplified programming style.',
+    example: '.STACK 100H  ; Reserves 256 bytes for stack',
     styleAffiliation: 'Simplified Style'
   },
   'DATA': {
     id: 'DATA',
     name: '.DATA',
-    fullForm: 'Data Segment Start',
+    fullForm: 'Data Segment Identifier',
     category: 'Segment Control',
     bytesAllocated: '0 Bytes (Compiler Directive)',
-    desc: 'Marks the beginning of the logical data segment. Behind the scenes, the assembler configures segment offsets for all following variables.',
-    example: '.DATA\nVAR_BYTE DB 10H',
+    desc: 'Marks the beginning of the data segment in Simplified programming style.',
+    example: '.DATA\nVAL1 DB 10H\nVAL2 DW 1234H',
     styleAffiliation: 'Simplified Style'
   },
   'CODE': {
     id: 'CODE',
     name: '.CODE',
-    fullForm: 'Code Segment Start',
+    fullForm: 'Code Segment Identifier',
     category: 'Segment Control',
     bytesAllocated: '0 Bytes (Compiler Directive)',
-    desc: 'Marks the beginning of the instruction code segment where executable instructions are placed.',
-    example: '.CODE\nSTART:\n  MOV AX, @DATA',
+    desc: 'Marks the beginning of the executable instruction segment in Simplified programming style.',
+    example: '.CODE\nMAIN PROC\n  MOV AX, @DATA\n  MOV DS, AX\nMAIN ENDP',
     styleAffiliation: 'Simplified Style'
   },
   '@DATA': {
     id: '@DATA',
     name: '@DATA',
-    fullForm: 'Predefined Segment Address Constant',
+    fullForm: 'Data Segment Address Symbol',
     category: 'Segment Control',
-    bytesAllocated: '0 Bytes (Assembler Constant)',
-    desc: 'A special predefined symbol representing the 16-bit segment address of the .DATA segment. In simplified model programming, you MUST load DS using this symbol, compared to the segment identifier used in standard programming.',
+    bytesAllocated: '0 Bytes (Compile Constant)',
+    desc: 'A predefined symbolic constant representing the physical base segment address of the .DATA block used to initialize DS register.',
     example: 'MOV AX, @DATA\nMOV DS, AX',
     styleAffiliation: 'Simplified Style'
   },
   'DB': {
     id: 'DB',
     name: 'DB (Define Byte)',
-    fullForm: 'Define Byte Variable',
+    fullForm: '8-Bit Byte Storage Allocation',
     category: 'Data Definition',
     bytesAllocated: '1 Byte per element',
-    desc: 'Allocates memory storage space in RAM for 8-bit byte variables. Can initialize variables with a hexadecimal constant, characters inside quotes, or leave it uninitialized using (?) symbol.',
-    example: 'MY_BYTE DB 7AH\nCHAR_VAL DB \'A\'',
+    desc: 'Allocates memory storage space in RAM for 8-bit byte variables or character strings.',
+    example: 'COUNT DB 0FFH\nMSG DB \'HELLO\', 0',
     styleAffiliation: 'Both Styles'
   },
   'DW': {
     id: 'DW',
     name: 'DW (Define Word)',
-    fullForm: 'Define 16-bit Word Variable',
+    fullForm: '16-Bit Word Storage Allocation',
     category: 'Data Definition',
     bytesAllocated: '2 Bytes per element',
-    desc: 'Allocates memory storage space in RAM for 16-bit word variables. Uses Little-Endian notation: the lower 8 bits are stored at the lower physical address offset, and the upper 8 bits are stored at the higher offset.',
-    example: 'MY_WORD DW 1F04H\nARR_WORD DW 10 DUP(0)',
+    desc: 'Allocates memory storage space in RAM for 16-bit word variables. Stored in physical memory using Little-Endian byte order.',
+    example: 'VAL_WORD DW 1234H\nARRAY_W DW 5 DUP(0)',
     styleAffiliation: 'Both Styles'
   },
   'DD': {
     id: 'DD',
     name: 'DD (Define Doubleword)',
-    fullForm: 'Define 32-bit Doubleword',
+    fullForm: '32-Bit Doubleword Storage Allocation',
     category: 'Data Definition',
     bytesAllocated: '4 Bytes per element',
-    desc: 'Allocates memory storage space in RAM for 32-bit doubleword variables. Excellent for storing far memory pointers (containing both a 16-bit offset and a 16-bit segment base address sequentially).',
-    example: 'MY_DWORD DD 12345678H',
+    desc: 'Allocates memory storage space for 32-bit values or FAR pointer addresses (Segment:Offset pairs).',
+    example: 'FAR_PTR DD 10002000H',
     styleAffiliation: 'Both Styles'
   },
   'DUP': {
     id: 'DUP',
     name: 'DUP (Duplicate Operator)',
-    fullForm: 'Array Allocation Duplication',
+    fullForm: 'Array Allocation Duplicator',
     category: 'Data Definition',
-    bytesAllocated: 'Count * element size',
-    desc: 'An operator used inside DB, DW, or DD declarations to easily initialize block memory arrays with a uniform initial value.',
-    example: 'MY_ARRAY DB 10 DUP(0H)  ; 10 bytes initialized to 0',
-    styleAffiliation: 'Both Styles'
-  },
-  'ORG': {
-    id: 'ORG',
-    name: 'ORG (Origin)',
-    fullForm: 'Origin Pointer Offset Control',
-    category: 'General Symbol',
-    bytesAllocated: '0 Bytes (Compiler Directive)',
-    desc: 'Directs the assembler to set the starting offset address pointer for subsequently defined code instructions or data variables. Often set to ORG 100H for DOS .COM files.',
-    example: 'ORG 0100H',
+    bytesAllocated: 'Count * Element Size',
+    desc: 'Duplicates a pattern or value multiple times to initialize array memory blocks.',
+    example: 'BUFFER DB 100 DUP(0)  ; 100 zeroed bytes',
     styleAffiliation: 'Both Styles'
   },
   'EQU': {
@@ -172,7171 +147,718 @@ const directivesData: Record<string, DirectiveInfo> = {
     fullForm: 'Equate Symbolic Constant',
     category: 'General Symbol',
     bytesAllocated: '0 Bytes (Replaced at Compile-Time)',
-    desc: 'Creates a text or numeric constant alias. The assembler replaces all occurrences of this name with its value during code assembly. Consumes no physical RAM at runtime.',
-    example: 'MAX_LIMIT EQU 100',
+    desc: 'Assigns a symbolic text alias or constant value. The assembler replaces occurrences during translation; no runtime RAM consumed.',
+    example: 'MAX_SIZE EQU 50\nMOV CX, MAX_SIZE',
+    styleAffiliation: 'Both Styles'
+  },
+  'ORG': {
+    id: 'ORG',
+    name: 'ORG (Origin)',
+    fullForm: 'Origin Offset Directive',
+    category: 'General Symbol',
+    bytesAllocated: '0 Bytes (Compiler Directive)',
+    desc: 'Sets the starting instruction or data location counter offset in memory. Crucial for DOS .COM executables (ORG 100H).',
+    example: 'ORG 100H  ; Sets CS offset to 100H',
+    styleAffiliation: 'Both Styles'
+  },
+  'END': {
+    id: 'END',
+    name: 'END',
+    fullForm: 'End of Assembly Source Module',
+    category: 'General Symbol',
+    bytesAllocated: '0 Bytes (Compiler Directive)',
+    desc: 'Terminates the assembly process for the current file. Specifies the program entry point label to the linker.',
+    example: 'END START',
     styleAffiliation: 'Both Styles'
   },
   'PROC': {
     id: 'PROC',
     name: 'PROC & ENDP',
-    fullForm: 'Procedure Declaration boundaries',
-    category: 'Procedure',
+    fullForm: 'Procedure Declaration Block',
+    category: 'Procedure & Scope',
     bytesAllocated: '0 Bytes (Compiler Directive)',
-    desc: 'Defines the starting and ending boundaries of procedures (subroutines). Can be configured as NEAR (within same segment) or FAR (across segments). Helps structure clean code blocks.',
-    example: 'DELAY PROC NEAR\n  ; delay logic\n  RET\nDELAY ENDP',
+    desc: 'Encloses subroutines/functions. Can be specified as NEAR (same code segment) or FAR (different code segment).',
+    example: 'MY_SUB PROC NEAR\n  ; subroutine logic\n  RET\nMY_SUB ENDP',
+    styleAffiliation: 'Both Styles'
+  },
+  'PTR': {
+    id: 'PTR',
+    name: 'PTR (Pointer Type Override)',
+    fullForm: 'Pointer Type Clarification Operator',
+    category: 'Procedure & Scope',
+    bytesAllocated: '0 Bytes (Compile Operator)',
+    desc: 'Overrides or clarifies the memory operand size (BYTE PTR or WORD PTR) when operand size is ambiguous.',
+    example: 'MOV BYTE PTR [BX], 05H\nINC WORD PTR [SI]',
+    styleAffiliation: 'Both Styles'
+  },
+  'OFFSET': {
+    id: 'OFFSET',
+    name: 'OFFSET',
+    fullForm: 'Offset Address Operator',
+    category: 'Procedure & Scope',
+    bytesAllocated: '0 Bytes (Compile Operator)',
+    desc: 'Extracts the 16-bit logical offset address of a variable or label rather than its content value.',
+    example: 'MOV BX, OFFSET MY_VAR\n; Same as LEA BX, MY_VAR',
     styleAffiliation: 'Both Styles'
   }
 };
 
-const segmentLayout = [
-  { label: 'MY_BYTE', directive: 'DB', value: '7AH', size: 1, offset: '0000H', desc: 'Single 8-bit byte at Offset 0000H' },
-  { label: 'MY_WORD', directive: 'DW', value: '1F04H', size: 2, offset: '0001H', desc: '16-bit Word spans 2 bytes (Offsets 0001H & 0002H - stored Little-Endian)' },
-  { label: 'MY_DWORD', directive: 'DD', value: '12345678H', size: 4, offset: '0003H', desc: '32-bit Doubleword spans 4 bytes (Offsets 0003H to 0006H)' },
-  { label: 'MY_ARRAY', directive: 'DB', value: '3 DUP(0)', size: 3, offset: '0007H', desc: '3 consecutive bytes initialized to 0 (Offsets 0007H to 0009H)' }
-];
-
-interface MemoryModel {
-  id: string;
-  name: string;
-  codeSegment: string;
-  dataSegment: string;
-  stackSegment: string;
-  pointers: string;
-  desc: string;
-  bestFor: string;
-  segments: Array<{ name: string; size: string; color: string }>;
-}
-
-const memoryModels: MemoryModel[] = [
-  {
-    id: 'tiny',
-    name: 'TINY',
-    codeSegment: 'Near (<64KB)',
-    dataSegment: 'Near (<64KB)',
-    stackSegment: 'Combined',
-    pointers: 'Near pointers only',
-    desc: 'All code, data, and stack are unified into a single physical 64KB segment. Used specifically for DOS .COM files to produce highly efficient, compact, single-image executables.',
-    bestFor: 'Extremely small utilities, quick-start BIOS routines',
-    segments: [
-      { name: 'CS, DS, SS, ES (Unified)', size: '64 KB Max', color: 'bg-indigo-600/90 border-indigo-500 text-indigo-100' }
-    ]
-  },
-  {
-    id: 'small',
-    name: 'SMALL',
-    codeSegment: 'Near (<64KB)',
-    dataSegment: 'Near (<64KB)',
-    stackSegment: 'Separate (64KB)',
-    pointers: 'Near code, Near data',
-    desc: 'The most popular memory model for standard utilities. Allocates exactly one 64KB segment for code, and exactly one 64KB segment for data. Stack is mapped separately.',
-    bestFor: 'Typical laboratory exercises, standard tool applications',
-    segments: [
-      { name: 'Code Segment (CS)', size: '64 KB Max', color: 'bg-emerald-600 border-emerald-500 text-emerald-100' },
-      { name: 'Data Segment (DS)', size: '64 KB Max', color: 'bg-amber-600 border-amber-500 text-amber-100' },
-      { name: 'Stack Segment (SS)', size: '64 KB Max', color: 'bg-blue-600 border-blue-500 text-blue-100' }
-    ]
-  },
-  {
-    id: 'medium',
-    name: 'MEDIUM',
-    codeSegment: 'Far (No Limit)',
-    dataSegment: 'Near (<64KB)',
-    stackSegment: 'Separate (64KB)',
-    pointers: 'Far code, Near data',
-    desc: 'Designed for programs with very large instruction sizes but minimal data storage. Code can span multiple physical segments (calling subroutines requires FAR calls), while all variables reside in a single 64KB block.',
-    bestFor: 'Complex algorithmic utilities, protocol processors',
-    segments: [
-      { name: 'Code Seg 1 (CS)', size: '64 KB', color: 'bg-emerald-600 border-emerald-500 text-emerald-100' },
-      { name: 'Code Seg 2 (CS)', size: '64 KB', color: 'bg-emerald-600/80 border-emerald-500 text-emerald-100' },
-      { name: 'Data Segment (DS)', size: '64 KB Max', color: 'bg-amber-600 border-amber-500 text-amber-100' },
-      { name: 'Stack Segment (SS)', size: '64 KB Max', color: 'bg-blue-600 border-blue-500 text-blue-100' }
-    ]
-  },
-  {
-    id: 'compact',
-    name: 'COMPACT',
-    codeSegment: 'Near (<64KB)',
-    dataSegment: 'Far (No Limit)',
-    stackSegment: 'Separate (64KB)',
-    pointers: 'Near code, Far data',
-    desc: 'The exact opposite of the Medium model. Code is restricted to a single 64KB segment (near pointers for calling functions), but data can exceed 64KB across multiple segments. However, no single variable or array can be larger than 64KB.',
-    bestFor: 'Small engines analyzing huge memory datasets',
-    segments: [
-      { name: 'Code Segment (CS)', size: '64 KB Max', color: 'bg-emerald-600 border-emerald-500 text-emerald-100' },
-      { name: 'Data Seg 1 (DS)', size: '64 KB', color: 'bg-amber-600 border-amber-500 text-amber-100' },
-      { name: 'Data Seg 2 (DS)', size: '64 KB', color: 'bg-amber-600/80 border-amber-500 text-amber-100' },
-      { name: 'Stack Segment (SS)', size: '64 KB Max', color: 'bg-blue-600 border-blue-500 text-blue-100' }
-    ]
-  },
-  {
-    id: 'large',
-    name: 'LARGE',
-    codeSegment: 'Far (No Limit)',
-    dataSegment: 'Far (No Limit)',
-    stackSegment: 'Separate (64KB)',
-    pointers: 'Far code, Far data',
-    desc: 'Removes segment limits for both instruction blocks and variables. Both code and data are allowed to span multiple segments, requiring 32-bit FAR pointers for all calls and data access. No single array can exceed 64KB.',
-    bestFor: 'Enterprise software, system utilities, full compiler systems',
-    segments: [
-      { name: 'Code Segment (CS)', size: 'Far/Multi', color: 'bg-emerald-600 border-emerald-500 text-emerald-100' },
-      { name: 'Data Segment (DS)', size: 'Far/Multi', color: 'bg-amber-600 border-amber-500 text-amber-100' },
-      { name: 'Stack Segment (SS)', size: '64 KB Max', color: 'bg-blue-600 border-blue-500 text-blue-100' }
-    ]
-  },
-  {
-    id: 'huge',
-    name: 'HUGE',
-    codeSegment: 'Far (No Limit)',
-    dataSegment: 'Far (No Limit)',
-    stackSegment: 'Separate (64KB)',
-    pointers: 'Far pointer + index updates',
-    desc: 'Extends the LARGE memory model by allowing individual arrays and data blocks themselves to exceed the 64KB physical segment boundary. The compiler automatically adds index pointer arithmetic to transition across segment limits.',
-    bestFor: 'Massive dataset tables, high-resolution graphic framebuffers',
-    segments: [
-      { name: 'Code Segment (CS)', size: 'Far/Multi', color: 'bg-emerald-600 border-emerald-500 text-emerald-100' },
-      { name: 'Huge Array (DS Span)', size: 'Spans Segments (>64KB)', color: 'bg-purple-600 border-purple-500 text-purple-100 font-bold' },
-      { name: 'Stack Segment (SS)', size: '64 KB Max', color: 'bg-blue-600 border-blue-500 text-blue-100' }
-    ]
-  }
-];
-
-interface LabExperiment {
-  id: string;
-  number: number | string;
+interface ProgrammingStyleInfo {
+  id: 'standard' | 'simplified' | 'com';
   title: string;
-  aim: string;
-  directivesUsed: string[];
-  algorithm: string[];
-  standardCode: string;
-  simplifiedCode: string;
-  bestPracticeTip: string;
+  badge: string;
+  subtitle: string;
+  desc: string;
+  formatName: string;
+  code: string;
+  keyDirectives: string[];
+  features: string[];
 }
 
-// labExperiments and labManualPagesData are imported from '../data/labExperimentsData'
+const programmingStylesData: Record<string, ProgrammingStyleInfo> = {
+  'standard': {
+    id: 'standard',
+    title: '1. Standard Segment-Ends Style',
+    badge: 'EXE Format (Explicit)',
+    subtitle: 'Classic SEGMENT / ENDS / ASSUME Frame Structure',
+    desc: 'The traditional 8086 program format where every memory section (Data, Code, Stack) is explicitly wrapped in SEGMENT and ENDS directives. Gives complete low-level control over segment naming and alignment.',
+    formatName: 'Standard .EXE Program Format',
+    code: `; Standard Segment-Ends Style
+DATA_SEG SEGMENT
+  NUM1 DB 15H
+  NUM2 DB 25H
+  RESULT DB ?
+DATA_SEG ENDS
 
-const sections = [
-  { name: 'Aim & Objectives', originalIdx: 0 },
-  { name: 'Theory Concepts', originalIdx: 3 },
-  { name: 'Algorithm Steps', originalIdx: 4 },
-  { name: 'Engineering Flowchart', originalIdx: 5 },
-  { name: 'Source Code Program', originalIdx: 6 },
-  { name: 'Manual Calculations', originalIdx: 8 },
-  { name: 'Experimental Procedure', originalIdx: 2 },
-  { name: 'Verification Result', originalIdx: 9 },
-  { name: 'Important Precautions', originalIdx: 10 },
-  { name: 'Student Task Challenge', originalIdx: 11 },
-  { name: 'Practical Applications', originalIdx: 12 }
-];
+CODE_SEG SEGMENT
+  ASSUME CS:CODE_SEG, DS:DATA_SEG
+START:
+  ; Manual DS Initialization
+  MOV AX, DATA_SEG
+  MOV DS, AX
 
-const getDecisionBranchInfo = (labId: string, label: string) => {
-  const normalizedLabel = label.trim().toLowerCase();
-  
-  if (labId === 'exp1') {
-    if (normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0')) {
-      return {
-        yes: "Move to Save Final Carry/Borrow (Step 8)",
-        no: "Loop back to ADD/SBB block (Step 5) for next byte"
-      };
-    }
-  } else if (labId === 'exp_math') {
-    if (normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0') || normalizedLabel.includes('decr cx')) {
-      return {
-        yes: "Proceed to Save Factorial Result to memory",
-        no: "Repeat Factorial Accumulator loop (AX = AX * CX)"
-      };
-    }
-  } else if (labId === 'exp_bit1') {
-    if (normalizedLabel.includes('msb') || normalizedLabel.includes('bit 7')) {
-      return {
-        yes: "Load Negative indicator BL = 01H",
-        no: "Load Positive indicator BL = 00H"
-      };
-    }
-  } else if (labId === 'exp_bit2') {
-    if (normalizedLabel.includes('lsb') || normalizedLabel.includes('bit 0')) {
-      return {
-        yes: "Load Odd indicator BL = 01H",
-        no: "Load Even indicator BL = 00H"
-      };
-    }
-  } else if (labId === 'exp_bit3') {
-    if (normalizedLabel.includes('carry flag') || normalizedLabel.includes('cf')) {
-      return {
-        yes: "Increment Ones Counter: INC BL",
-        no: "Increment Zeros Counter: INC BH"
-      };
-    } else if (normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0')) {
-      return {
-        yes: "Save counters to memory variables",
-        no: "Loop back for next bit shift (SHR AL, 1)"
-      };
-    }
-  } else if (labId === 'exp_arr1') {
-    if (normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0')) {
-      return {
-        yes: "Save accumulated Sum to memory variable SUM",
-        no: "Loop back to ADD next array byte element"
-      };
-    }
-  } else if (labId === 'exp3') {
-    if (normalizedLabel.includes('al (max)') || normalizedLabel.includes('largest') || normalizedLabel.includes('> al')) {
-      return {
-        yes: "Update Max candidate: AL = [SI]",
-        no: "Skip update, proceed to check Min candidate"
-      };
-    } else if (normalizedLabel.includes('ah (min)') || normalizedLabel.includes('smallest') || normalizedLabel.includes('< ah')) {
-      return {
-        yes: "Update Min candidate: AH = [SI]",
-        no: "Skip update, proceed to loop counter check"
-      };
-    } else if (normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0')) {
-      return {
-        yes: "Save AL (Largest) and AH (Smallest) to memory",
-        no: "Loop back to increment SI pointer for next element"
-      };
-    }
-  } else if (labId === 'exp4') {
-    if (normalizedLabel.includes('al <= [si+1]') || normalizedLabel.includes('al<=[si+1]') || normalizedLabel.includes('ordered')) {
-      return {
-        yes: "Skip swap, go directly to Pointer Increment",
-        no: "Swap adjacent memory elements [SI] and [SI+1] via AH buffer"
-      };
-    } else if (normalizedLabel.includes('inner loop') || normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0')) {
-      return {
-        yes: "Proceed to Outer Loop check step",
-        no: "Loop back to inspect next adjacent pair in this pass"
-      };
-    } else if (normalizedLabel.includes('outer loop') || normalizedLabel.includes('dx = 0') || normalizedLabel.includes('dx=0')) {
-      return {
-        yes: "Stop (Array successfully sorted in ascending order)",
-        no: "Loop back to point SI to array start and begin next sweep pass"
-      };
-    }
-  } else if (labId === 'exp_str1') {
-    if (normalizedLabel.includes('terminator') || normalizedLabel.includes('"$') || normalizedLabel.includes('zf=1')) {
-      return {
-        yes: "Proceed to convert CX count to exact string length",
-        no: "Repeat REPNE SCASB scan for next string character"
-      };
-    }
-  } else if (labId === 'exp_str3') {
-    if (normalizedLabel.includes('identical') || normalizedLabel.includes('are strings') || normalizedLabel.includes('zf=1')) {
-      return {
-        yes: "Load Match indicator AL = 00H (Equal)",
-        no: "Load Mismatch indicator AL = 01H (Unequal)"
-      };
-    }
-  } else if (labId === 'exp_str4') {
-    if (normalizedLabel.includes('copy loop') || normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0')) {
-      return {
-        yes: "Proceed to Palindrome symmetry verification",
-        no: "Loop back to copy next character backwards"
-      };
-    } else if (normalizedLabel.includes('identical') || normalizedLabel.includes('are strings') || normalizedLabel.includes('zf=1')) {
-      return {
-        yes: "Load Palindrome success indicator AL = 01H",
-        no: "Load Palindrome failure indicator AL = 00H"
-      };
-    }
-  } else if (labId === 'exp5') {
-    if (normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0') || normalizedLabel.includes('block copy')) {
-      return {
-        yes: "Proceed to block duplicate verification",
-        no: "Repeat REP MOVSB block copy step"
-      };
-    }
+  ; Addition Logic
+  MOV AL, NUM1
+  ADD AL, NUM2
+  MOV RESULT, AL
+
+  ; DOS Exit Interrupt
+  MOV AH, 4CH
+  INT 21H
+CODE_SEG ENDS
+END START`,
+    keyDirectives: ['SEGMENT', 'ENDS', 'ASSUME', 'END', 'DB'],
+    features: [
+      'Explicit SEGMENT and ENDS blocks for each memory section',
+      'Requires ASSUME directive to bind registers to segment names',
+      'Data segment address MUST be loaded manually into DS via MOV AX, DATA_SEG',
+      'Generates a multi-segment relocatable .EXE executable file'
+    ]
+  },
+  'simplified': {
+    id: 'simplified',
+    title: '2. Simplified Dot-Model Style',
+    badge: 'EXE Format (Modern)',
+    subtitle: 'Concise .MODEL / .DATA / .CODE Shortcut Structure',
+    desc: 'The modern, streamlined programming style using dot-directives. Eliminates verbose SEGMENT/ENDS syntax and ASSUME statements while maintaining clean module separation.',
+    formatName: 'Simplified Dot-Model .EXE Format',
+    code: `; Simplified Dot-Model Style
+.MODEL SMALL
+.STACK 100H
+
+.DATA
+  NUM1 DB 15H
+  NUM2 DB 25H
+  RESULT DB ?
+
+.CODE
+MAIN PROC
+  ; Predefined @DATA symbol
+  MOV AX, @DATA
+  MOV DS, AX
+
+  ; Addition Logic
+  MOV AL, NUM1
+  ADD AL, NUM2
+  MOV RESULT, AL
+
+  ; DOS Exit
+  MOV AH, 4CH
+  INT 21H
+MAIN ENDP
+END MAIN`,
+    keyDirectives: ['.MODEL', '.STACK', '.DATA', '.CODE', '@DATA', 'PROC', 'ENDP'],
+    features: [
+      'Uses .MODEL SMALL to automatically configure code and data segment limits',
+      'Replaces ASSUME with implicit automated segment declarations',
+      'Loads DS using the predefined @DATA symbol',
+      'Cleaner, more readable syntax used in modern assembly courses'
+    ]
+  },
+  'com': {
+    id: 'com',
+    title: '3. Tiny .COM Single Segment Style',
+    badge: 'COM Format (Single Segment)',
+    subtitle: 'Unified 64KB Memory Space (.MODEL TINY + ORG 100H)',
+    desc: 'A ultra-compact program style where Code, Data, and Stack all reside inside a single 64KB physical segment. DOS automatically initializes CS = DS = SS = ES upon startup.',
+    formatName: 'Tiny .COM Executable Format',
+    code: `; Tiny .COM Single Segment Style
+.MODEL TINY
+.CODE
+ORG 100H  ; Entry point offset for .COM
+
+START:
+  JMP REAL_CODE
+
+  ; Embedded Data inside Code Segment
+  NUM1 DB 15H
+  NUM2 DB 25H
+  RESULT DB ?
+
+REAL_CODE:
+  ; NO DS Initialization Needed!
+  ; DOS automatically sets CS = DS = SS = ES
+
+  MOV AL, NUM1
+  ADD AL, NUM2
+  MOV RESULT, AL
+
+  ; DOS Exit
+  MOV AH, 4CH
+  INT 21H
+
+END START`,
+    keyDirectives: ['.MODEL TINY', '.CODE', 'ORG 100H', 'JMP', 'END'],
+    features: [
+      'Combines Code, Data, and Stack into ONE unified 64KB segment',
+      'Requires ORG 100H to reserve 256-byte Program Segment Prefix (PSP)',
+      'NO manual DS loading required (CS = DS = SS = ES automatically)',
+      'Produces lightweight .COM files (maximum size 64KB)'
+    ]
   }
-  
-  return {
-    yes: "Proceed to next step",
-    no: "Repeat/Skip loop block"
-  };
 };
-
-const getBranchTargetIndices = (labId: string, label: string): { yes: number | null; no: number | null } => {
-  const normalizedLabel = label.trim().toLowerCase();
-  
-  if (labId === 'exp1') {
-    if (normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0')) {
-      return { yes: 7, no: 4 }; // Save final Carry (7), AL = [SI]... (4)
-    }
-  } else if (labId === 'exp_math') {
-    if (normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0') || normalizedLabel.includes('decr cx')) {
-      return { yes: 7, no: 5 }; // Save final Factorial (7), AX = AX * CX (5)
-    }
-  } else if (labId === 'exp_bit1') {
-    if (normalizedLabel.includes('msb') || normalizedLabel.includes('bit 7')) {
-      return { yes: 5, no: 4 }; // Set BL = 01H (5), Set BL = 00H (4)
-    }
-  } else if (labId === 'exp_bit2') {
-    if (normalizedLabel.includes('lsb') || normalizedLabel.includes('bit 0')) {
-      return { yes: 5, no: 4 }; // Set BL = 01H (5), Set BL = 00H (4)
-    }
-  } else if (labId === 'exp_bit3') {
-    if (normalizedLabel.includes('carry flag') || normalizedLabel.includes('cf')) {
-      return { yes: 5, no: 4 }; // Increment Ones (5), Increment Zeros (4)
-    } else if (normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0')) {
-      return { yes: 7, no: 2 }; // Store counters (7), Shift AL right (2)
-    }
-  } else if (labId === 'exp_arr1') {
-    if (normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0')) {
-      return { yes: 5, no: 2 }; // Store AL (5), Add element (2)
-    }
-  } else if (labId === 'exp3') {
-    if (normalizedLabel.includes('al (max)') || normalizedLabel.includes('largest') || normalizedLabel.includes('> al')) {
-      return { yes: 4, no: 5 }; // Update Max (4), Is current [SI] < AH? (5)
-    } else if (normalizedLabel.includes('ah (min)') || normalizedLabel.includes('smallest') || normalizedLabel.includes('< ah')) {
-      return { yes: 6, no: 7 }; // Update Min (6), Is Loop CX = 0? (7)
-    } else if (normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0')) {
-      return { yes: 8, no: 2 }; // Save AL and AH (8), Increment pointer SI++ (2)
-    }
-  } else if (labId === 'exp4') {
-    if (normalizedLabel.includes('al <= [si+1]') || normalizedLabel.includes('al<=[si+1]') || normalizedLabel.includes('ordered')) {
-      return { yes: 6, no: 5 }; // Increment Pointer (6), Swap elements (5)
-    } else if (normalizedLabel.includes('inner loop') || normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0')) {
-      return { yes: 8, no: 3 }; // Is Outer Loop DX = 0? (8), AL = [SI] (3)
-    } else if (normalizedLabel.includes('outer loop') || normalizedLabel.includes('dx = 0') || normalizedLabel.includes('dx=0')) {
-      return { yes: 9, no: 2 }; // STOP (9), Point SI to start (2)
-    }
-  } else if (labId === 'exp_str1') {
-    if (normalizedLabel.includes('terminator') || normalizedLabel.includes('"$') || normalizedLabel.includes('zf=1')) {
-      return { yes: 5, no: 3 }; // Convert CX count (5), Scan String (3)
-    }
-  } else if (labId === 'exp_str3') {
-    if (normalizedLabel.includes('identical') || normalizedLabel.includes('are strings') || normalizedLabel.includes('zf=1')) {
-      return { yes: 6, no: 5 }; // Set AL = 00H (6), Set AL = 01H (5)
-    }
-  } else if (labId === 'exp_str4') {
-    if (normalizedLabel.includes('copy loop') || normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0')) {
-      return { yes: 4, no: 2 }; // Reinit pointers (4), Copy character (2)
-    } else if (normalizedLabel.includes('identical') || normalizedLabel.includes('are strings') || normalizedLabel.includes('zf=1')) {
-      return { yes: 8, no: 7 }; // Set AL = 01H (8), Set AL = 00H (7)
-    }
-  } else if (labId === 'exp5') {
-    if (normalizedLabel.includes('cx = 0') || normalizedLabel.includes('cx=0') || normalizedLabel.includes('block copy')) {
-      return { yes: 5, no: 3 }; // Verify DEST_BLOCK (5), REP MOVSB (3)
-    }
-  }
-  
-  return { yes: null, no: null };
-};
-
-const renderFlowchartStepLabel = (label: string): React.ReactNode => {
-  const colonIndex = label.indexOf(':');
-  if (colonIndex !== -1) {
-    const prefix = label.substring(0, colonIndex);
-    const suffix = label.substring(colonIndex + 1);
-    
-    // Check if suffix has parentheses, e.g., " (isolates sign bit 7)"
-    const openParenIndex = suffix.indexOf('(');
-    if (openParenIndex !== -1) {
-      const codePart = suffix.substring(0, openParenIndex).trim();
-      const parenPart = suffix.substring(openParenIndex);
-      return (
-        <span className="text-slate-800 font-sans text-[11px] leading-tight font-medium flex flex-col items-center text-center">
-          <span className="text-slate-400 font-bold text-[8.5px] uppercase tracking-wider mb-0.5">{prefix}:</span>
-          <code className="font-mono bg-indigo-50 border border-indigo-150 px-1.5 py-0.5 rounded text-[10.5px] font-extrabold text-indigo-700 my-0.5 shadow-3xs inline-block">
-            {codePart}
-          </code>
-          <span className="text-slate-500 text-[9.5px] mt-0.5 leading-snug">{parenPart}</span>
-        </span>
-      );
-    }
-    
-    return (
-      <span className="text-slate-800 font-sans text-[11px] leading-tight font-medium flex flex-col items-center text-center">
-        <span className="text-slate-400 font-bold text-[8.5px] uppercase tracking-wider mb-0.5">{prefix}:</span>
-        <code className="font-mono bg-indigo-50 border border-indigo-150 px-1.5 py-0.5 rounded text-[10.5px] font-extrabold text-indigo-700 my-0.5 shadow-3xs inline-block">
-          {suffix.trim()}
-        </code>
-      </span>
-    );
-  }
-  
-  const words = label.split(' ');
-  return (
-    <span className="text-slate-800 font-sans text-[11px] leading-normal font-semibold text-center block">
-      {words.map((word, idx) => {
-        const clean = word.replace(/[(),.;[\]]/g, '');
-        const isCode = /^[A-Z0-9_=&+\-*/➔→[\]]+$/.test(clean) || 
-                       ['AL', 'AH', 'AX', 'BL', 'BH', 'BX', 'CX', 'DX', 'SI', 'DI', 'DS', 'ES', 'CF', 'ZF', 'SF', 'DF', 'CLC', 'SBB', 'ADC', 'MOVSB', 'CMPSB', 'SCASB', 'REP', 'REPE', 'REPNE', 'MUL', 'IMUL', 'DIV', 'IDIV', 'INC', 'DEC', 'XCHG', 'CMP', 'CWD', 'LOOP'].includes(clean);
-        
-        if (isCode && clean.length > 0) {
-          return (
-            <React.Fragment key={idx}>
-              <code className="font-mono bg-indigo-50/70 border border-indigo-100/50 px-1 py-0.2 rounded text-[10px] font-bold text-indigo-700 mx-0.5">{word}</code>
-              {idx < words.length - 1 ? ' ' : ''}
-            </React.Fragment>
-          );
-        }
-        return word + (idx < words.length - 1 ? ' ' : '');
-      })}
-    </span>
-  );
-};
-
-const parseCustomBitValue = (input: string): number | null => {
-  const clean = input.trim().toUpperCase();
-  if (!clean) return null;
-  
-  // Hex with prefix 0X
-  if (clean.startsWith('0X')) {
-    const val = parseInt(clean.substring(2), 16);
-    return (!isNaN(val) && val >= 0 && val <= 255) ? val : null;
-  }
-  
-  // Hex with suffix H
-  if (clean.endsWith('H')) {
-    const val = parseInt(clean.substring(0, clean.length - 1), 16);
-    return (!isNaN(val) && val >= 0 && val <= 255) ? val : null;
-  }
-  
-  // If it has hex-only characters (A-F), treat as hex
-  if (/[A-F]/.test(clean)) {
-    const val = parseInt(clean, 16);
-    return (!isNaN(val) && val >= 0 && val <= 255) ? val : null;
-  }
-  
-  // Otherwise, try parsing as decimal (signed/unsigned)
-  const decVal = parseInt(clean, 10);
-  if (!isNaN(decVal) && decVal >= -128 && decVal <= 255) {
-    return decVal < 0 ? decVal + 256 : decVal;
-  }
-  
-  // Fallback to hex for pure numeric if decimal fails
-  const hexVal = parseInt(clean, 16);
-  if (!isNaN(hexVal) && hexVal >= 0 && hexVal <= 255) {
-    return hexVal;
-  }
-  
-  return null;
-};
-
-export function getInstructionsUsed(labId: string): string[] {
-  switch (labId) {
-    case 'exp1': // Multi-precision Addition & Subtraction
-      return ['MOV', 'LEA', 'CLC', 'ADC', 'INC', 'SBB', 'LOOP', 'INT'];
-    case 'exp2': // Multiplication & Division
-      return ['MOV', 'MUL', 'IMUL', 'XOR', 'DIV', 'CWD', 'IDIV', 'INT'];
-    case 'exp_math': // Square, Cube & Factorial
-      return ['MOV', 'XOR', 'MUL', 'LOOP', 'INT'];
-    case 'exp_bit1': // Positive/Negative
-      return ['MOV', 'TEST', 'JS', 'JMP', 'INT'];
-    case 'exp_bit2': // Odd/Even
-      return ['MOV', 'TEST', 'JZ', 'JMP', 'INT'];
-    case 'exp_bit3': // Count Ones/Zeros
-      return ['MOV', 'XOR', 'SHR', 'JC', 'INC', 'DEC', 'LOOP', 'INT'];
-    case 'exp_arr1': // Addition & Subtraction of N Numbers
-      return ['MOV', 'LEA', 'XOR', 'ADD', 'ADC', 'INC', 'LOOP', 'INT'];
-    case 'exp3': // Largest/Smallest in Array
-      return ['MOV', 'LEA', 'CMP', 'JAE', 'JBE', 'LOOP', 'INT'];
-    case 'exp4': // Sort Array
-      return ['MOV', 'CMP', 'XCHG', 'JC', 'JNC', 'JZ', 'DEC', 'JNZ', 'LOOP', 'INT'];
-    case 'exp_str1': // String Length
-      return ['MOV', 'LES', 'DI', 'SCASB', 'CLD', 'REPNE', 'SUB', 'DEC', 'INT'];
-    case 'exp_str2': // Display String
-      return ['MOV', 'LEA', 'INT'];
-    case 'exp_str3': // Compare Strings
-      return ['MOV', 'CMPSB', 'REPE', 'CLD', 'JZ', 'JNZ', 'INT'];
-    case 'exp_str4': // String Reversal
-      return ['MOV', 'CMPSB', 'LOOP', 'INT'];
-    case 'exp5': // Block Transfer
-      return ['MOV', 'REP', 'MOVSB', 'CLD', 'STD', 'INT'];
-    default:
-      return ['MOV', 'INT'];
-  }
-}
 
 interface DirectiveSandboxSimulatorProps {
   initialLabId?: string;
 }
 
-export default function DirectiveSandboxSimulator({ initialLabId }: DirectiveSandboxSimulatorProps) {
-  const [selectedStyle, setSelectedStyle] = useState<'standard' | 'simplified' | 'com'>('standard');
-  const [hoveredDirective, setHoveredDirective] = useState<string>('DB');
-  const [selectedVarIdx, setSelectedVarIdx] = useState<number | null>(null);
-  const [copiedStyle, setCopiedStyle] = useState<string | null>(null);
-  const [selectedModelId, setSelectedModelId] = useState<string>('small');
-  const [selectedLabId, setSelectedLabId] = useState<string>('exp1');
-  const [activeLabStyle, setActiveLabStyle] = useState<'standard' | 'simplified'>('simplified');
-  const [activeTab, setActiveTab] = useState<'manual' | 'sandbox'>('manual');
-  const [currentPageIdx, setCurrentPageIdx] = useState(0);
-  const [hoveredTargetStepIdx, setHoveredTargetStepIdx] = useState<number | null>(null);
-  const [showChallengeHint, setShowChallengeHint] = useState<boolean>(false);
+export default function DirectiveSandboxSimulator({ initialLabId }: DirectiveSandboxSimulatorProps = {}) {
+  const [activeTab, setActiveTab] = useState<'directives' | 'styles' | 'sandbox'>('directives');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedDirectiveId, setSelectedDirectiveId] = useState<string>('DB');
+  const [selectedStyleId, setSelectedStyleId] = useState<'standard' | 'simplified' | 'com'>('standard');
+  const [copiedCode, setCopiedCode] = useState<boolean>(false);
 
-  // --- INTERACTIVE LAB SIMULATOR STATE ---
-  // Lab 1 (Multi-precision)
-  const [exp1Size, setExp1Size] = useState<number>(4);
-  const [exp1Num1, setExp1Num1] = useState<string[]>(['FF', 'FE', 'FD', 'FC', '00', '00', '00', '00']);
-  const [exp1Num2, setExp1Num2] = useState<string[]>(['01', '02', '03', '04', '00', '00', '00', '00']);
-  const [exp1Op, setExp1Op] = useState<'ADD' | 'SUB'>('ADD');
-  const [exp1Step, setExp1Step] = useState<number>(0); // 0, 1, 2, 3, 4 (done)
-  const [exp1Carry, setExp1Carry] = useState<number>(0);
-  const [exp1Results, setExp1Results] = useState<string[]>(['', '', '', '', '', '', '', '']);
-  const [exp1FinalCarry, setExp1FinalCarry] = useState<number | null>(null);
+  // Memory Sandbox state
+  const [var1Val, setVar1Val] = useState<string>('7A');
+  const [var2Val, setVar2Val] = useState<string>('1F04');
+  const [dupCount, setDupCount] = useState<number>(3);
 
-  // Lab 2 (Bit Manipulation Instructions)
-  const [expBit1Input, setExpBit1Input] = useState<number>(0x23);
-  const [expBit1Step, setExpBit1Step] = useState<number>(0);
-  const [expBit2Input, setExpBit2Input] = useState<number>(47);
-  const [expBit2Step, setExpBit2Step] = useState<number>(0);
-  const [expBit3Input, setExpBit3Input] = useState<number>(0xA5);
-  const [expBit3Step, setExpBit3Step] = useState<number>(0);
-  const [expBit3AL, setExpBit3AL] = useState<number>(0xA5);
-  const [expBit3Ones, setExpBit3Ones] = useState<number>(0);
-  const [expBit3Zeros, setExpBit3Zeros] = useState<number>(0);
+  const selectedDirective = directivesCatalog[selectedDirectiveId] || directivesCatalog['DB'];
+  const selectedStyle = programmingStylesData[selectedStyleId];
 
-  // Custom text input states for EXP 2A, 2B, 2C
-  const [expBit1CustomText, setExpBit1CustomText] = useState<string>('');
-  const [expBit2CustomText, setExpBit2CustomText] = useState<string>('');
-  const [expBit3CustomText, setExpBit3CustomText] = useState<string>('');
-
-  // Lab 2 (Multiplication & Division)
-  const [exp2Size, setExp2Size] = useState<'8bit' | '16bit'>('16bit');
-  const [exp2Op, setExp2Op] = useState<'MUL' | 'IMUL' | 'DIV' | 'IDIV'>('MUL');
-  const [exp2Op1, setExp2Op1] = useState<string>('0A12');
-  const [exp2Op2, setExp2Op2] = useState<string>('0050');
-  const [exp2Step, setExp2Step] = useState<number>(0); // 0: inputs, 1: loaded, 2: completed
-  const [exp2ResultAX, setExp2ResultAX] = useState<string>('');
-  const [exp2ResultDX, setExp2ResultDX] = useState<string>('');
-  const [exp2Remainder, setExp2Remainder] = useState<string>('');
-  const [exp2Error, setExp2Error] = useState<string>('');
-
-  // Lab 3 (Max Value Scan)
-  const [exp3Array, setExp3Array] = useState<string[]>(['25', '4A', '12', '8B', '05', '92', '31', '15']);
-  const [exp3Step, setExp3Step] = useState<number>(0); // 0 to 8 (done)
-  const [exp3MaxAL, setExp3MaxAL] = useState<string>('00');
-  const [exp3IsGreater, setExp3IsGreater] = useState<boolean | null>(null);
-
-  // Lab 4 (Bubble Sort)
-  const [exp4Array, setExp4Array] = useState<string[]>(['88', '11', '55', '22', '44', '33']);
-  const [exp4SI, setExp4SI] = useState<number>(0);
-  const [exp4Pass, setExp4Pass] = useState<number>(1);
-  const [exp4StepActive, setExp4StepActive] = useState<'compare' | 'swap' | 'next' | 'done'>('compare');
-  const [exp4Swapped, setExp4Swapped] = useState<boolean>(false);
-  const [exp4AnySwappedThisPass, setExp4AnySwappedThisPass] = useState<boolean>(false);
-
-  // Lab 5 (Block Transfer Copy)
-  const [exp5Array, setExp5Array] = useState<string[]>(['10', '20', '30', '40', '50']);
-  const [exp5Overlap, setExp5Overlap] = useState<'none' | 'forward' | 'backward'>('none');
-  const [exp5Step, setExp5Step] = useState<number>(0); // 0 to 5
-  const [exp5DestArray, setExp5DestArray] = useState<string[]>(['00', '00', '00', '00', '00', '00', '00']);
-
-  // Lab 1C (Square, Cube & Factorial of a Number)
-  const [expMathInput, setExpMathInput] = useState<number>(5);
-
-  const resetSimulator = (labId: string) => {
-    if (labId === 'exp_math') {
-      setExpMathInput(5);
-    } else if (labId === 'exp1') {
-      setExp1Step(0);
-      setExp1Carry(0);
-      setExp1Results(Array(8).fill(''));
-      setExp1FinalCarry(null);
-    } else if (labId === 'exp2') {
-      setExp2Step(0);
-      setExp2ResultAX('');
-      setExp2ResultDX('');
-      setExp2Remainder('');
-      setExp2Error('');
-    } else if (labId === 'exp3') {
-      setExp3Step(0);
-      setExp3MaxAL('00');
-      setExp3IsGreater(null);
-    } else if (labId === 'exp4') {
-      setExp4SI(0);
-      setExp4Pass(1);
-      setExp4StepActive('compare');
-      setExp4Swapped(false);
-      setExp4AnySwappedThisPass(false);
-      setExp4Array(['88', '11', '55', '22', '44', '33']);
-    } else if (labId === 'exp5') {
-      setExp5Step(0);
-      if (exp5Overlap === 'forward') {
-        setExp5DestArray(['10', '20', '00', '00', '00', '00', '00']); // overlapped from index 2
-      } else {
-        setExp5DestArray(['00', '00', '00', '00', '00', '00', '00']);
-      }
-    } else if (labId === 'exp_bit1') {
-      setExpBit1Step(0);
-    } else if (labId === 'exp_bit2') {
-      setExpBit2Step(0);
-    } else if (labId === 'exp_bit3') {
-      setExpBit3Step(0);
-      setExpBit3AL(expBit3Input);
-      setExpBit3Ones(0);
-      setExpBit3Zeros(0);
+  const handleCopyCode = (text: string) => {
+    if (navigator && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
     }
   };
 
-  const stepSimulator = (labId: string) => {
-    if (labId === 'exp1') {
-      if (exp1Step >= exp1Size) {
-        resetSimulator('exp1');
-        return;
-      }
-      const i = exp1Step;
-      const aVal = parseInt(exp1Num1[i] || '0', 16);
-      const bVal = parseInt(exp1Num2[i] || '0', 16);
-      const prevCarry = exp1Carry;
-      
-      let resVal = 0;
-      let nextCarry = 0;
-      
-      if (exp1Op === 'ADD') {
-        const sum = aVal + bVal + prevCarry;
-        resVal = sum & 0xFF;
-        nextCarry = sum > 255 ? 1 : 0;
-      } else {
-        const diff = aVal - bVal - prevCarry;
-        resVal = (diff + 256) & 0xFF;
-        nextCarry = diff < 0 ? 1 : 0;
-      }
-      
-      const newRes = [...exp1Results];
-      newRes[i] = resVal.toString(16).toUpperCase().padStart(2, '0');
-      setExp1Results(newRes);
-      
-      if (i === exp1Size - 1) {
-        setExp1FinalCarry(nextCarry);
-        setExp1Step(exp1Size);
-      } else {
-        setExp1Carry(nextCarry);
-        setExp1Step(i + 1);
-      }
-    }
-    
-    else if (labId === 'exp2') {
-      if (exp2Step === 2) {
-        setExp2Step(0);
-        return;
-      }
-      if (exp2Step === 0) {
-        setExp2Step(1);
-        return;
-      }
-      const op1Hex = exp2Op1.trim();
-      const op2Hex = exp2Op2.trim();
-      
-      const is16 = exp2Size === '16bit';
-      const isSigned = exp2Op === 'IMUL' || exp2Op === 'IDIV';
-      const isDiv = exp2Op === 'DIV' || exp2Op === 'IDIV';
-      
-      let val1 = parseInt(op1Hex, 16);
-      let val2 = parseInt(op2Hex, 16);
-      
-      if (isNaN(val1) || isNaN(val2)) {
-        setExp2Error('Invalid Hexadecimal input!');
-        setExp2Step(2);
-        return;
-      }
-      
-      let sVal1 = val1;
-      let sVal2 = val2;
-
-      if (isDiv) {
-        if (is16) {
-          // 16-bit division: Dividend DX:AX is 32-bit.
-          // Since user inputs 16-bit AX, we sign-extend or zero-extend to 32-bit.
-          if (isSigned) {
-            sVal1 = (val1 & 0x8000) !== 0 ? val1 - 65536 : val1;
-            sVal2 = (val2 & 0x8000) !== 0 ? val2 - 65536 : val2;
-          } else {
-            sVal1 = val1;
-            sVal2 = val2;
-          }
-        } else {
-          // 8-bit division: Dividend is AX (16-bit). Divisor is BL (8-bit).
-          if (isSigned) {
-            sVal1 = (val1 & 0x8000) !== 0 ? val1 - 65536 : val1; // AX is 16-bit signed
-            sVal2 = (val2 & 0x80) !== 0 ? val2 - 256 : val2;     // BL is 8-bit signed
-          } else {
-            sVal1 = val1;          // AX is 16-bit unsigned
-            sVal2 = val2 & 0xFF;   // BL is 8-bit unsigned
-          }
-        }
-      } else {
-        // Multiplication
-        if (is16) {
-          // 16-bit multiplication: AX * BX
-          if (isSigned) {
-            sVal1 = (val1 & 0x8000) !== 0 ? val1 - 65536 : val1;
-            sVal2 = (val2 & 0x8000) !== 0 ? val2 - 65536 : val2;
-          } else {
-            sVal1 = val1;
-            sVal2 = val2;
-          }
-        } else {
-          // 8-bit multiplication: AL * BL
-          if (isSigned) {
-            sVal1 = (val1 & 0x80) !== 0 ? val1 - 256 : val1;
-            sVal2 = (val2 & 0x80) !== 0 ? val2 - 256 : val2;
-          } else {
-            sVal1 = val1 & 0xFF;
-            sVal2 = val2 & 0xFF;
-          }
-        }
-      }
-      
-      if (isDiv) {
-        if ((isSigned ? sVal2 : val2) === 0) {
-          setExp2Error('Division by zero! INT 00H exception.');
-          setExp2Step(2);
-          return;
-        }
-        
-        let quotient = 0;
-        let remainder = 0;
-        
-        if (isSigned) {
-          quotient = Math.trunc(sVal1 / sVal2);
-          remainder = sVal1 % sVal2;
-          
-          const qMax = is16 ? 32767 : 127;
-          const qMin = is16 ? -32768 : -128;
-          if (quotient > qMax || quotient < qMin) {
-            setExp2Error('Divide Overflow! Result exceeds register bounds.');
-            setExp2Step(2);
-            return;
-          }
-        } else {
-          const uDivisor = is16 ? val2 : (val2 & 0xFF);
-          quotient = Math.floor(val1 / uDivisor);
-          remainder = val1 % uDivisor;
-          
-          const qMax = is16 ? 65535 : 255;
-          if (quotient > qMax) {
-            setExp2Error('Divide Overflow! Result exceeds register bounds.');
-            setExp2Step(2);
-            return;
-          }
-        }
-        
-        const qMask = is16 ? 0xFFFF : 0xFF;
-        const rMask = is16 ? 0xFFFF : 0xFF;
-        
-        const qHex = (quotient & qMask).toString(16).toUpperCase().padStart(is16 ? 4 : 2, '0');
-        const rHex = (remainder & rMask).toString(16).toUpperCase().padStart(is16 ? 4 : 2, '0');
-        
-        setExp2ResultAX(qHex);
-        setExp2Remainder(rHex);
-        setExp2ResultDX(is16 ? '0000' : '00');
-        setExp2Error('');
-      } else {
-        let product = 0;
-        if (isSigned) {
-          product = sVal1 * sVal2;
-        } else {
-          const uVal1 = is16 ? val1 : (val1 & 0xFF);
-          const uVal2 = is16 ? val2 : (val2 & 0xFF);
-          product = uVal1 * uVal2;
-        }
-        
-        const pMask = is16 ? 0xFFFFFFFF : 0xFFFF;
-        const uProd = product & pMask;
-        
-        if (is16) {
-          const lower = uProd & 0xFFFF;
-          const upper = (uProd >> 16) & 0xFFFF;
-          setExp2ResultAX(lower.toString(16).toUpperCase().padStart(4, '0'));
-          setExp2ResultDX(upper.toString(16).toUpperCase().padStart(4, '0'));
-        } else {
-          setExp2ResultAX(uProd.toString(16).toUpperCase().padStart(4, '0'));
-          setExp2ResultDX('0000');
-        }
-        setExp2Remainder('');
-        setExp2Error('');
-      }
-      
-      setExp2Step(2);
-    }
-    
-    else if (labId === 'exp3') {
-      if (exp3Step >= 8) {
-        resetSimulator('exp3');
-        return;
-      }
-      
-      const i = exp3Step;
-      const currentValHex = exp3Array[i];
-      const currentVal = parseInt(currentValHex, 16);
-      const currentMax = parseInt(exp3MaxAL, 16);
-      
-      const isGreater = currentVal > currentMax;
-      setExp3IsGreater(isGreater);
-      
-      if (isGreater || i === 0) {
-        setExp3MaxAL(currentValHex.toUpperCase().padStart(2, '0'));
-      }
-      
-      setExp3Step(i + 1);
-    }
-    
-    else if (labId === 'exp4') {
-      const size = exp4Array.length;
-      
-      if (exp4StepActive === 'done') {
-        resetSimulator('exp4');
-        return;
-      }
-      
-      if (exp4StepActive === 'compare') {
-        const val1 = parseInt(exp4Array[exp4SI], 16);
-        const val2 = parseInt(exp4Array[exp4SI + 1], 16);
-        const shouldSwap = val1 > val2;
-        
-        setExp4Swapped(shouldSwap);
-        setExp4StepActive('swap');
-      } 
-      else if (exp4StepActive === 'swap') {
-        if (exp4Swapped) {
-          const newArray = [...exp4Array];
-          const temp = newArray[exp4SI];
-          newArray[exp4SI] = newArray[exp4SI + 1];
-          newArray[exp4SI + 1] = temp;
-          setExp4Array(newArray);
-          setExp4AnySwappedThisPass(true);
-        }
-        setExp4StepActive('next');
-      } 
-      else if (exp4StepActive === 'next') {
-        const limit = size - exp4Pass;
-        if (exp4SI < limit - 1) {
-          setExp4SI(exp4SI + 1);
-          setExp4StepActive('compare');
-        } else {
-          if (exp4Pass < size - 1 && exp4AnySwappedThisPass) {
-            setExp4SI(0);
-            setExp4Pass(exp4Pass + 1);
-            setExp4AnySwappedThisPass(false);
-            setExp4StepActive('compare');
-          } else {
-            setExp4StepActive('done');
-          }
-        }
-      }
-    }
-    
-    else if (labId === 'exp5') {
-      const size = exp5Array.length;
-      if (exp5Step >= size) {
-        resetSimulator('exp5');
-        return;
-      }
-      
-      const isBack = exp5Overlap === 'backward';
-      const isForwardOverlap = exp5Overlap === 'forward';
-      
-      if (isBack) {
-        const stepNum = exp5Step;
-        const i = size - 1 - stepNum;
-        
-        const sourceVal = exp5Array[i];
-        const newDest = [...exp5DestArray];
-        newDest[i + 2] = sourceVal;
-        setExp5DestArray(newDest);
-        setExp5Step(stepNum + 1);
-      } 
-      else if (isForwardOverlap) {
-        const stepNum = exp5Step;
-        const newDest = [...exp5DestArray];
-        let sourceVal = '';
-        if (stepNum < 2) {
-          sourceVal = exp5Array[stepNum];
-        } else {
-          sourceVal = newDest[stepNum];
-        }
-        
-        newDest[stepNum + 2] = sourceVal;
-        setExp5DestArray(newDest);
-        setExp5Step(stepNum + 1);
-      } 
-      else {
-        const i = exp5Step;
-        const sourceVal = exp5Array[i];
-        const newDest = [...exp5DestArray];
-        newDest[i] = sourceVal;
-        setExp5DestArray(newDest);
-        setExp5Step(i + 1);
-      }
-    }
-    
-    else if (labId === 'exp_bit1') {
-      if (expBit1Step >= 3) {
-        resetSimulator('exp_bit1');
-        return;
-      }
-      setExpBit1Step(expBit1Step + 1);
-    }
-    
-    else if (labId === 'exp_bit2') {
-      if (expBit2Step >= 3) {
-        resetSimulator('exp_bit2');
-        return;
-      }
-      setExpBit2Step(expBit2Step + 1);
-    }
-    
-    else if (labId === 'exp_bit3') {
-      if (expBit3Step >= 9) {
-        resetSimulator('exp_bit3');
-        return;
-      }
-      
-      const step = expBit3Step;
-      if (step === 0) {
-        setExpBit3AL(expBit3Input);
-        setExpBit3Ones(0);
-        setExpBit3Zeros(0);
-        setExpBit3Step(1);
-      } else if (step >= 1 && step <= 8) {
-        const carry = expBit3AL & 1;
-        const nextAL = expBit3AL >> 1;
-        setExpBit3AL(nextAL);
-        if (carry === 1) {
-          setExpBit3Ones(expBit3Ones + 1);
-        } else {
-          setExpBit3Zeros(expBit3Zeros + 1);
-        }
-        setExpBit3Step(step + 1);
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (initialLabId) {
-      setSelectedLabId(initialLabId);
-      setActiveTab('manual');
-    }
-  }, [initialLabId]);
-
-  useEffect(() => {
-    setCurrentPageIdx(0);
-    setShowChallengeHint(false);
-    resetSimulator(selectedLabId);
-  }, [selectedLabId, exp1Op, exp2Size, exp2Op, exp5Overlap]);
-
-  const standardSkeletonCode = `; --- 1. STANDARD SEGMENT STYLE (EXE) ---
-DATA_SEG SEGMENT
-    VAR1 DB 25H         ; Define 8-bit byte
-    ARR1 DW 10 DUP(0)   ; Define 10-word array
-DATA_SEG ENDS
-
-STACK_SEG SEGMENT STACK
-    DB 100H DUP(0)      ; Reserve 256 bytes for Stack
-STACK_SEG ENDS
-
-CODE_SEG SEGMENT
-    ASSUME CS:CODE_SEG, DS:DATA_SEG, SS:STACK_SEG
-
-START:
-    ; Load Data Segment address into DS
-    MOV AX, DATA_SEG
-    MOV DS, AX
-
-    ; Application logic here
-    MOV AL, VAR1
-
-    ; Clean DOS exit
-    MOV AH, 4CH
-    INT 21H
-CODE_SEG ENDS
-END START`;
-
-  const simplifiedSkeletonCode = `; --- 2. SIMPLIFIED DOT-MODEL STYLE (EXE) ---
-.MODEL SMALL            ; Set Memory Model size
-.STACK 100H             ; Allocate 256-byte stack
-
-.DATA                   ; Start of Data Segment
-    VAR1 DB 25H         ; Define 8-bit byte
-    ARR1 DW 10 DUP(0)   ; Define 10-word array
-
-.CODE                   ; Start of Code Segment
-START:
-    ; Load predefined symbol @DATA into DS
-    MOV AX, @DATA
-    MOV DS, AX
-
-    ; Application logic here
-    MOV AL, VAR1
-
-    ; Clean DOS exit
-    MOV AH, 4CH
-    INT 21H
-END START`;
-
-  const tinySkeletonCode = `; --- 3. TINY .COM STYLE (SINGLE SEGMENT) ---
-.MODEL TINY             ; Unified CS, DS, SS and ES
-.CODE
-ORG 0100H               ; Executable starts at offset 100h
-
-START:
-    JMP MAIN_RUN        ; Skip past variable storage
-
-    ; Inline variable definitions inside Code Segment
-    VAR1 DB 25H         ; Define 8-bit byte
-    ARR1 DW 10 DUP(0)   ; Define 10-word array
-
-MAIN_RUN:
-    ; NO Segment loading needed! CS = DS = SS = ES.
-    MOV AL, VAR1
-
-    ; Clean DOS exit
-    MOV AH, 4CH
-    INT 21H
-END START`;
-
-  const renderApplicationIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'key':
-        return <Key className="w-4 h-4 text-indigo-600 shrink-0" />;
-      case 'thermometer':
-        return <Thermometer className="w-4 h-4 text-indigo-600 shrink-0" />;
-      case 'hard-drive':
-        return <HardDrive className="w-4 h-4 text-indigo-600 shrink-0" />;
-      case 'cpu':
-      default:
-        return <Cpu className="w-4 h-4 text-indigo-600 shrink-0" />;
-    }
-  };
-
-  const renderDynamicCarryRipple = () => {
-    return (
-      <div className="w-full flex flex-col gap-4 text-xs font-mono">
-        {/* Presets and Inputs */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-slate-500 text-[10px]">MODE:</span>
-              <select
-                value={exp1Op}
-                onChange={(e) => setExp1Op(e.target.value as 'ADD' | 'SUB')}
-                className="bg-white border border-slate-200 px-2 py-1 rounded text-[11px] font-bold text-indigo-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              >
-                <option value="ADD">Addition (ADC)</option>
-                <option value="SUB">Subtraction (SBB)</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-slate-500 text-[10px]">SIZE:</span>
-              <select
-                value={exp1Size}
-                onChange={(e) => {
-                  const s = parseInt(e.target.value, 10);
-                  setExp1Size(s);
-                  setExp1Step(0);
-                  setExp1Carry(0);
-                  setExp1Results(Array(8).fill(''));
-                  setExp1FinalCarry(null);
-                  
-                  const newNum1 = Array(8).fill('00');
-                  const newNum2 = Array(8).fill('00');
-                  for (let k = 0; k < s; k++) {
-                    newNum1[k] = ['FF', 'FE', 'FD', 'FC', 'FB', 'FA', 'F9', 'F8'][k] || '00';
-                    newNum2[k] = ['01', '02', '03', '04', '05', '06', '07', '08'][k] || '00';
-                  }
-                  setExp1Num1(newNum1);
-                  setExp1Num2(newNum2);
-                }}
-                className="bg-white border border-slate-200 px-2 py-1 rounded text-[11px] font-bold text-indigo-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              >
-                <option value={1}>1 Byte (8-bit)</option>
-                <option value={2}>2 Bytes (16-bit)</option>
-                <option value={4}>4 Bytes (32-bit)</option>
-                <option value={8}>8 Bytes (64-bit)</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => {
-                const newNum1 = Array(8).fill('00');
-                const newNum2 = Array(8).fill('00');
-                for (let k = 0; k < exp1Size; k++) {
-                  newNum1[k] = ['FF', 'FE', 'FD', 'FC', 'FB', 'FA', 'F9', 'F8'][k] || 'FF';
-                  newNum2[k] = ['01', '02', '03', '04', '05', '06', '07', '08'][k] || '01';
-                }
-                setExp1Num1(newNum1);
-                setExp1Num2(newNum2);
-                resetSimulator('exp1');
-              }}
-              className="bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 px-2 py-1 rounded text-[10px] font-bold cursor-pointer"
-            >
-              Max Carry Ripple
-            </button>
-            <button
-              onClick={() => {
-                const newNum1 = Array(8).fill('00');
-                const newNum2 = Array(8).fill('00');
-                const custom1 = ['A5', '4C', '28', 'D1', 'E2', '7F', '12', '9A'];
-                const custom2 = ['1B', 'E3', '90', '22', '03', 'C4', 'A1', 'F5'];
-                for (let k = 0; k < exp1Size; k++) {
-                  newNum1[k] = custom1[k] || '00';
-                  newNum2[k] = custom2[k] || '00';
-                }
-                setExp1Num1(newNum1);
-                setExp1Num2(newNum2);
-                resetSimulator('exp1');
-              }}
-              className="bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 px-2 py-1 rounded text-[10px] font-bold cursor-pointer"
-            >
-              Custom Values
-            </button>
-            <button
-              onClick={() => {
-                const newNum1 = Array(8).fill('00');
-                const newNum2 = Array(8).fill('00');
-                for (let k = 0; k < exp1Size; k++) {
-                  newNum1[k] = Math.floor(Math.random()*256).toString(16).toUpperCase().padStart(2, '0');
-                  newNum2[k] = Math.floor(Math.random()*256).toString(16).toUpperCase().padStart(2, '0');
-                }
-                setExp1Num1(newNum1);
-                setExp1Num2(newNum2);
-                resetSimulator('exp1');
-              }}
-              className="bg-white hover:bg-indigo-50 text-indigo-600 border border-indigo-200 px-2 py-1 rounded text-[10px] font-bold cursor-pointer flex items-center gap-1"
-            >
-              <RefreshCw className="w-3.5 h-3.5" /> Random
-            </button>
-          </div>
-        </div>
-
-        {/* Core Schematic Representation */}
-        <div 
-          className="grid gap-2 text-center relative py-2 bg-white/40 p-2 rounded-2xl border border-slate-100"
-          style={{ gridTemplateColumns: `repeat(${exp1Size}, minmax(0, 1fr))` }}
-        >
-          {Array.from({ length: exp1Size }, (_, k) => exp1Size - 1 - k).map((idx) => {
-            const isActive = exp1Step === idx;
-            const isProcessed = exp1Step > idx;
-            return (
-              <div 
-                key={idx} 
-                className={`flex flex-col border rounded-xl p-2 transition-all duration-300 relative ${
-                  isActive 
-                    ? 'border-indigo-500 bg-indigo-50/70 shadow-xs ring-2 ring-indigo-400/20 scale-[1.03]' 
-                    : isProcessed
-                    ? 'border-emerald-200 bg-emerald-50/20 text-slate-600'
-                    : 'border-slate-200 bg-slate-50/50'
-                }`}
-              >
-                <div className="text-[9px] font-black text-slate-400 mb-1">
-                  Byte {idx} {idx === exp1Size - 1 ? '(MSB)' : idx === 0 ? '(LSB)' : ''}
-                </div>
-                
-                {/* Input 1 */}
-                <input 
-                  type="text"
-                  maxLength={2}
-                  value={exp1Num1[idx] || '00'}
-                  onChange={(e) => {
-                    const next = [...exp1Num1];
-                    next[idx] = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, '');
-                    setExp1Num1(next);
-                    resetSimulator('exp1');
-                  }}
-                  className="w-full text-center bg-white border border-slate-200 hover:border-indigo-300 focus:border-indigo-500 rounded p-1 text-[11.5px] font-black text-slate-900 focus:outline-none"
-                  disabled={exp1Step > 0}
-                />
-                
-                <div className="my-1.5 font-bold text-slate-400 text-[10px]">{exp1Op === 'ADD' ? '+' : '-'}</div>
-
-                {/* Input 2 */}
-                <input 
-                  type="text"
-                  maxLength={2}
-                  value={exp1Num2[idx] || '00'}
-                  onChange={(e) => {
-                    const next = [...exp1Num2];
-                    next[idx] = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, '');
-                    setExp1Num2(next);
-                    resetSimulator('exp1');
-                  }}
-                  className="w-full text-center bg-white border border-slate-200 hover:border-indigo-300 focus:border-indigo-500 rounded p-1 text-[11.5px] font-black text-slate-900 focus:outline-none"
-                  disabled={exp1Step > 0}
-                />
-
-                <div className="h-[1px] bg-slate-200 my-2" />
-
-                {/* Result */}
-                <div className={`font-mono font-bold text-center text-xs p-1 rounded ${
-                  exp1Results[idx] 
-                    ? 'bg-emerald-600 text-white font-extrabold shadow-3xs' 
-                    : 'bg-slate-100 text-slate-400 italic font-medium'
-                }`}>
-                  {exp1Results[idx] ? `${exp1Results[idx]}H` : '??H'}
-                </div>
-
-                {/* Active index indicators */}
-                {isActive && (
-                  <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow-2xs whitespace-nowrap animate-bounce">
-                    SI, DI Pointer
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Carry Ripple Pathway */}
-        <div className="flex items-center justify-between px-4 py-2 bg-amber-50 border border-amber-300 rounded-xl text-[11px] font-extrabold text-amber-950 shadow-3xs">
-          <div className="flex items-center gap-1.5">
-            <span className="bg-amber-100 border border-amber-400 text-amber-950 px-1.5 py-0.5 rounded text-[9px] font-black">CARRY IN</span>
-            <span className="font-mono text-xs font-black text-amber-950 bg-white/80 border border-amber-250 px-1.5 py-0.5 rounded">{exp1Carry}</span>
-          </div>
-          <div className="flex items-center gap-1 text-amber-950 font-black">
-            <span className="text-amber-900 font-bold">Ripple Propagation:</span>
-            <span className="font-mono bg-amber-100/40 px-2 py-0.5 rounded border border-amber-200">CF = {exp1Carry} ➔ [ADC/SBB] ➔ Next Carry</span>
-          </div>
-          {exp1FinalCarry !== null && (
-            <div className="flex items-center gap-1">
-              <span className="bg-emerald-100 border border-emerald-400 text-emerald-950 px-1.5 py-0.5 rounded text-[9px] uppercase font-black">Final Flags</span>
-              <span className="font-mono text-xs font-black text-emerald-900 bg-white/80 border border-emerald-200 px-1.5 py-0.5 rounded">CY = {exp1FinalCarry}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Live Simulator Operations Console */}
-        <div className="bg-slate-950 text-slate-200 p-3 rounded-2xl border border-slate-800 text-left font-mono">
-          <div className="text-[9px] text-indigo-400 font-bold border-b border-slate-800 pb-1 flex justify-between items-center">
-            <span>TRACE CONTROLLER (ALP RUNTIME)</span>
-            <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-black">STEP {exp1Step}/{exp1Size}</span>
-          </div>
-          
-          <div className="mt-2 text-[12px] leading-relaxed font-mono">
-            {exp1Step === exp1Size ? (
-              <p className="text-emerald-400 font-bold">
-                ✓ Run Complete! Full {exp1Size * 8}-bit {exp1Op === 'ADD' ? 'Addition' : 'Subtraction'} performed successfully.
-                <br />
-                <span className="text-slate-400 text-[11px]">Final Output Value: {exp1Results.slice(0, exp1Size).reverse().join('')}H with {exp1Op === 'ADD' ? 'Carry' : 'Borrow'} = {exp1FinalCarry}.</span>
-              </p>
-            ) : (
-              <div>
-                <p className="text-slate-300">
-                  <span className="text-indigo-400 font-bold">Executing Code:</span> {exp1Op === 'ADD' ? 'ADC AL, [DI]' : 'SBB AL, [DI]'} (Byte {exp1Step})
-                </p>
-                <p className="text-indigo-300 mt-1">
-                  AL = {exp1Num1[exp1Step]}H, [DI] = {exp1Num2[exp1Step]}H, {exp1Op === 'ADD' ? 'CarryIn' : 'BorrowIn'} (CF) = {exp1Carry}
-                </p>
-                <p className="text-amber-400 mt-1 font-bold">
-                  ➔ Calculation: {exp1Num1[exp1Step]}H {exp1Op === 'ADD' ? '+' : '-'} {exp1Num2[exp1Step]}H {exp1Op === 'ADD' ? '+' : '-'} {exp1Carry} (Carry) = {(parseInt(exp1Num1[exp1Step], 16) + (exp1Op === 'ADD' ? 1 : -1) * (parseInt(exp1Num2[exp1Step], 16) + exp1Carry)).toString(16).toUpperCase()}H
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-900 pt-2.5">
-            <button
-              onClick={() => resetSimulator('exp1')}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl text-[10.5px] font-bold cursor-pointer"
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => stepSimulator('exp1')}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-xl text-[10.5px] font-extrabold cursor-pointer flex items-center gap-1 shadow-xs"
-            >
-              {exp1Step >= 4 ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Restart</span>
-                </>
-              ) : (
-                <>
-                  <span>Execute Step {exp1Step + 1}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderDynamicRegisterPair = () => {
-    const is16 = exp2Size === '16bit';
-    const isSigned = exp2Op === 'IMUL' || exp2Op === 'IDIV';
-    const isDiv = exp2Op === 'DIV' || exp2Op === 'IDIV';
-
-    const op1BitSize = isDiv ? 16 : (is16 ? 16 : 8);
-    const op2BitSize = is16 ? 16 : 8;
-
-    const parseHex = (hex: string, bits: 8 | 16 | 32) => {
-      const cleanHex = hex.trim();
-      if (!cleanHex) return { unsigned: 0, signed: 0, isValid: false };
-      const uVal = parseInt(cleanHex, 16);
-      if (isNaN(uVal)) return { unsigned: 0, signed: 0, isValid: false };
-      const limit = Math.pow(2, bits);
-      const signBit = Math.pow(2, bits - 1);
-      const sVal = uVal >= signBit ? uVal - limit : uVal;
-      return { unsigned: uVal, signed: sVal, isValid: true };
-    };
-
-    const op1Parsed = parseHex(exp2Op1, op1BitSize);
-    const op2Parsed = parseHex(exp2Op2, op2BitSize);
-
-    const getDecString = (hexVal: string, bitSize: 8 | 16 | 32, signed: boolean) => {
-      if (!hexVal) return '0';
-      const parsed = parseInt(hexVal, 16);
-      if (isNaN(parsed)) return '0';
-      if (signed) {
-        const limit = Math.pow(2, bitSize);
-        const signBit = Math.pow(2, bitSize - 1);
-        const sVal = parsed >= signBit ? parsed - limit : parsed;
-        return `${sVal}`;
-      } else {
-        return `${parsed}`;
-      }
-    };
-
-    const getComparisonData = () => {
-      if (!op1Parsed.isValid || !op2Parsed.isValid) return null;
-      const u1 = op1Parsed.unsigned;
-      const u2 = op2Parsed.unsigned;
-      const s1 = op1Parsed.signed;
-      const s2 = op2Parsed.signed;
-
-      if (isDiv) {
-        if (u2 === 0) {
-          return {
-            unsignedExpr: `${u1} ÷ ${u2}`,
-            unsignedResult: 'Division by Zero (INT 00H)',
-            signedExpr: `${s1} ÷ ${s2}`,
-            signedResult: 'Division by Zero (INT 00H)'
-          };
-        }
-        
-        // Unsigned Div
-        const uQuot = Math.floor(u1 / u2);
-        const uRem = u1 % u2;
-        const uQuotLimit = is16 ? 65535 : 255;
-        const uResultStr = uQuot > uQuotLimit ? 'Divide Overflow Error' : `Quotient = ${uQuot}, Remainder = ${uRem}`;
-
-        // Signed Div
-        let sResultStr = '';
-        if (s2 === 0) {
-          sResultStr = 'Division by Zero (INT 00H)';
-        } else {
-          const sQuot = Math.trunc(s1 / s2);
-          const sRem = s1 % s2;
-          const qMax = is16 ? 32767 : 127;
-          const qMin = is16 ? -32768 : -128;
-          if (sQuot > qMax || sQuot < qMin) {
-            sResultStr = 'Divide Overflow Error';
-          } else {
-            sResultStr = `Quotient = ${sQuot}, Remainder = ${sRem}`;
-          }
-        }
-
-        return {
-          unsignedExpr: `${u1} ÷ ${u2}`,
-          unsignedResult: uResultStr,
-          signedExpr: `${s1} ÷ ${s2}`,
-          signedResult: sResultStr,
-        };
-      } else {
-        // Multiplication
-        const uProd = u1 * u2;
-        const sProd = s1 * s2;
-        return {
-          unsignedExpr: `${u1} × ${u2}`,
-          unsignedResult: `Product = ${uProd}`,
-          signedExpr: `${s1} × ${s2}`,
-          signedResult: `Product = ${sProd}`,
-        };
-      }
-    };
-
-    const compData = getComparisonData();
-
-    return (
-      <div className="w-full flex flex-col gap-4 text-xs font-mono text-slate-800">
-        {/* Controls block */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-500 text-[10px]">SIZE:</span>
-            <div className="flex bg-white border border-slate-200 rounded-lg p-0.5">
-              {(['8bit', '16bit'] as const).map((sz) => (
-                <button
-                  key={sz}
-                  onClick={() => {
-                    setExp2Size(sz);
-                    setExp2Op1(sz === '8bit' ? 'A1' : '0A12');
-                    setExp2Op2(sz === '8bit' ? '50' : '0050');
-                    resetSimulator('exp2');
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${
-                    exp2Size === sz ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  {sz === '8bit' ? '8-Bit' : '16-Bit'}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-500 text-[10px]">OPERATION:</span>
-            <select
-              value={exp2Op}
-              onChange={(e) => {
-                setExp2Op(e.target.value as any);
-                resetSimulator('exp2');
-              }}
-              className="bg-white border border-slate-200 px-2 py-1 rounded text-[11px] font-bold text-indigo-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="MUL">MUL (Unsigned Mult)</option>
-              <option value="IMUL">IMUL (Signed Mult)</option>
-              <option value="DIV">DIV (Unsigned Div)</option>
-              <option value="IDIV">IDIV (Signed Div)</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Manual inputs & simulation schema */}
-        <div className="grid grid-cols-2 gap-4 items-stretch bg-white/40 p-3 rounded-2xl border border-slate-100">
-          <div className="space-y-2 text-left flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] font-bold text-slate-500 block">
-                  OPERAND 1 ({isDiv ? 'AX' : (is16 ? 'AX' : 'AL')})
-                </label>
-                <span className="text-[8px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-black">
-                  {isDiv ? '16-BIT DIVIDEND' : (is16 ? '16-BIT' : '8-BIT')}
-                </span>
-              </div>
-              <input
-                type="text"
-                maxLength={isDiv ? 4 : (is16 ? 4 : 2)}
-                value={exp2Op1}
-                onChange={(e) => {
-                  setExp2Op1(e.target.value.toUpperCase().replace(/[^0-9A-F]/g, ''));
-                  resetSimulator('exp2');
-                }}
-                placeholder={isDiv ? '0A12' : (is16 ? '0A12' : 'A1')}
-                className="w-full bg-white border border-slate-200 hover:border-indigo-300 focus:border-indigo-500 rounded-lg p-2 font-mono font-black text-slate-900 text-sm focus:outline-none"
-                disabled={exp2Step > 0}
-              />
-              <span className="text-[9px] text-slate-400 block font-bold uppercase mt-1 leading-none">
-                {isDiv ? 'Dividend (Numerator)' : 'Multiplicand'}
-              </span>
-            </div>
-            
-            {op1Parsed.isValid && (
-              <div className="text-[10px] text-slate-500 font-mono mt-2 flex flex-wrap gap-x-2 gap-y-0.5 justify-between bg-slate-50/80 px-2 py-1 rounded border border-slate-200/60 shadow-3xs">
-                <span>Unsigned: <strong className="text-indigo-600 font-bold">{op1Parsed.unsigned}</strong></span>
-                <span>Signed: <strong className={op1Parsed.signed < 0 ? "text-rose-600 font-bold" : "text-emerald-600 font-bold"}>{op1Parsed.signed}</strong></span>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2 text-left flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] font-bold text-slate-500 block">
-                  OPERAND 2 ({is16 ? 'BX' : 'BL'})
-                </label>
-                <span className="text-[8px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-black">
-                  {is16 ? '16-BIT' : '8-BIT'}
-                </span>
-              </div>
-              <input
-                type="text"
-                maxLength={is16 ? 4 : 2}
-                value={exp2Op2}
-                onChange={(e) => {
-                  setExp2Op2(e.target.value.toUpperCase().replace(/[^0-9A-F]/g, ''));
-                  resetSimulator('exp2');
-                }}
-                placeholder={is16 ? '0050' : '50'}
-                className="w-full bg-white border border-slate-200 hover:border-indigo-300 focus:border-indigo-500 rounded-lg p-2 font-mono font-black text-slate-900 text-sm focus:outline-none"
-                disabled={exp2Step > 0}
-              />
-              <span className="text-[9px] text-slate-400 block font-bold uppercase mt-1 leading-none">
-                {isDiv ? 'Divisor (Denominator)' : 'Multiplier'}
-              </span>
-            </div>
-
-            {op2Parsed.isValid && (
-              <div className="text-[10px] text-slate-500 font-mono mt-2 flex flex-wrap gap-x-2 gap-y-0.5 justify-between bg-slate-50/80 px-2 py-1 rounded border border-slate-200/60 shadow-3xs">
-                <span>Unsigned: <strong className="text-indigo-600 font-bold">{op2Parsed.unsigned}</strong></span>
-                <span>Signed: <strong className={op2Parsed.signed < 0 ? "text-rose-600 font-bold" : "text-emerald-600 font-bold"}>{op2Parsed.signed}</strong></span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Registers Visual Graphic */}
-        <div className="flex flex-col gap-2.5 items-center justify-center py-2 bg-slate-50 p-3 rounded-2xl border border-slate-200">
-          <div className="flex items-center justify-center gap-8 text-center w-full">
-            <div className="flex flex-col items-center">
-              <span className="text-[9.5px] text-slate-400 font-bold block mb-1">
-                {isDiv ? 'AX REGISTER' : (is16 ? 'AX REGISTER' : 'AL REGISTER')}
-              </span>
-              <div className="bg-indigo-50 text-indigo-700 font-black text-sm p-2.5 px-5 rounded-xl border border-indigo-200 font-mono shadow-3xs min-w-[70px]">
-                {exp2Op1 || '00'}H
-              </div>
-            </div>
-            
-            <div className="text-lg font-black text-slate-300">
-              {isDiv ? '÷' : '×'}
-            </div>
-
-            <div className="flex flex-col items-center">
-              <span className="text-[9.5px] text-slate-400 font-bold block mb-1">
-                {is16 ? 'BX REGISTER' : 'BL REGISTER'}
-              </span>
-              <div className="bg-indigo-50 text-indigo-700 font-black text-sm p-2.5 px-5 rounded-xl border border-indigo-200 font-mono shadow-3xs min-w-[70px]">
-                {exp2Op2 || '00'}H
-              </div>
-            </div>
-          </div>
-
-          <div className="text-indigo-400 text-[10px] font-black animate-pulse flex items-center gap-1">
-            <span>─── ALU HARDWARE CONVERTER EXECUTION ───▶</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 w-full">
-            <div className="flex flex-col items-center bg-white p-2.5 rounded-xl border border-slate-150">
-              <span className="text-[9px] text-slate-500 font-bold uppercase mb-1">
-                {isDiv ? (is16 ? 'Quotient (AX)' : 'Quotient (AL)') : (is16 ? 'AX (Lower Product Word)' : 'AX (Full Product)')}
-              </span>
-              <strong className={`text-sm font-mono font-black ${exp2Step === 2 ? 'text-emerald-600' : 'text-slate-300'}`}>
-                {exp2Step === 2 ? `${exp2ResultAX}H` : '????H'}
-              </strong>
-              
-              {exp2Step === 2 && (
-                <div className="text-[9.5px] text-slate-500 font-mono mt-2 flex flex-col items-center bg-slate-50/80 p-1.5 rounded-lg border border-slate-200 w-full gap-0.5">
-                  <div>Unsigned: <strong className="text-indigo-600 font-bold">{getDecString(exp2ResultAX, isDiv ? (is16 ? 16 : 8) : 16, false)}</strong></div>
-                  <div>Signed: <strong className="text-rose-600 font-bold">{getDecString(exp2ResultAX, isDiv ? (is16 ? 16 : 8) : 16, true)}</strong></div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col items-center bg-white p-2.5 rounded-xl border border-slate-150">
-              <span className="text-[9px] text-slate-500 font-bold uppercase mb-1">
-                {isDiv ? (is16 ? 'Remainder (DX)' : 'Remainder (AH)') : (is16 ? 'DX (Upper Product Word)' : 'DX (Not Used)')}
-              </span>
-              <strong className={`text-sm font-mono font-black ${exp2Step === 2 ? 'text-emerald-600' : 'text-slate-300'}`}>
-                {exp2Step === 2 ? (isDiv ? (is16 ? `${exp2Remainder}H` : `${exp2Remainder}H`) : `${exp2ResultDX}H`) : '????H'}
-              </strong>
-              
-              {exp2Step === 2 && (
-                <div className="text-[9.5px] text-slate-500 font-mono mt-2 flex flex-col items-center bg-slate-50/80 p-1.5 rounded-lg border border-slate-200 w-full gap-0.5">
-                  {isDiv ? (
-                    <>
-                      <div>Unsigned: <strong className="text-indigo-600 font-bold">{getDecString(exp2Remainder, is16 ? 16 : 8, false)}</strong></div>
-                      <div>Signed: <strong className="text-rose-600 font-bold">{getDecString(exp2Remainder, is16 ? 16 : 8, true)}</strong></div>
-                    </>
-                  ) : is16 ? (
-                    <>
-                      <div>Unsigned: <strong className="text-indigo-600 font-bold">{getDecString(exp2ResultDX, 16, false)}</strong></div>
-                      <div>Signed: <strong className="text-rose-600 font-bold">{getDecString(exp2ResultDX, 16, true)}</strong></div>
-                    </>
-                  ) : (
-                    <span className="text-[9px] text-slate-400 py-1">Cleared / Not Used</span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Live Simulator Operations Console */}
-        <div className="bg-slate-950 text-slate-200 p-3.5 rounded-2xl border border-slate-800 text-left font-mono">
-          <div className="text-[9px] text-indigo-400 font-bold border-b border-slate-800 pb-1.5 flex justify-between items-center">
-            <span>MULTIPROCESSOR EXECUTION UNIT (ALU)</span>
-            <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-black text-[9px]">
-              {exp2Step === 0 ? 'INPUT STAGE' : exp2Step === 1 ? 'LOAD STAGE' : 'COMPLETE'}
-            </span>
-          </div>
-
-          <div className="mt-2 text-[12px] leading-relaxed font-mono min-h-[50px]">
-            {exp2Error ? (
-              <p className="text-rose-400 font-bold">❌ Error: {exp2Error}</p>
-            ) : exp2Step === 0 ? (
-              <p className="text-slate-400">
-                Configure your hex operands above, then click <span className="text-indigo-400 font-bold">"Load Operands"</span> to begin.
-              </p>
-            ) : exp2Step === 1 ? (
-              <p className="text-amber-400 font-bold">
-                ✓ Operands loaded. Click <span className="text-indigo-300 font-bold">"Execute ALU Cycle"</span> to compute hex logic for {exp2Op}.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                <div className="text-emerald-400 font-bold">
-                  <p>✓ Calculation completed successfully!</p>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Assembly Expression: <span className="text-indigo-300">{exp2Op} {is16 ? 'BX' : 'BL'}</span> (Operand1 in AX/AL = {exp2Op1}H, Operand2 in BX/BL = {exp2Op2}H)
-                  </p>
-                </div>
-
-                {compData && (
-                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs space-y-2">
-                    <div className="text-[10px] text-slate-400 font-bold tracking-wider uppercase">
-                      Comparative Register Analysis (Signed vs Unsigned):
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono">
-                      {/* Unsigned display */}
-                      <div className={`p-2.5 rounded-xl border ${!isSigned ? 'bg-indigo-950/50 border-indigo-500/40 text-indigo-100' : 'bg-slate-950/30 border-slate-850 text-slate-400'}`}>
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Unsigned Interpretation ({exp2Op.replace('I', '')})</span>
-                          {!isSigned && <span className="bg-indigo-500 text-white text-[7px] px-1 py-0.5 rounded font-sans uppercase font-bold">Active Mode</span>}
-                        </div>
-                        <div className="text-[11px] font-bold text-slate-200">{compData.unsignedExpr}</div>
-                        <div className="text-[11.5px] text-indigo-300 mt-1 font-semibold">{compData.unsignedResult}</div>
-                      </div>
-
-                      {/* Signed display */}
-                      <div className={`p-2.5 rounded-xl border ${isSigned ? 'bg-indigo-950/50 border-indigo-500/40 text-indigo-100' : 'bg-slate-950/30 border-slate-850 text-slate-400'}`}>
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-[9px] font-bold text-rose-400 uppercase tracking-wider">Signed Interpretation ({exp2Op.includes('I') ? exp2Op : 'I' + exp2Op})</span>
-                          {isSigned && <span className="bg-rose-500 text-white text-[7px] px-1 py-0.5 rounded font-sans uppercase font-bold">Active Mode</span>}
-                        </div>
-                        <div className="text-[11px] font-bold text-slate-200">{compData.signedExpr}</div>
-                        <div className="text-[11.5px] text-rose-300 mt-1 font-semibold">{compData.signedResult}</div>
-                      </div>
-                    </div>
-                    <p className="text-[9.5px] text-slate-500 leading-normal italic text-justify">
-                      Notice how the CPU execution logic changes depending on signedness! The exact same hex binary patterns are interpreted as negative numbers in 2's complement when using signed instructions (IMUL/IDIV).
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-900 pt-2.5">
-            <button
-              onClick={() => resetSimulator('exp2')}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl text-[10.5px] font-bold cursor-pointer transition-colors"
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => stepSimulator('exp2')}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-xl text-[10.5px] font-extrabold cursor-pointer flex items-center gap-1 shadow-xs transition-colors"
-            >
-              {exp2Step === 2 ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Restart</span>
-                </>
-              ) : (
-                <>
-                  <span>{exp2Step === 0 ? 'Load Operands' : 'Execute ALU Cycle'}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderDynamicPointerScan = () => {
-    return (
-      <div className="w-full flex flex-col gap-4 text-xs font-mono text-slate-800">
-        {/* Controls block */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-slate-500 text-[10px]">ARRAY PRESETS:</span>
-            <button
-              onClick={() => {
-                setExp3Array(['25', '4A', '12', '8B', '05', '92', '31', '15']);
-                resetSimulator('exp3');
-              }}
-              className="bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 px-2 py-1 rounded text-[10px] font-bold cursor-pointer"
-            >
-              Preset 1
-            </button>
-            <button
-              onClick={() => {
-                setExp3Array(['FF', 'EE', 'DD', 'CC', 'BB', 'AA', '99', '88']);
-                resetSimulator('exp3');
-              }}
-              className="bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 px-2 py-1 rounded text-[10px] font-bold cursor-pointer"
-            >
-              Decreasing
-            </button>
-            <button
-              onClick={() => {
-                const arr = Array.from({length:8}, () => Math.floor(Math.random()*256).toString(16).toUpperCase().padStart(2, '0'));
-                setExp3Array(arr);
-                resetSimulator('exp3');
-              }}
-              className="bg-white hover:bg-indigo-50 text-indigo-600 border border-indigo-200 px-2 py-1 rounded text-[10px] font-bold cursor-pointer flex items-center gap-1"
-            >
-              <RefreshCw className="w-3 h-3" /> Randomize
-            </button>
-          </div>
-        </div>
-
-        {/* Array Visualization */}
-        <div className="flex flex-col gap-1 text-left bg-white/40 p-3 rounded-2xl border border-slate-100">
-          <div className="flex justify-between items-center text-slate-400 text-[9px] font-bold mb-1.5">
-            <span>REGISTER SI (Offset index pointer)</span>
-            <span>Scan Flow: Left to Right ────▶</span>
-          </div>
-
-          <div className="flex gap-1.5 overflow-x-auto py-1">
-            {exp3Array.map((val, i) => {
-              const isCurrent = exp3Step === i;
-              const isPassed = exp3Step > i;
-              return (
-                <div
-                  key={i}
-                  className={`flex-1 min-w-[32px] text-center p-2 rounded-xl border transition-all duration-300 relative ${
-                    isCurrent
-                      ? 'bg-amber-100 border-amber-500 text-amber-800 scale-[1.05] ring-2 ring-amber-400 font-black'
-                      : isPassed
-                      ? 'bg-slate-50 border-slate-200 text-slate-400'
-                      : 'bg-indigo-50/50 border-indigo-100 text-indigo-900 font-bold'
-                  }`}
-                >
-                  <div className="text-[8px] font-mono text-slate-400 mb-0.5">SI={i}</div>
-                  <input
-                    type="text"
-                    maxLength={2}
-                    value={val}
-                    onChange={(e) => {
-                      const next = [...exp3Array];
-                      next[i] = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, '');
-                      setExp3Array(next);
-                      resetSimulator('exp3');
-                    }}
-                    className={`w-full text-center bg-transparent border-none text-[11px] font-mono font-bold focus:outline-none ${
-                      isCurrent ? 'text-amber-950 font-black' : 'text-indigo-950'
-                    }`}
-                    disabled={exp3Step > 0}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Dynamic Comparison Panel */}
-        <div className="grid grid-cols-3 gap-2.5 items-center justify-between bg-slate-50 p-2.5 rounded-2xl border border-slate-200 text-center">
-          <div className="flex flex-col items-center bg-white p-2 rounded-xl border border-slate-150">
-            <span className="text-[8.5px] text-slate-400 font-bold">AL (MAX SO FAR)</span>
-            <strong className="text-sm text-indigo-700 font-black mt-0.5">{exp3MaxAL}H</strong>
-          </div>
-
-          <div className="flex flex-col items-center justify-center p-1 font-black bg-indigo-50 text-indigo-800 rounded-xl border border-indigo-150 text-[10px] min-h-[45px]">
-            {exp3Step === 0 ? (
-              <span>CLICK STEP TO START</span>
-            ) : exp3Step >= 8 ? (
-              <span className="text-emerald-700">SCAN COMPLETED</span>
-            ) : (
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="text-[7.5px] text-indigo-500 uppercase">CMP Instruction</span>
-                <span>{exp3Array[exp3Step - 1]}H vs {exp3MaxAL}H</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col items-center bg-white p-2 rounded-xl border border-slate-150">
-            <span className="text-[8.5px] text-slate-400 font-bold">REMAINING CX</span>
-            <strong className="text-sm text-indigo-700 font-black mt-0.5">
-              {Math.max(0, 8 - exp3Step)}
-            </strong>
-          </div>
-        </div>
-
-        {/* Operations Console */}
-        <div className="bg-slate-950 text-slate-200 p-3 rounded-2xl border border-slate-800 text-left font-mono">
-          <div className="text-[9px] text-indigo-400 font-bold border-b border-slate-800 pb-1 flex justify-between items-center">
-            <span>REGISTER TRACE SCANNER (CMP ENGINE)</span>
-            <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-black">
-              STEP {exp3Step}/8
-            </span>
-          </div>
-
-          <div className="mt-2 text-[12px] leading-relaxed font-mono min-h-[50px]">
-            {exp3Step === 0 ? (
-              <p className="text-slate-400">
-                Click <span className="text-indigo-400 font-bold">"Execute Step"</span> to initialize AL = [SI] and start scanning the array.
-              </p>
-            ) : exp3Step >= 8 ? (
-              <p className="text-emerald-400 font-bold">
-                ✓ Scan Complete! Maximum element found: <span className="text-white bg-emerald-600 px-1.5 py-0.5 rounded text-xs">{exp3MaxAL}H</span>
-              </p>
-            ) : (
-              <div>
-                <p className="text-slate-300">
-                  <span className="text-indigo-400 font-bold">CMP AL, [SI]:</span> Comparing Current Max ({exp3MaxAL}H) with [SI] ({exp3Array[exp3Step - 1]}H).
-                </p>
-                {exp3IsGreater ? (
-                  <p className="text-amber-400 font-bold mt-1">
-                    ➔ AL ({exp3MaxAL}H) is already greater or equal. Skip update!
-                  </p>
-                ) : (
-                  <p className="text-emerald-400 font-bold mt-1">
-                    ➔ New maximum candidate found! Updating Register AL = {exp3Array[exp3Step - 1]}H.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-900 pt-2.5">
-            <button
-              onClick={() => resetSimulator('exp3')}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl text-[10.5px] font-bold cursor-pointer"
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => stepSimulator('exp3')}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-xl text-[10.5px] font-extrabold cursor-pointer flex items-center gap-1 shadow-xs"
-            >
-              {exp3Step >= 8 ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Restart</span>
-                </>
-              ) : (
-                <>
-                  <span>Execute Step {exp3Step + 1}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderDynamicBubbleSwap = () => {
-    return (
-      <div className="w-full flex flex-col gap-4 text-xs font-mono text-slate-800">
-        {/* Array Presets and controls */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-slate-500 text-[10px]">PRESETS:</span>
-            <button
-              onClick={() => {
-                setExp4Array(['88', '11', '55', '22', '44', '33']);
-                resetSimulator('exp4');
-              }}
-              className="bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 px-2 py-1 rounded text-[10px] font-bold cursor-pointer"
-            >
-              Reverse Sorted
-            </button>
-            <button
-              onClick={() => {
-                const arr = Array.from({length:6}, () => Math.floor(Math.random()*256).toString(16).toUpperCase().padStart(2, '0'));
-                setExp4Array(arr);
-                resetSimulator('exp4');
-              }}
-              className="bg-white hover:bg-indigo-50 text-indigo-600 border border-indigo-200 px-2 py-1 rounded text-[10px] font-bold cursor-pointer flex items-center gap-1"
-            >
-              <RefreshCw className="w-3.5 h-3.5" /> Randomize
-            </button>
-          </div>
-          <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
-            <span>Pass: <span className="text-indigo-700 font-black">{exp4Pass}</span></span>
-            <span className="mx-1">|</span>
-            <span>Index SI: <span className="text-indigo-700 font-black">{exp4SI}</span></span>
-          </div>
-        </div>
-
-        {/* Array Cards Map */}
-        <div className="flex flex-col gap-1 text-left bg-white/40 p-3 rounded-2xl border border-slate-100">
-          <div className="flex justify-between items-center text-slate-400 text-[9px] font-bold mb-1.5">
-            <span>BUBBLE SORT ARRAY COMPONENT STACK</span>
-            <span>Adjacent bounds compared: [SI] and [SI+1]</span>
-          </div>
-
-          <div className="flex gap-2">
-            {exp4Array.map((val, i) => {
-              const isSI = exp4SI === i;
-              const isSIPlus = exp4SI + 1 === i;
-              const isComparing = exp4StepActive === 'compare' || exp4StepActive === 'swap';
-              const isSortedRegion = i >= exp4Array.length - exp4Pass + 1;
-              
-              let cardStyle = 'bg-indigo-50/50 border-indigo-100 text-indigo-900';
-              if (isComparing && isSI) {
-                cardStyle = 'bg-amber-100 border-amber-500 text-amber-800 scale-[1.04] ring-2 ring-amber-400 z-10 font-black';
-              } else if (isComparing && isSIPlus) {
-                cardStyle = 'bg-rose-100 border-rose-500 text-rose-800 scale-[1.04] ring-2 ring-rose-400 z-10 font-black';
-              } else if (isSortedRegion) {
-                cardStyle = 'bg-emerald-50 border-emerald-200 text-emerald-800/60 opacity-80';
-              }
-
-              return (
-                <div
-                  key={i}
-                  className={`flex-1 text-center p-2.5 rounded-xl border transition-all duration-300 relative ${cardStyle}`}
-                >
-                  <div className="text-[7.5px] font-mono text-slate-400 mb-0.5">
-                    {i === exp4SI ? 'SI' : i === exp4SI + 1 ? 'SI+1' : `Off ${i}`}
-                  </div>
-                  <input
-                    type="text"
-                    maxLength={2}
-                    value={val}
-                    onChange={(e) => {
-                      const next = [...exp4Array];
-                      next[i] = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, '');
-                      setExp4Array(next);
-                      resetSimulator('exp4');
-                    }}
-                    className={`w-full text-center bg-transparent border-none text-[12px] font-mono font-black focus:outline-none ${
-                      isSI || isSIPlus ? 'text-slate-900' : 'text-indigo-950'
-                    }`}
-                    disabled={exp4StepActive !== 'compare' || exp4SI > 0 || exp4Pass > 1}
-                  />
-                  {isSortedRegion && (
-                    <span className="absolute -top-1.5 right-1 bg-emerald-500 text-white rounded-full p-0.5 text-[6px] font-black scale-75">
-                      ✓
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Real-time comparison text */}
-        <div className="flex items-center justify-between p-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-[10.5px] font-bold text-slate-700 font-mono">
-          <div className="flex items-center gap-1">
-            <span className="bg-slate-200 text-slate-800 px-1.5 py-0.5 rounded text-[8.5px]">CMP</span>
-            <span>[SI] ({exp4Array[exp4SI]}H) &gt; [SI+1] ({exp4Array[exp4SI + 1]}H) ?</span>
-          </div>
-          <div>
-            {exp4StepActive === 'compare' ? (
-              <span className="text-amber-600 animate-pulse">Evaluating...</span>
-            ) : exp4Swapped ? (
-              <span className="text-rose-600 font-black">YES, SWAP NEEDED!</span>
-            ) : (
-              <span className="text-emerald-600 font-black">NO, KEEP ORDER</span>
-            )}
-          </div>
-        </div>
-
-        {/* Execution Unit status console */}
-        <div className="bg-slate-950 text-slate-200 p-3 rounded-2xl border border-slate-800 text-left font-mono">
-          <div className="text-[9px] text-indigo-400 font-bold border-b border-slate-800 pb-1 flex justify-between items-center">
-            <span>BUBBLE SORT MULTI-PASS COMPILATION PROCESSOR</span>
-            <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-black uppercase">
-              {exp4StepActive} Stage
-            </span>
-          </div>
-
-          <div className="mt-2 text-[12px] leading-relaxed font-mono min-h-[50px]">
-            {exp4StepActive === 'done' ? (
-              <p className="text-emerald-400 font-bold">
-                ✓ Array successfully sorted: <span className="text-white bg-emerald-600 px-1.5 py-0.5 rounded text-xs">{exp4Array.join('H, ')}H</span>
-              </p>
-            ) : exp4StepActive === 'compare' ? (
-              <p className="text-slate-300">
-                Comparing element <span className="text-amber-400 font-bold">{exp4Array[exp4SI]}H</span> with adjacent <span className="text-rose-400 font-bold">{exp4Array[exp4SI + 1]}H</span>.
-              </p>
-            ) : exp4StepActive === 'swap' ? (
-              <p className="text-amber-400">
-                {exp4Swapped ? (
-                  <span>
-                    ➔ Swap triggered! Loading [SI] into AL register and [SI+1] into AH, and cross-saving them.
-                  </span>
-                ) : (
-                  <span>➔ Elements are in perfect order. No swap required.</span>
-                )}
-              </p>
-            ) : (
-              <p className="text-indigo-300">
-                Incrementing SI index pointer to inspect next adjacent pair in active window.
-              </p>
-            )}
-          </div>
-
-          <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-900 pt-2.5">
-            <button
-              onClick={() => resetSimulator('exp4')}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl text-[10.5px] font-bold cursor-pointer"
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => stepSimulator('exp4')}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-xl text-[10.5px] font-extrabold cursor-pointer flex items-center gap-1 shadow-xs"
-            >
-              {exp4StepActive === 'done' ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Restart</span>
-                </>
-              ) : (
-                <>
-                  <span>
-                    {exp4StepActive === 'compare' ? 'Analyze CMP' : exp4StepActive === 'swap' ? 'Swap Buffers' : 'Next Pair'}
-                  </span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderDynamicBlockCopy = () => {
-    return (
-      <div className="w-full flex flex-col gap-4 text-xs font-mono text-slate-800">
-        {/* Toggle Overlapping vs Non-overlapping */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-500 text-[10px]">MEMORY MAP:</span>
-            <div className="flex bg-white border border-slate-200 rounded-lg p-0.5">
-              {(['none', 'forward', 'backward'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => {
-                    setExp5Overlap(mode);
-                    resetSimulator('exp5');
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${
-                    exp5Overlap === mode ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  {mode === 'none' ? 'Non-Overlapping' : mode === 'forward' ? 'Overlap (Forward Copy Bug!)' : 'Overlap (Backward STD Fix!)'}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Source array row */}
-        <div className="flex flex-col gap-1 text-left bg-white/40 p-2.5 rounded-xl border border-slate-100">
-          <span className="text-indigo-600 text-[9px] font-bold uppercase leading-none mb-1.5 block">
-            SOURCE MEMORY BLOCK (DS:SI starts at 1100H)
-          </span>
-          <div className="flex gap-2">
-            {exp5Array.map((val, i) => {
-              const isSourcePointer = exp5Overlap === 'backward'
-                ? (5 - 1 - exp5Step === i && exp5Step < 5)
-                : (exp5Step === i && exp5Step < 5);
-              return (
-                <div
-                  key={i}
-                  className={`flex-1 text-center p-2 rounded-xl border relative transition-all ${
-                    isSourcePointer ? 'bg-amber-100 border-amber-500 text-amber-800 ring-2 ring-amber-400 font-black scale-[1.02]' : 'bg-slate-50 border-slate-200'
-                  }`}
-                >
-                  <div className="text-[7.5px] text-slate-400 mb-0.5">110{i}H</div>
-                  <input
-                    type="text"
-                    maxLength={2}
-                    value={val}
-                    onChange={(e) => {
-                      const next = [...exp5Array];
-                      next[i] = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, '');
-                      setExp5Array(next);
-                      resetSimulator('exp5');
-                    }}
-                    className="w-full text-center bg-transparent border-none text-[11px] font-mono font-bold focus:outline-none"
-                    disabled={exp5Step > 0}
-                  />
-                  {isSourcePointer && (
-                    <span className="absolute -bottom-1.5 text-[7px] left-1/2 -translate-x-1/2 bg-amber-600 text-white px-1 rounded font-black whitespace-nowrap">
-                      SI
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Destination array row */}
-        <div className="flex flex-col gap-1 text-left bg-white/40 p-2.5 rounded-xl border border-slate-100">
-          <span className="text-emerald-600 text-[9px] font-bold uppercase leading-none mb-1.5 block">
-            DESTINATION MEMORY BLOCK (ES:DI starts at {exp5Overlap === 'none' ? '1200H' : '1102H'})
-          </span>
-          <div className="flex gap-2">
-            {exp5DestArray.map((val, i) => {
-              const destOffset = exp5Overlap === 'none' ? 0 : 2;
-              const isDestPointer = exp5Overlap === 'backward'
-                ? (5 - 1 - exp5Step + destOffset === i && exp5Step < 5)
-                : (exp5Step + destOffset === i && exp5Step < 5);
-              return (
-                <div
-                  key={i}
-                  className={`flex-1 text-center p-2 rounded-xl border relative transition-all ${
-                    isDestPointer ? 'bg-emerald-100 border-emerald-500 text-emerald-800 ring-2 ring-emerald-400 font-black scale-[1.02]' : 'bg-slate-50 border-slate-200'
-                  }`}
-                >
-                  <div className="text-[7.5px] text-slate-400 mb-0.5">
-                    {exp5Overlap === 'none' ? `120${i}H` : `110${i}H`}
-                  </div>
-                  <div className={`text-[11px] font-black ${val !== '00' ? 'text-emerald-700' : 'text-slate-300'}`}>
-                    {val}H
-                  </div>
-                  {isDestPointer && (
-                    <span className="absolute -bottom-1.5 text-[7px] left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-1 rounded font-black whitespace-nowrap">
-                      DI
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Live Simulator Operations Console */}
-        <div className="bg-slate-950 text-slate-200 p-3 rounded-2xl border border-slate-800 text-left font-mono">
-          <div className="text-[9px] text-indigo-400 font-bold border-b border-slate-800 pb-1 flex justify-between items-center">
-            <span>STRING TRANSFER COPROCESSOR (REP MOVSB)</span>
-            <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-black">
-              DF = {exp5Overlap === 'backward' ? '1 (DN)' : '0 (UP)'} | CX = {Math.max(0, 5 - exp5Step)}
-            </span>
-          </div>
-
-          <div className="mt-2 text-[12px] leading-relaxed font-mono min-h-[50px]">
-            {exp5Step >= 5 ? (
-              <div className="text-emerald-400 font-bold">
-                <p>✓ Transfer Complete!</p>
-                {exp5Overlap === 'forward' ? (
-                  <p className="text-rose-400 font-black text-[11px] mt-1 leading-snug">
-                    ⚠️ ALERT: Look at the destination offsets! Because we copied forward, offsets 1102H and 1103H got overwritten before they could be read! The copied sequence is corrupted.
-                  </p>
-                ) : exp5Overlap === 'backward' ? (
-                  <p className="text-emerald-400 font-black text-[11px] mt-1 leading-snug">
-                    ✓ SUCCESS: By setting DF=1 (STD), the processor copied backwards (starting at 1104H to 1106H). No original data was overwritten before reading!
-                  </p>
-                ) : (
-                  <p className="text-slate-400 text-[11px] mt-1">
-                    Non-overlapping block copy completed perfectly into the 1200H space.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div>
-                <p className="text-slate-300">
-                  <span className="text-indigo-400 font-bold">Instruction:</span> MOVSB (Byte {exp5Step + 1}/5)
-                </p>
-                {exp5Overlap === 'backward' ? (
-                  <p className="text-amber-400 font-bold mt-1">
-                    ➔ Reading from 110{4 - exp5Step}H ({exp5Array[4 - exp5Step]}H) and writing to 110{6 - exp5Step}H. SI & DI decrementing.
-                  </p>
-                ) : exp5Overlap === 'forward' ? (
-                  <p className="text-rose-400 font-bold mt-1">
-                    ➔ Reading from 110{exp5Step}H and writing to 110{exp5Step + 2}H.
-                    {exp5Step >= 2 && <span className="block text-[10px] text-red-300 font-mono mt-0.5">* Notice: Reading value that was already overwritten!</span>}
-                  </p>
-                ) : (
-                  <p className="text-emerald-400 font-bold mt-1">
-                    ➔ Reading from 110{exp5Step}H ({exp5Array[exp5Step]}H) and writing to 120{exp5Step}H.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-900 pt-2.5">
-            <button
-              onClick={() => resetSimulator('exp5')}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl text-[10.5px] font-bold cursor-pointer"
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => stepSimulator('exp5')}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-xl text-[10.5px] font-extrabold cursor-pointer flex items-center gap-1 shadow-xs"
-            >
-              {exp5Step >= 5 ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Restart</span>
-                </>
-              ) : (
-                <>
-                  <span>Copy Byte {exp5Step + 1}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderSchematicDiagram = (diagramType: string) => {
-    switch (diagramType) {
-      case 'carry-ripple':
-        return renderDynamicCarryRipple();
-      case 'register-pair':
-        return renderDynamicRegisterPair();
-      case 'pointer-scan':
-        return renderDynamicPointerScan();
-      case 'bubble-swap':
-        return renderDynamicBubbleSwap();
-      case 'block-copy':
-        return renderDynamicBlockCopy();
-      default:
-        return null;
-    }
-  };
-
-  const renderStaticCalculations = () => {
-    const activeLabData = labManualPagesData[selectedLabId] || labManualPagesData['exp1'];
-    return (
-      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex-1 flex flex-col gap-2">
-        {activeLabData.manualCalculations.steps.map((st, idx) => (
-          <div key={idx} className="bg-white border border-slate-150 p-3 rounded-xl flex flex-col gap-1 shadow-3xs hover:border-teal-200 transition-all">
-            <div className="flex items-center gap-2">
-              <span className="bg-teal-50 border border-teal-100 text-teal-700 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md uppercase">
-                Step {idx + 1}
-              </span>
-              <h5 className="font-bold text-[13px] text-slate-900">{st.step}</h5>
-            </div>
-            <p className="text-[13px] text-slate-600 leading-normal pl-2 border-l-2 border-slate-100">
-              {st.detail}
-            </p>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const renderDynamicCalculationsExpMath = () => {
-    const n = expMathInput;
-    const squareVal = n * n;
-    const cubeVal = n * n * n;
-    
-    // Factorial calculation and iterations trace
-    let factVal = 1;
-    const factTrace = [];
-    for (let i = n; i >= 1; i--) {
-      const prevFact = factVal;
-      factVal = factVal * i;
-      factTrace.push({
-        iteration: n - i + 1,
-        cxVal: i,
-        prevAX: prevFact,
-        currAX: factVal,
-        detail: `AX (${prevFact}) * CX (${i}) = ${factVal}`
-      });
-    }
-
-    return (
-      <div className="space-y-5 text-left">
-        {/* Interactive Control Block */}
-        <div className="bg-teal-50 border border-teal-150 p-3.5 rounded-2xl text-teal-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse"></span>
-            <span className="font-bold text-[13px]">Active Input (NUM DB):</span>
-            <span className="bg-teal-100 px-2.5 py-0.5 rounded text-xs font-black">N = {n}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setExpMathInput(prev => Math.max(1, prev - 1))}
-              disabled={n <= 1}
-              className="w-7 h-7 flex items-center justify-center bg-white border border-teal-200 rounded-lg hover:bg-teal-100 disabled:opacity-50 text-teal-800 font-extrabold cursor-pointer"
-            >
-              -
-            </button>
-            <span className="w-8 text-center font-bold font-sans text-slate-800 text-sm">{n}</span>
-            <button
-              onClick={() => setExpMathInput(prev => Math.min(8, prev + 1))}
-              disabled={n >= 8}
-              className="w-7 h-7 flex items-center justify-center bg-white border border-teal-200 rounded-lg hover:bg-teal-100 disabled:opacity-50 text-teal-800 font-extrabold cursor-pointer"
-            >
-              +
-            </button>
-            <span className="text-[10px] text-slate-500 italic font-sans ml-1">(Limit: 1 - 8)</span>
-          </div>
-        </div>
-
-        {/* Square and Cube Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-white border border-slate-150 p-3.5 rounded-2xl space-y-2.5 shadow-3xs hover:border-indigo-200 transition-colors">
-            <span className="text-[9.5px] font-mono font-black text-indigo-600 uppercase tracking-widest block border-b border-slate-100 pb-1.5">
-              1. SQUARE CALCULATION (N²)
-            </span>
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-500">Operation:</span>
-                <span className="font-mono text-slate-800 font-extrabold">{n} × {n}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-500">Decimal Result:</span>
-                <span className="font-sans font-black text-slate-900">{squareVal}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-500">Hexadecimal (SQUARE):</span>
-                <span className="font-mono font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                  {squareVal.toString(16).toUpperCase().padStart(4, '0')}H
-                </span>
-              </div>
-            </div>
-            <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 space-y-1">
-              <span className="text-[8px] font-mono font-extrabold text-slate-400 block uppercase">8086 Assembly Logic:</span>
-              <pre className="font-mono text-[10.5px] leading-tight text-slate-600">
-                {`MOV AL, NUM  ; AL = ${n}\nXOR AH, AH   ; AX = ${n}\nMUL AL       ; AX = ${squareVal} (${squareVal.toString(16).toUpperCase()}H)`}
-              </pre>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-150 p-3.5 rounded-2xl space-y-2.5 shadow-3xs hover:border-indigo-200 transition-colors">
-            <span className="text-[9.5px] font-mono font-black text-indigo-600 uppercase tracking-widest block border-b border-slate-100 pb-1.5">
-              2. CUBE CALCULATION (N³)
-            </span>
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-500">Operation:</span>
-                <span className="font-mono text-slate-800 font-extrabold">{squareVal} × {n}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-500">Decimal Result:</span>
-                <span className="font-sans font-black text-slate-900">{cubeVal}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-500">Hexadecimal (CUBE):</span>
-                <span className="font-mono font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                  {cubeVal.toString(16).toUpperCase().padStart(4, '0')}H
-                </span>
-              </div>
-            </div>
-            <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 space-y-1">
-              <span className="text-[8px] font-mono font-extrabold text-slate-400 block uppercase">8086 Assembly Logic:</span>
-              <pre className="font-mono text-[10.5px] leading-tight text-slate-600">
-                {`MOV BX, AX   ; BX = ${squareVal}\nMOV AL, NUM  ; AL = ${n}\nXOR AH, AH   ; AH = 0\nMUL BX       ; AX = ${cubeVal} (${cubeVal.toString(16).toUpperCase()}H)`}
-              </pre>
-            </div>
-          </div>
-        </div>
-
-        {/* Factorial Loop Walkthrough Block */}
-        <div className="bg-white border border-slate-150 p-4 rounded-2xl space-y-3 shadow-3xs">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <span className="text-[10px] font-mono font-black text-indigo-600 uppercase tracking-widest block">
-              3. FACTORIAL LOOP TRACE (N!)
-            </span>
-            <span className="bg-emerald-50 border border-emerald-100 text-emerald-800 font-mono font-black text-[10px] px-2.5 py-0.5 rounded-lg">
-              Result: {factVal} ({factVal.toString(16).toUpperCase().padStart(4, '0')}H)
-            </span>
-          </div>
-
-          <div className="space-y-1.5 text-xs text-slate-600">
-            <p className="leading-relaxed">
-              Factorial of <strong className="text-slate-900">{n}</strong> is computed iteratively using the <strong className="font-mono text-slate-900 bg-slate-100 px-1 rounded text-[11px]">LOOP</strong> instruction, executing exactly <strong className="text-slate-900">{n}</strong> times:
-            </p>
-          </div>
-
-          <div className="overflow-hidden border border-slate-200 rounded-xl bg-slate-50/45">
-            <table className="w-full text-left border-collapse font-mono text-[11.5px]">
-              <thead>
-                <tr className="bg-slate-100 text-slate-500 font-black uppercase text-[9px] border-b border-slate-200">
-                  <th className="px-3 py-2 border-r border-slate-200 text-center w-12">Iter</th>
-                  <th className="px-3 py-2 border-r border-slate-200 text-center">CX (Counter)</th>
-                  <th className="px-3 py-2 border-r border-slate-200">Active Multiply</th>
-                  <th className="px-3 py-2">AX (Accumulator)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-150 bg-white font-black text-slate-700">
-                {factTrace.map((tr) => (
-                  <tr key={tr.iteration} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-3 py-2 border-r border-slate-200 text-center bg-slate-50/40">{tr.iteration}</td>
-                    <td className="px-3 py-2 border-r border-slate-200 text-center font-bold">{tr.cxVal}</td>
-                    <td className="px-3 py-2 border-r border-slate-200 text-slate-600 font-medium">{tr.detail}</td>
-                    <td className="px-3 py-2 text-indigo-600 bg-indigo-50/20">{tr.currAX.toString(16).toUpperCase().padStart(4, '0')}H ({tr.currAX})</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderDynamicCalculationsExp1 = () => {
-    const stepsTrace = [];
-    let carry = 0;
-    for (let i = 0; i < exp1Size; i++) {
-      const a = parseInt(exp1Num1[i] || '0', 16);
-      const b = parseInt(exp1Num2[i] || '0', 16);
-      const carryIn = carry;
-      
-      let sumOrDiff = 0;
-      let carryOut = 0;
-      let label = '';
-      let equation = '';
-      
-      if (exp1Op === 'ADD') {
-        sumOrDiff = a + b + carryIn;
-        carryOut = sumOrDiff > 255 ? 1 : 0;
-        const res = sumOrDiff & 0xFF;
-        equation = `${exp1Num1[i]}H + ${exp1Num2[i]}H + CarryIn(${carryIn}) = ${res.toString(16).toUpperCase()}H`;
-        label = `Byte ${i} Addition (ADC)`;
-        carry = carryOut;
-      } else {
-        sumOrDiff = a - b - carryIn;
-        carryOut = sumOrDiff < 0 ? 1 : 0;
-        const res = (sumOrDiff + 256) & 0xFF;
-        equation = `${exp1Num1[i]}H - ${exp1Num2[i]}H - BorrowIn(${carryIn}) = ${res.toString(16).toUpperCase()}H`;
-        label = `Byte ${i} Subtraction (SBB)`;
-        carry = carryOut;
-      }
-      
-      stepsTrace.push({ label, equation, carryIn, carryOut, a, b, res: sumOrDiff & 0xFF });
-    }
-
-    return (
-      <div className="space-y-4">
-        <div className="bg-teal-50 border border-teal-150 p-3 rounded-2xl text-teal-950 flex items-center justify-between text-[11px] font-bold">
-          <span>Active Inputs: Num1 = {exp1Num1.slice(0, exp1Size).reverse().join('')}H | Num2 = {exp1Num2.slice(0, exp1Size).reverse().join('')}H</span>
-          <span className="bg-teal-100 px-2 py-0.5 rounded text-[9px] uppercase font-mono">{exp1Op} MODE</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {stepsTrace.map((st, i) => (
-            <div key={i} className="bg-white border border-slate-200 hover:border-teal-300 p-3.5 rounded-2xl shadow-3xs transition-all text-left">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <span className="bg-teal-50 text-teal-700 border border-teal-100 text-[8.5px] font-bold px-1.5 py-0.5 rounded uppercase font-mono">
-                  STEP {i + 1}
-                </span>
-                <span className="font-bold text-slate-800 text-[12px]">{st.label}</span>
-              </div>
-              <div className="font-mono text-[11.5px] font-black text-indigo-700 bg-indigo-50/50 p-2 rounded-lg border border-indigo-100/50 my-2">
-                {st.equation}
-              </div>
-              <ul className="space-y-1 text-slate-600 text-[11px] leading-relaxed">
-                <li>• Hex values: <span className="font-mono text-slate-800 font-bold">{st.a.toString(16).toUpperCase()}H</span> ({st.a}) and <span className="font-mono text-slate-800 font-bold">{st.b.toString(16).toUpperCase()}H</span> ({st.b})</li>
-                <li>• Carry Input = <span className="font-bold">{st.carryIn}</span>, resulting in Carry Output = <span className="text-amber-600 font-bold">{st.carryOut}</span></li>
-                <li>• Stored sum/diff in memory offset RESULT+{i} is <span className="font-mono text-emerald-600 font-bold">{st.res.toString(16).toUpperCase().padStart(2, '0')}H</span></li>
-              </ul>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const renderDynamicCalculationsExp2 = () => {
-    const is16 = exp2Size === '16bit';
-    const isSigned = exp2Op === 'IMUL' || exp2Op === 'IDIV';
-    const isDiv = exp2Op === 'DIV' || exp2Op === 'IDIV';
-    
-    let val1 = parseInt(exp2Op1 || '0', 16);
-    let val2 = parseInt(exp2Op2 || '1', 16);
-    if (isNaN(val1)) val1 = 0;
-    if (isNaN(val2) || val2 === 0) val2 = 1;
-
-    const limit = is16 ? 65536 : 256;
-    const signBit = is16 ? 0x8000 : 0x80;
-    
-    let sVal1 = val1;
-    let sVal2 = val2;
-    if (isSigned) {
-      if ((sVal1 & signBit) !== 0) sVal1 -= limit;
-      if ((sVal2 & signBit) !== 0) sVal2 -= limit;
-    }
-
-    return (
-      <div className="space-y-4 text-left">
-        <div className="bg-teal-50 border border-teal-150 p-3 rounded-2xl text-teal-950 flex items-center justify-between text-[11.5px] font-bold font-mono">
-          <span>Active Inputs: Op1 = {exp2Op1}H | Op2 = {exp2Op2}H</span>
-          <span className="bg-teal-100 px-2 py-0.5 rounded text-[9px] uppercase font-mono">{exp2Op} ({exp2Size})</span>
-        </div>
-
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl space-y-3.5 shadow-3xs">
-          <div>
-            <h5 className="font-bold text-slate-800 text-sm mb-1">Step 1: Operand Interpretation</h5>
-            <p className="text-[13px] text-slate-600 leading-relaxed">
-              Before hardware processing, the registers parse the binary signals into standard numerical structures:
-              <br />
-              • Operand 1: <strong className="font-mono text-slate-900">{exp2Op1}H</strong> translates to decimal <strong className="text-indigo-600">{val1}</strong> (Unsigned) {isSigned && `or ${sVal1} (Signed 2's Complement)`}.
-              <br />
-              • Operand 2: <strong className="font-mono text-slate-900">{exp2Op2}H</strong> translates to decimal <strong className="text-indigo-600">{val2}</strong> (Unsigned) {isSigned && `or ${sVal2} (Signed 2's Complement)`}.
-            </p>
-          </div>
-
-          <div className="border-t border-slate-100 pt-3">
-            <h5 className="font-bold text-slate-800 text-sm mb-1">Step 2: Arithmetic ALU Formula</h5>
-            <div className="bg-indigo-50/50 border border-indigo-100 font-mono text-xs p-2.5 rounded-lg text-indigo-700 font-black my-2">
-              {isDiv ? (
-                <span>
-                  Quotient = {isSigned ? sVal1 : val1} / {isSigned ? sVal2 : val2} = {isSigned ? Math.trunc(sVal1 / sVal2) : Math.floor(val1 / val2)}
-                  <br />
-                  Remainder = {isSigned ? sVal1 : val1} % {isSigned ? sVal2 : val2} = {isSigned ? sVal1 % sVal2 : val1 % val2}
-                </span>
-              ) : (
-                <span>
-                  Product = {isSigned ? sVal1 : val1} * {isSigned ? sVal2 : val2} = {isSigned ? sVal1 * sVal2 : val1 * val2}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="border-t border-slate-100 pt-3">
-            <h5 className="font-bold text-slate-800 text-sm mb-1">Step 3: Bit Allocation to Intel Registers</h5>
-            <p className="text-[13px] text-slate-600 leading-relaxed">
-              Based on the 8086 Instruction Set architecture specs:
-              <br />
-              {isDiv ? (
-                is16 ? (
-                  <span>
-                    • Quotient goes to <strong className="font-mono text-slate-800">AX</strong>: {(isSigned ? Math.trunc(sVal1 / sVal2) : Math.floor(val1 / val2)) & 0xFFFF} (Hex: {((isSigned ? Math.trunc(sVal1 / sVal2) : Math.floor(val1 / val2)) & 0xFFFF).toString(16).toUpperCase().padStart(4, '0')}H)
-                    <br />
-                    • Remainder goes to <strong className="font-mono text-slate-800">DX</strong>: {(isSigned ? sVal1 % sVal2 : val1 % val2) & 0xFFFF} (Hex: {((isSigned ? sVal1 % sVal2 : val1 % val2) & 0xFFFF).toString(16).toUpperCase().padStart(4, '0')}H)
-                  </span>
-                ) : (
-                  <span>
-                    • Quotient goes to <strong className="font-mono text-slate-800">AL</strong>: {(isSigned ? Math.trunc(sVal1 / sVal2) : Math.floor(val1 / val2)) & 0xFF} (Hex: {((isSigned ? Math.trunc(sVal1 / sVal2) : Math.floor(val1 / val2)) & 0xFF).toString(16).toUpperCase().padStart(2, '0')}H)
-                    <br />
-                    • Remainder goes to <strong className="font-mono text-slate-800">AH</strong>: {(isSigned ? sVal1 % sVal2 : val1 % val2) & 0xFF} (Hex: {((isSigned ? sVal1 % sVal2 : val1 % val2) & 0xFF).toString(16).toUpperCase().padStart(2, '0')}H)
-                  </span>
-                )
-              ) : (
-                is16 ? (
-                  <span>
-                    • Upper Word of Product is stored in <strong className="font-mono text-slate-800">DX</strong>
-                    <br />
-                    • Lower Word of Product is stored in <strong className="font-mono text-slate-800">AX</strong>
-                  </span>
-                ) : (
-                  <span>
-                    • Full 16-bit Product is stored in <strong className="font-mono text-slate-800">AX</strong> register
-                  </span>
-                )
-              )}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderDynamicCalculationsExp3 = () => {
-    const trace = [];
-    let currentMax = parseInt(exp3Array[0] || '0', 16);
-    
-    trace.push({
-      step: "SI = 0 (Initialization)",
-      detail: `AL register is pre-loaded with the first array element [0] which is ${exp3Array[0]}H (decimal ${parseInt(exp3Array[0], 16)}). The index pointer SI is set to 1, and CX loop register is set to 7.`
-    });
-
-    for (let i = 1; i < 8; i++) {
-      const val = parseInt(exp3Array[i] || '0', 16);
-      const isGreater = val > currentMax;
-      const oldMax = currentMax;
-      if (isGreater) {
-        currentMax = val;
-      }
-      trace.push({
-        step: `Loop Iteration ${i} (SI = ${i})`,
-        detail: `CMP AL (${oldMax.toString(16).toUpperCase()}H) with [SI] (${exp3Array[i]}H). Since [SI] is ${isGreater ? 'greater than AL, we update AL' : 'not greater than AL, we skip assignment'}. AL remains ${currentMax.toString(16).toUpperCase()}H.`
-      });
-    }
-
-    return (
-      <div className="space-y-4 text-left font-mono">
-        <div className="bg-teal-50 border border-teal-150 p-3 rounded-2xl text-teal-950 flex items-center justify-between text-[11.5px] font-bold">
-          <span>Active Array: [{exp3Array.join('H, ')}H]</span>
-          <span className="bg-teal-100 px-2 py-0.5 rounded text-[9px] uppercase">Max Search</span>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2.5 max-h-[350px] overflow-y-auto pr-1">
-          {trace.map((t, i) => (
-            <div key={i} className="bg-white border border-slate-150 p-3 rounded-xl flex flex-col gap-1 shadow-3xs hover:border-teal-200 transition-all text-left">
-              <div className="flex items-center gap-2">
-                <span className="bg-teal-50 border border-teal-100 text-teal-700 text-[9px] font-mono font-bold px-2 py-0.5 rounded-md uppercase">
-                  {i === 0 ? 'Init' : `CMP ${i}`}
-                </span>
-                <h5 className="font-bold text-[13px] text-slate-900">{t.step}</h5>
-              </div>
-              <p className="text-[13px] text-slate-600 leading-normal pl-2 border-l-2 border-slate-100">
-                {t.detail}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const renderDynamicCalculationsExp4 = () => {
-    return (
-      <div className="space-y-4 text-left font-mono">
-        <div className="bg-teal-50 border border-teal-150 p-3 rounded-2xl text-teal-950 flex items-center justify-between text-[11.5px] font-bold">
-          <span>Active Array State: [{exp4Array.join('H, ')}H]</span>
-          <span className="bg-teal-100 px-2 py-0.5 rounded text-[9px] uppercase">BUBBLE SORT</span>
-        </div>
-
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl space-y-3 shadow-3xs">
-          <h5 className="font-bold text-slate-800 text-sm">Step-by-Step Sorting Strategy</h5>
-          <p className="text-[13px] text-slate-600 leading-relaxed">
-            Bubble sort performs adjacent comparisons of array elements, shifting larger bytes to the right in multiple passes:
+  const categories = ['All', 'Segment Control', 'Data Definition', 'Procedure & Scope', 'General Symbol'];
+
+  const filteredDirectives = Object.values(directivesCatalog).filter(d => {
+    if (selectedCategory === 'All') return true;
+    return d.category === selectedCategory;
+  });
+
+  return (
+    <div id="directive-sandbox-simulator" className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 text-slate-800 flex flex-col justify-between shadow-xs min-h-[750px] max-w-7xl mx-auto w-full">
+      {/* Top Main Navigation Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 mb-6">
+        <div>
+          <h2 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <Binary className="w-5 h-5 text-indigo-600" />
+            8086 Assembler Directives & Programming Styles
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Interactive compile-time directive reference, program structure comparison, and RAM memory layout analyzer
           </p>
-          <ul className="space-y-2 text-[12.5px] text-slate-600 pl-4 list-disc leading-relaxed">
-            <li>
-              • <strong>Register CX & DX Limits:</strong> The outer loop is managed by register DX (count = N-1). The inner loop is managed by CX, which decrements on each pass to ignore already-sorted elements at the end.
-            </li>
-            <li>
-              • <strong>Buffer Swapping:</strong> If [SI] is greater than [SI+1], [SI] is temporarily cached in AL, [SI+1] is placed in [SI], and AL is restored to [SI+1].
-            </li>
-            <li>
-              • <strong>Active Index Trace:</strong> Currently comparing index <span className="font-mono font-bold text-slate-800">{exp4SI}</span> ({exp4Array[exp4SI]}H) and <span className="font-mono font-bold text-slate-800">{exp4SI+1}</span> ({exp4Array[exp4SI+1]}H). Since {parseInt(exp4Array[exp4SI],16)} {parseInt(exp4Array[exp4SI],16) > parseInt(exp4Array[exp4SI+1],16) ? '>' : '<='} {parseInt(exp4Array[exp4SI+1],16)}, a swap is {parseInt(exp4Array[exp4SI],16) > parseInt(exp4Array[exp4SI+1],16) ? 'REQUIRED' : 'NOT REQUIRED'}.
-            </li>
-          </ul>
+        </div>
+
+        <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner">
+          <button
+            id="btn-tab-directives"
+            onClick={() => setActiveTab('directives')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeTab === 'directives'
+                ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <BookOpen className="w-4 h-4 text-indigo-600" />
+            Assembler Directives
+          </button>
+          <button
+            id="btn-tab-styles"
+            onClick={() => setActiveTab('styles')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeTab === 'styles'
+                ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Code2 className="w-4 h-4 text-indigo-600" />
+            Programming Styles
+          </button>
+          <button
+            id="btn-tab-sandbox"
+            onClick={() => setActiveTab('sandbox')}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeTab === 'sandbox'
+                ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Database className="w-4 h-4 text-indigo-600" />
+            Memory Layout Sandbox
+          </button>
         </div>
       </div>
-    );
-  };
 
-  const renderDynamicCalculationsExp5 = () => {
-    const isBack = exp5Overlap === 'backward';
-    const isForwardOverlap = exp5Overlap === 'forward';
-    
-    return (
-      <div className="space-y-4 text-left font-mono">
-        <div className="bg-teal-50 border border-teal-150 p-3 rounded-2xl text-teal-950 flex items-center justify-between text-[11.5px] font-bold">
-          <span>Active Mode: {exp5Overlap === 'none' ? 'Non-overlapping' : isForwardOverlap ? 'Forward Overlap' : 'Backward Overlap'}</span>
-          <span className="bg-teal-100 px-2 py-0.5 rounded text-[9px] uppercase">MOVSB BLOCK COPY</span>
-        </div>
-
-        <div className="bg-white border border-slate-200 p-4 rounded-2xl space-y-3.5 shadow-3xs font-sans">
-          <div>
-            <h5 className="font-bold text-slate-800 text-sm mb-1 font-sans">How String Instructions Handle Overlap</h5>
-            <p className="text-[13px] text-slate-600 leading-relaxed font-sans">
-              When copying memory blocks that overlap (e.g., copying a block of size 5 from 1100H to 1102H):
-            </p>
-          </div>
-
-          {isForwardOverlap ? (
-            <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl text-rose-950 text-xs space-y-2 font-mono">
-              <strong className="text-rose-800 text-[13px] block">⚠️ The Forward Copy Overwrite Bug (DF = 0)</strong>
-              <p className="leading-relaxed">
-                When copying forward starting at index 0 (1100H):
-                <br />
-                • Copy 1100H (10H) to 1102H. Offset 1102H becomes 10H (overwriting original value 30H).
-                <br />
-                • Copy 1101H (20H) to 1103H. Offset 1103H becomes 20H (overwriting original value 40H).
-                <br />
-                • When we reach offset 1102H, we try to copy its original value, but it is already overwritten with 10H!
-                <br />
-                ➔ Resulting corrupted block: <strong className="font-mono">[10H, 20H, 10H, 20H, 10H]</strong> instead of original sequence!
-              </p>
-            </div>
-          ) : isBack ? (
-            <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-emerald-950 text-xs space-y-2 font-mono">
-              <strong className="text-emerald-800 text-[13px] block">✓ The Backward STD Solution (DF = 1)</strong>
-              <p className="leading-relaxed">
-                To prevent overwriting, we set Direction Flag <strong className="font-mono">DF = 1</strong> using <strong className="font-mono">STD</strong>, starting at the END of the blocks:
-                <br />
-                • SI starts at 1104H (50H) and DI starts at 1106H.
-                <br />
-                • Copy 1104H (50H) to 1106H.
-                <br />
-                • Decrement SI & DI. Copy 1103H (40H) to 1105H.
-                <br />
-                • Pointers decrement safely towards the start, ensuring we ALWAYS read original values before they are written over.
-                <br />
-                ➔ Perfect copy integrity achieved!
-              </p>
-            </div>
-          ) : (
-            <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-xl text-indigo-950 text-xs space-y-2 font-sans">
-              <strong className="text-indigo-800 text-[13px] block">✓ Clean Non-overlapping Transfer</strong>
-              <p className="leading-relaxed">
-                Since source blocks and destination blocks do not share any physical memory lanes (Source = 1100H, Destination = 1200H), the copy proceeds linearly without any side effects.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const renderDynamicCalculationsExpBit1 = () => {
-    const isNegative = (expBit1Input & 0x80) !== 0;
-    const hexStr = expBit1Input.toString(16).toUpperCase().padStart(2, '0');
-    const binStr = (expBit1Input & 0xFF).toString(2).padStart(8, '0');
-    const signBit = binStr[0];
-
-    return (
-      <div className="space-y-4 text-left font-mono">
-        {/* Unified Input and Conversions Control Panel */}
-        <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-3.5 shadow-3xs text-slate-800">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Input Value Controller</span>
-            <span className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold font-mono">8-Bit Mode</span>
-          </div>
-
-              {/* Student Task Presets from Lab Manual */}
-              <div className="space-y-1.5">
-                <div className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider">Lab Manual Task Presets:</div>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { label: '01H (+1)', value: 0x01, type: 'Positive' },
-                    { label: '7FH (+127)', value: 0x7F, type: 'Positive' },
-                    { label: '80H (-128)', value: 0x80, type: 'Negative' },
-                    { label: 'FFH (-1)', value: 0xFF, type: 'Negative' }
-                  ].map((p) => (
-                    <button
-                      key={p.value}
-                      onClick={() => {
-                        setExpBit1Input(p.value);
-                        setExpBit1Step(0);
-                      }}
-                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 ${
-                        expBit1Input === p.value
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-600/10 scale-[1.02]'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                      }`}
-                      disabled={expBit1Step > 0}
-                    >
-                      <span className={`w-2 h-2 rounded-full ${p.type === 'Positive' ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Custom Value Entry */}
-              <div className="bg-white border border-dashed border-indigo-200 p-2.5 rounded-xl flex items-center justify-between gap-3">
-                <div className="flex-1">
-                  <span className="text-[9.5px] text-slate-500 font-bold block mb-1">OR ENTER CUSTOM VALUE (DEC OR HEX):</span>
-                  <input
-                    type="text"
-                    value={expBit1CustomText}
-                    onChange={(e) => setExpBit1CustomText(e.target.value)}
-                    placeholder="e.g. 4B, -15, 128"
-                    className="w-full font-mono text-xs bg-slate-50 border border-slate-200 px-2 py-1.5 rounded-lg text-indigo-700 focus:outline-none focus:border-indigo-500"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        const parsed = parseCustomBitValue(expBit1CustomText);
-                        if (parsed !== null) {
-                          setExpBit1Input(parsed);
-                          setExpBit1Step(0);
-                        } else {
-                          alert('Invalid input! Please enter a value between -128 and 255 (or hex 00 to FF).');
-                        }
-                      }
-                    }}
-                  />
-                </div>
+      {/* Content Area */}
+      <div className="flex-1 min-h-[580px]">
+        {/* TAB 1: ASSEMBLER DIRECTIVES CATALOG */}
+        {activeTab === 'directives' && (
+          <motion.div
+            key="directives-tab"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="space-y-6"
+          >
+            {/* Category Filter Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Filter:</span>
+              {categories.map((cat) => (
                 <button
-                  onClick={() => {
-                    const parsed = parseCustomBitValue(expBit1CustomText);
-                    if (parsed !== null) {
-                      setExpBit1Input(parsed);
-                      setExpBit1Step(0);
-                    } else {
-                      alert('Invalid input! Please enter a value between -128 and 255 (or hex 00 to FF).');
-                    }
-                  }}
-                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-3xs flex items-center gap-1 cursor-pointer shrink-0 mt-3.5"
-                >
-                  Apply Value
-                </button>
-              </div>
-
-          {/* Three-way interactive entry system */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 border-t border-slate-100">
-            {/* Hex Entry */}
-            <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
-              <span className="text-[9px] text-slate-400 font-bold block mb-1">HEXADECIMAL</span>
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="text"
-                  maxLength={2}
-                  value={hexStr}
-                  onChange={(e) => {
-                    const clean = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, '');
-                    if (clean === '') {
-                      setExpBit1Input(0);
-                    } else {
-                      const val = parseInt(clean, 16);
-                      if (!isNaN(val) && val >= 0 && val <= 255) {
-                        setExpBit1Input(val);
-                      }
-                    }
-                    setExpBit1Step(0);
-                  }}
-                  className="w-full text-center font-mono font-black text-sm bg-slate-50 border border-slate-200 p-1.5 rounded-lg text-indigo-700 focus:outline-none focus:border-indigo-500 focus:bg-white"
-                  disabled={expBit1Step > 0}
-                  placeholder="00"
-                />
-                <span className="text-xs font-bold text-slate-400 font-mono">H</span>
-              </div>
-            </div>
-
-            {/* Unsigned Entry */}
-            <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
-              <span className="text-[9px] text-slate-400 font-bold block mb-1">UNSIGNED DECIMAL</span>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min={0}
-                  max={255}
-                  value={expBit1Input}
-                  onChange={(e) => {
-                    let val = parseInt(e.target.value, 10);
-                    if (isNaN(val)) val = 0;
-                    val = Math.max(0, Math.min(255, val));
-                    setExpBit1Input(val);
-                    setExpBit1Step(0);
-                  }}
-                  className="w-full text-center font-mono font-black text-sm bg-slate-50 border border-slate-200 p-1.5 rounded-lg text-indigo-700 focus:outline-none focus:border-indigo-500 focus:bg-white"
-                  disabled={expBit1Step > 0}
-                />
-              </div>
-            </div>
-
-            {/* Signed Entry */}
-            <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
-              <span className="text-[9px] text-slate-400 font-bold block mb-1">SIGNED DECIMAL</span>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min={-128}
-                  max={127}
-                  value={expBit1Input > 127 ? expBit1Input - 256 : expBit1Input}
-                  onChange={(e) => {
-                    let val = parseInt(e.target.value, 10);
-                    if (isNaN(val)) val = 0;
-                    val = Math.max(-128, Math.min(127, val));
-                    const unsignedVal = val < 0 ? val + 256 : val;
-                    setExpBit1Input(unsignedVal);
-                    setExpBit1Step(0);
-                  }}
-                  className="w-full text-center font-mono font-black text-sm bg-slate-50 border border-slate-200 p-1.5 rounded-lg text-indigo-700 focus:outline-none focus:border-indigo-500 focus:bg-white"
-                  disabled={expBit1Step > 0}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive unified range slider */}
-          <div className="space-y-1.5 pt-1 border-t border-slate-100">
-            <div className="flex items-center justify-between text-[10px] text-slate-500 font-bold">
-              <span>UNIFIED SLIDER (0-255):</span>
-              <span className="font-mono text-indigo-600 font-bold">Unsigned: {expBit1Input} | Signed: {expBit1Input > 127 ? expBit1Input - 256 : expBit1Input}</span>
-            </div>
-            <input 
-              type="range"
-              min={0}
-              max={255}
-              value={expBit1Input}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                setExpBit1Input(val);
-                setExpBit1Step(0);
-              }}
-              className="w-full accent-indigo-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
-              disabled={expBit1Step > 0}
-            />
-          </div>
-        </div>
-
-        {/* 8-bit Binary Register with Sign Bit Highlighted */}
-        <div className="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-2.5 shadow-3xs">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Register AL (8-bit Binary)</span>
-            <span className="text-[9px] bg-red-50 border border-red-200 text-red-600 px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-              Bit 7 is the Sign Bit
-            </span>
-          </div>
-          <div className="flex gap-1.5">
-            {binStr.split('').map((bit, idx) => {
-              const isMSB = idx === 0;
-              return (
-                <div 
-                  key={idx} 
-                  className={`flex-1 text-center p-2 rounded-xl border transition-all ${
-                    isMSB 
-                      ? 'bg-red-50 border-red-300 text-red-700 font-black ring-2 ring-red-400/20 shadow-3xs scale-[1.03]' 
-                      : 'bg-slate-50 border-slate-200 text-slate-700'
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer whitespace-nowrap ${
+                    selectedCategory === cat
+                      ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  <div className="text-[8px] text-slate-400 font-bold">D{7 - idx}</div>
-                  <div className="text-[14px] font-black">{bit}</div>
-                  <div className="text-[7px] text-slate-400 font-mono mt-0.5">
-                    {isMSB ? 'SIGN' : `2^${7-idx}`}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Console / Trace Walkthrough */}
-        <div className="bg-slate-950 text-slate-200 p-3.5 rounded-2xl border border-slate-800 font-mono">
-          <div className="text-[9px] text-indigo-400 font-bold border-b border-slate-800 pb-1.5 flex justify-between items-center">
-            <span>ALP TRACE CONTROLLER</span>
-            <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-black uppercase">
-              {expBit1Step === 0 ? 'NOT STARTED' : expBit1Step === 1 ? 'LOAD DATA' : expBit1Step === 2 ? 'TEST SIGN' : 'COMPLETE'}
-            </span>
-          </div>
-
-          <div className="mt-2.5 text-xs leading-relaxed">
-            {expBit1Step === 0 && (
-              <p className="text-slate-400 italic">
-                Simulator is idle. Click "Next Step" to execute the first instruction: "MOV AL, DATA_VAL".
-              </p>
-            )}
-            {expBit1Step === 1 && (
-              <div className="space-y-1">
-                <p className="text-slate-300 font-bold">
-                  <span className="text-indigo-400">1. MOV AL, DATA_VAL</span>
-                </p>
-                <p className="text-indigo-300 pl-2 font-mono">
-                  ➔ AL register is loaded with the value {hexStr}H (binary {binStr}B).
-                </p>
-              </div>
-            )}
-            {expBit1Step === 2 && (
-              <div className="space-y-1.5">
-                <p className="text-slate-300 font-bold">
-                  <span className="text-indigo-400">2. TEST AL, 80H</span>
-                </p>
-                <p className="text-slate-300 pl-2">
-                  ➔ Logical AND of AL ({hexStr}H) and 80H (10000000B):
-                  <br />
-                  <span className="text-slate-400 font-mono">  {binStr}B (AL)</span>
-                  <br />
-                  <span className="text-slate-400 font-mono">& 10000000B (80H)</span>
-                  <br />
-                  <span className="text-indigo-300 font-bold font-mono">= {signBit}0000000B</span>
-                </p>
-                <p className="text-amber-400 pl-2 font-bold">
-                  ➔ Sign Flag (SF) = {signBit === '1' ? '1 (Negative)' : '0 (Positive)'}.
-                </p>
-              </div>
-            )}
-            {expBit1Step === 3 && (
-              <div className="space-y-1.5">
-                <p className="text-emerald-400 font-bold">
-                  ✓ Program Execution Complete!
-                </p>
-                <p className="text-slate-300 pl-2">
-                  <span className="text-indigo-400 font-bold">Branch Taken:</span> {isNegative ? 'JS IS_NEG' : 'JNS (Fall through)'}
-                  <br />
-                  <span className="text-indigo-400 font-bold">Result Saved:</span> RESULT = {isNegative ? '01H (Negative)' : '00H (Positive)'}
-                </p>
-                <p className="text-emerald-300 pl-2 font-extrabold text-[12.5px] bg-emerald-950/45 p-2 rounded-lg border border-emerald-900/60 mt-1 font-sans leading-relaxed">
-                  The data value {expBit1Input > 127 ? expBit1Input - 256 : expBit1Input} is determined to be <span className="underline font-black">{isNegative ? 'NEGATIVE' : 'POSITIVE'}</span>.
-                </p>
-              </div>
-            )}
-          </div>
-          
-          <div className="mt-4 flex justify-end gap-2 border-t border-slate-800 pt-3 shrink-0">
-            <button
-              onClick={() => {
-                setExpBit1Step(0);
-              }}
-              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold cursor-pointer"
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => stepSimulator('exp_bit1')}
-              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold cursor-pointer flex items-center gap-1"
-            >
-              {expBit1Step === 3 ? 'Restart' : 'Next Step'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderDynamicCalculationsExpBit2 = () => {
-    const isOdd = (expBit2Input & 0x01) !== 0;
-    const hexStr = expBit2Input.toString(16).toUpperCase().padStart(2, '0');
-    const binStr = (expBit2Input & 0xFF).toString(2).padStart(8, '0');
-    const lsbBit = binStr[7];
-
-    return (
-      <div className="space-y-4 text-left font-mono">
-        {/* Unified Input and Conversions Control Panel */}
-        <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-3.5 shadow-3xs text-slate-800">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Input Value Controller</span>
-            <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold font-mono">8-Bit Mode</span>
-          </div>
-
-          {/* Student Task Presets from Lab Manual */}
-          <div className="space-y-1.5">
-            <div className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider">Lab Manual Task Presets:</div>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { label: '02H (Even)', value: 0x02, type: 'Even' },
-                { label: '03H (Odd)', value: 0x03, type: 'Odd' },
-                { label: 'A5H (Odd)', value: 0xA5, type: 'Odd' },
-                { label: '3CH (Even)', value: 0x3C, type: 'Even' },
-                { label: 'FFH (Odd)', value: 0xFF, type: 'Odd' },
-                { label: '10H (Even)', value: 0x10, type: 'Even' }
-              ].map((p) => (
-                <button
-                  key={p.value}
-                  onClick={() => {
-                    setExpBit2Input(p.value);
-                    setExpBit2Step(0);
-                  }}
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 ${
-                    expBit2Input === p.value
-                      ? 'bg-purple-600 text-white border-purple-600 shadow-sm shadow-purple-600/10 scale-[1.02]'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                  }`}
-                  disabled={expBit2Step > 0}
-                >
-                  <span className={`w-2 h-2 rounded-full ${p.type === 'Even' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                  {p.label}
+                  {cat}
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Custom Value Entry */}
-          <div className="bg-white border border-dashed border-purple-200 p-2.5 rounded-xl flex items-center justify-between gap-3">
-            <div className="flex-1">
-              <span className="text-[9.5px] text-slate-500 font-bold block mb-1">OR ENTER CUSTOM VALUE (DEC OR HEX):</span>
-              <input
-                type="text"
-                value={expBit2CustomText}
-                onChange={(e) => setExpBit2CustomText(e.target.value)}
-                placeholder="e.g. 3C, 47, -5"
-                className="w-full font-mono text-xs bg-slate-50 border border-slate-200 px-2 py-1.5 rounded-lg text-purple-700 focus:outline-none focus:border-purple-500"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const parsed = parseCustomBitValue(expBit2CustomText);
-                    if (parsed !== null) {
-                      setExpBit2Input(parsed);
-                      setExpBit2Step(0);
-                    } else {
-                      alert('Invalid input! Please enter a value between -128 and 255 (or hex 00 to FF).');
-                    }
-                  }
-                }}
-              />
-            </div>
-            <button
-              onClick={() => {
-                const parsed = parseCustomBitValue(expBit2CustomText);
-                if (parsed !== null) {
-                  setExpBit2Input(parsed);
-                  setExpBit2Step(0);
-                } else {
-                  alert('Invalid input! Please enter a value between -128 and 255 (or hex 00 to FF).');
-                }
-              }}
-              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition-all shadow-3xs flex items-center gap-1 cursor-pointer shrink-0 mt-3.5"
-            >
-              Apply Value
-            </button>
-          </div>
-
-          {/* Dual-way interactive entry system */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
-            {/* Hex Entry */}
-            <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
-              <span className="text-[9px] text-slate-400 font-bold block mb-1">HEXADECIMAL</span>
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="text"
-                  maxLength={2}
-                  value={hexStr}
-                  onChange={(e) => {
-                    const clean = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, '');
-                    if (clean === '') {
-                      setExpBit2Input(0);
-                    } else {
-                      const val = parseInt(clean, 16);
-                      if (!isNaN(val) && val >= 0 && val <= 255) {
-                        setExpBit2Input(val);
-                      }
-                    }
-                    setExpBit2Step(0);
-                  }}
-                  className="w-full text-center font-mono font-black text-sm bg-slate-50 border border-slate-200 p-1.5 rounded-lg text-purple-700 focus:outline-none focus:border-purple-500 focus:bg-white"
-                  disabled={expBit2Step > 0}
-                  placeholder="00"
-                />
-                <span className="text-xs font-bold text-slate-400 font-mono">H</span>
-              </div>
-            </div>
-
-            {/* Unsigned Entry */}
-            <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
-              <span className="text-[9px] text-slate-400 font-bold block mb-1">UNSIGNED DECIMAL</span>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min={0}
-                  max={255}
-                  value={expBit2Input}
-                  onChange={(e) => {
-                    let val = parseInt(e.target.value, 10);
-                    if (isNaN(val)) val = 0;
-                    val = Math.max(0, Math.min(255, val));
-                    setExpBit2Input(val);
-                    setExpBit2Step(0);
-                  }}
-                  className="w-full text-center font-mono font-black text-sm bg-slate-50 border border-slate-200 p-1.5 rounded-lg text-purple-700 focus:outline-none focus:border-purple-500 focus:bg-white"
-                  disabled={expBit2Step > 0}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive slider */}
-          <div className="space-y-1.5 pt-1 border-t border-slate-100">
-            <div className="flex items-center justify-between text-[10px] text-slate-500 font-bold">
-              <span>UNIFIED SLIDER VALUE (0-255):</span>
-              <span className="font-mono text-purple-600 font-bold">Unsigned: {expBit2Input} | Parity: {isOdd ? 'ODD' : 'EVEN'}</span>
-            </div>
-            <input 
-              type="range"
-              min={0}
-              max={255}
-              value={expBit2Input}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                setExpBit2Input(val);
-                setExpBit2Step(0);
-              }}
-              className="w-full accent-purple-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
-              disabled={expBit2Step > 0}
-            />
-          </div>
-        </div>
-
-        {/* 8-bit Binary Register with LSB Highlighted */}
-        <div className="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-2.5 shadow-3xs">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Register AL (8-bit Binary)</span>
-            <span className="text-[9px] bg-purple-50 border border-purple-200 text-purple-600 px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
-              Bit 0 is the Odd/Even Indicator
-            </span>
-          </div>
-          <div className="flex gap-1.5">
-            {binStr.split('').map((bit, idx) => {
-              const isLSB = idx === 7;
-              return (
-                <div 
-                  key={idx} 
-                  className={`flex-1 text-center p-2 rounded-xl border transition-all ${
-                    isLSB 
-                      ? 'bg-purple-50 border-purple-300 text-purple-700 font-black ring-2 ring-purple-400/20 shadow-3xs scale-[1.03]' 
-                      : 'bg-slate-50 border-slate-200 text-slate-700'
-                  }`}
-                >
-                  <div className="text-[8px] text-slate-400 font-bold">D{7 - idx}</div>
-                  <div className="text-[14px] font-black">{bit}</div>
-                  <div className="text-[7px] text-slate-400 font-mono mt-0.5">
-                    {isLSB ? 'LSB' : `2^${7-idx}`}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Console / Trace Walkthrough */}
-        <div className="bg-slate-950 text-slate-200 p-3.5 rounded-2xl border border-slate-800 font-mono">
-          <div className="text-[9px] text-indigo-400 font-bold border-b border-slate-800 pb-1.5 flex justify-between items-center">
-            <span>ALP TRACE CONTROLLER</span>
-            <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-black uppercase">
-              {expBit2Step === 0 ? 'NOT STARTED' : expBit2Step === 1 ? 'LOAD DATA' : expBit2Step === 2 ? 'TEST LSB' : 'COMPLETE'}
-            </span>
-          </div>
-
-          <div className="mt-2.5 text-xs leading-relaxed">
-            {expBit2Step === 0 && (
-              <p className="text-slate-400 italic">
-                Simulator is idle. Click "Next Step" to execute the first instruction: "MOV AL, DATA_VAL".
-              </p>
-            )}
-            {expBit2Step === 1 && (
-              <div className="space-y-1">
-                <p className="text-slate-300 font-bold">
-                  <span className="text-indigo-400">1. MOV AL, DATA_VAL</span>
-                </p>
-                <p className="text-indigo-300 pl-2 font-mono">
-                  ➔ AL register is loaded with the value {hexStr}H (binary {binStr}B).
-                </p>
-              </div>
-            )}
-            {expBit2Step === 2 && (
-              <div className="space-y-1.5">
-                <p className="text-slate-300 font-bold">
-                  <span className="text-indigo-400">2. TEST AL, 01H</span>
-                </p>
-                <p className="text-slate-300 pl-2">
-                  ➔ Logical AND of AL ({hexStr}H) and 01H (00000001B):
-                  <br />
-                  <span className="text-slate-400 font-mono">  {binStr}B (AL)</span>
-                  <br />
-                  <span className="text-slate-400 font-mono">& 00000001B (01H)</span>
-                  <br />
-                  <span className="text-indigo-300 font-bold font-mono">= 0000000{lsbBit}B</span>
-                </p>
-                <p className="text-amber-400 pl-2 font-bold">
-                  ➔ Zero Flag (ZF) = {lsbBit === '0' ? '1 (Is Zero/Even)' : '0 (Not Zero/Odd)'}.
-                </p>
-              </div>
-            )}
-            {expBit2Step === 3 && (
-              <div className="space-y-1.5">
-                <p className="text-emerald-400 font-bold">
-                  ✓ Program Execution Complete!
-                </p>
-                <p className="text-slate-300 pl-2">
-                  <span className="text-indigo-400 font-bold">Branch Taken:</span> {isOdd ? 'JZ IS_EVEN (Not Taken)' : 'JZ IS_EVEN (Taken)'}
-                  <br />
-                  <span className="text-indigo-400 font-bold">Result Saved:</span> RESULT = {isOdd ? '01H (Odd)' : '00H (Even)'}
-                </p>
-                <p className="text-emerald-300 pl-2 font-extrabold text-[12.5px] bg-emerald-950/45 p-2 rounded-lg border border-emerald-900/60 mt-1 font-sans leading-relaxed">
-                  The data value {expBit2Input} is determined to be <span className="underline font-black">{isOdd ? 'ODD' : 'EVEN'}</span>.
-                </p>
-              </div>
-            )}
-          </div>
-          
-          <div className="mt-4 flex justify-end gap-2 border-t border-slate-800 pt-3 shrink-0">
-            <button
-              onClick={() => {
-                setExpBit2Step(0);
-              }}
-              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold cursor-pointer"
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => stepSimulator('exp_bit2')}
-              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold cursor-pointer flex items-center gap-1"
-            >
-              {expBit2Step === 3 ? 'Restart' : 'Next Step'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderDynamicCalculationsExpBit3 = () => {
-    const origHex = expBit3Input.toString(16).toUpperCase().padStart(2, '0');
-    const origBin = expBit3Input.toString(2).padStart(8, '0');
-    const activeALHex = expBit3AL.toString(16).toUpperCase().padStart(2, '0');
-    const activeALBin = expBit3AL.toString(2).padStart(8, '0');
-
-    return (
-      <div className="space-y-4 text-left font-mono">
-        {/* Unified Input and Conversions Control Panel */}
-        <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-3.5 shadow-3xs text-slate-800">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Input Value Controller</span>
-            <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold font-mono">8-Bit Mode</span>
-          </div>
-
-          {/* Student Task Presets from Lab Manual */}
-          <div className="space-y-1.5">
-            <div className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider">Lab Manual Task Presets:</div>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { label: '0FH (4 Ones)', value: 0x0F },
-                { label: '55H (4 Ones)', value: 0x55 },
-                { label: 'AAH (4 Ones)', value: 0xAA },
-                { label: 'F0H (4 Ones)', value: 0xF0 },
-                { label: '3CH (4 Ones)', value: 0x3C }
-              ].map((p) => (
-                <button
-                  key={p.value}
-                  onClick={() => {
-                    setExpBit3Input(p.value);
-                    setExpBit3Step(0);
-                    setExpBit3AL(p.value);
-                    setExpBit3Ones(0);
-                    setExpBit3Zeros(0);
-                  }}
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 ${
-                    expBit3Input === p.value
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/10 scale-[1.02]'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                  }`}
-                  disabled={expBit3Step > 0}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Custom Value Entry */}
-          <div className="bg-white border border-dashed border-emerald-200 p-2.5 rounded-xl flex items-center justify-between gap-3">
-            <div className="flex-1">
-              <span className="text-[9.5px] text-slate-500 font-bold block mb-1">OR ENTER CUSTOM VALUE (DEC OR HEX):</span>
-              <input
-                type="text"
-                value={expBit3CustomText}
-                onChange={(e) => setExpBit3CustomText(e.target.value)}
-                placeholder="e.g. F0, 245, 12"
-                className="w-full font-mono text-xs bg-slate-50 border border-slate-200 px-2 py-1.5 rounded-lg text-emerald-700 focus:outline-none focus:border-emerald-500"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const parsed = parseCustomBitValue(expBit3CustomText);
-                    if (parsed !== null) {
-                      setExpBit3Input(parsed);
-                      setExpBit3AL(parsed);
-                      setExpBit3Step(0);
-                      setExpBit3Ones(0);
-                      setExpBit3Zeros(0);
-                    } else {
-                      alert('Invalid input! Please enter a value between -128 and 255 (or hex 00 to FF).');
-                    }
-                  }
-                }}
-              />
-            </div>
-            <button
-              onClick={() => {
-                const parsed = parseCustomBitValue(expBit3CustomText);
-                if (parsed !== null) {
-                  setExpBit3Input(parsed);
-                  setExpBit3AL(parsed);
-                  setExpBit3Step(0);
-                  setExpBit3Ones(0);
-                  setExpBit3Zeros(0);
-                } else {
-                  alert('Invalid input! Please enter a value between -128 and 255 (or hex 00 to FF).');
-                }
-              }}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-3xs flex items-center gap-1 cursor-pointer shrink-0 mt-3.5"
-            >
-              Apply Value
-            </button>
-          </div>
-
-          {/* Dual-way interactive entry system */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
-            {/* Hex Entry */}
-            <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
-              <span className="text-[9px] text-slate-400 font-bold block mb-1">HEXADECIMAL</span>
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="text"
-                  maxLength={2}
-                  value={origHex}
-                  onChange={(e) => {
-                    const clean = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, '');
-                    if (clean === '') {
-                      setExpBit3Input(0);
-                      setExpBit3AL(0);
-                    } else {
-                      const val = parseInt(clean, 16);
-                      if (!isNaN(val) && val >= 0 && val <= 255) {
-                        setExpBit3Input(val);
-                        setExpBit3AL(val);
-                      }
-                    }
-                    setExpBit3Step(0);
-                    setExpBit3Ones(0);
-                    setExpBit3Zeros(0);
-                  }}
-                  className="w-full text-center font-mono font-black text-sm bg-slate-50 border border-slate-200 p-1.5 rounded-lg text-emerald-700 focus:outline-none focus:border-emerald-500 focus:bg-white"
-                  disabled={expBit3Step > 0}
-                  placeholder="00"
-                />
-                <span className="text-xs font-bold text-slate-400 font-mono">H</span>
-              </div>
-            </div>
-
-            {/* Unsigned Decimal Entry */}
-            <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
-              <span className="text-[9px] text-slate-400 font-bold block mb-1">UNSIGNED DECIMAL</span>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min={0}
-                  max={255}
-                  value={expBit3Input}
-                  onChange={(e) => {
-                    let val = parseInt(e.target.value, 10);
-                    if (isNaN(val)) val = 0;
-                    val = Math.max(0, Math.min(255, val));
-                    setExpBit3Input(val);
-                    setExpBit3AL(val);
-                    setExpBit3Step(0);
-                    setExpBit3Ones(0);
-                    setExpBit3Zeros(0);
-                  }}
-                  className="w-full text-center font-mono font-black text-sm bg-slate-50 border border-slate-200 p-1.5 rounded-lg text-emerald-700 focus:outline-none focus:border-emerald-500 focus:bg-white"
-                  disabled={expBit3Step > 0}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive slider */}
-          <div className="space-y-1.5 pt-1 border-t border-slate-100">
-            <div className="flex items-center justify-between text-[10px] text-slate-500 font-bold">
-              <span>UNIFIED SLIDER VALUE (0-255):</span>
-              <span className="font-mono text-emerald-600 font-bold">Unsigned: {expBit3Input}</span>
-            </div>
-            <input 
-              type="range"
-              min={0}
-              max={255}
-              value={expBit3Input}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                setExpBit3Input(val);
-                setExpBit3AL(val);
-                setExpBit3Step(0);
-                setExpBit3Ones(0);
-                setExpBit3Zeros(0);
-              }}
-              className="w-full accent-emerald-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
-              disabled={expBit3Step > 0}
-            />
-          </div>
-        </div>
-
-        {/* Dynamic Register Display Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* Active AL box */}
-          <div className="bg-white border border-slate-200 p-3 rounded-xl flex flex-col items-center justify-center text-center shadow-3xs">
-            <span className="text-[8px] font-bold text-slate-400 block mb-1">REGISTER AL (SHIFTING)</span>
-            <span className="text-sm font-black text-slate-800 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
-              {activeALHex}H
-            </span>
-            <span className="text-[9.5px] font-mono text-slate-500 mt-1.5 font-bold tracking-wider">
-              {activeALBin}
-            </span>
-          </div>
-
-          {/* Logical Ones count (BL) */}
-          <div className="bg-emerald-50/50 border border-emerald-150 p-3 rounded-xl flex flex-col items-center justify-center text-center">
-            <span className="text-[8px] font-bold text-emerald-600 block mb-1">ONES COUNT (BL)</span>
-            <span className="text-lg font-black text-emerald-700">
-              {expBit3Ones}
-            </span>
-            <span className="text-[9px] text-emerald-600 font-bold mt-1 uppercase">
-              {expBit3Step > 0 ? `CF = 1 detected` : 'Cleared'}
-            </span>
-          </div>
-
-          {/* Logical Zeros count (BH) */}
-          <div className="bg-rose-50/50 border border-rose-150 p-3 rounded-xl flex flex-col items-center justify-center text-center">
-            <span className="text-[8px] font-bold text-rose-600 block mb-1">ZEROS COUNT (BH)</span>
-            <span className="text-lg font-black text-rose-700">
-              {expBit3Zeros}
-            </span>
-            <span className="text-[9px] text-rose-600 font-bold mt-1 uppercase">
-              {expBit3Step > 0 ? `CF = 0 detected` : 'Cleared'}
-            </span>
-          </div>
-        </div>
-
-        {/* Console / Trace Controller */}
-        <div className="bg-slate-950 text-slate-200 p-3.5 rounded-2xl border border-slate-800 font-mono">
-          <div className="text-[9px] text-indigo-400 font-bold border-b border-slate-800 pb-1.5 flex justify-between items-center">
-            <span>LOOP TRACE CONTROLLER</span>
-            <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-black">
-              {expBit3Step === 0 ? 'NOT STARTED' : expBit3Step === 9 ? 'DONE' : `ITERATION ${expBit3Step}/8`}
-            </span>
-          </div>
-
-          <div className="mt-2.5 text-xs leading-relaxed min-h-[90px]">
-            {expBit3Step === 0 ? (
-              <p className="text-slate-400 italic">
-                CX register will be preloaded with 8 (loop counter). BL/BH counts cleared to 0. Click "Next Step" to execute loop.
-              </p>
-            ) : expBit3Step >= 1 && expBit3Step <= 8 ? (
-              <div className="space-y-1">
-                <p className="text-indigo-400 font-bold">
-                  ➔ Iteration {expBit3Step}: SHR AL, 1
-                </p>
-                <p className="text-slate-300">
-                  AL shifted right. LSB bit was <strong className="text-amber-400">{(expBit3Input >> (expBit3Step - 1)) & 1}</strong>, which moved into the <strong className="text-amber-400">Carry Flag (CF)</strong>.
-                </p>
-                <p className="text-slate-300 font-mono">
-                  • New AL value: {activeALHex}H (binary {activeALBin})
-                  <br />
-                  • Status: CF = {((expBit3Input >> (expBit3Step - 1)) & 1) === 1 ? '1 ➔ INC BL (Ones)' : '0 ➔ INC BH (Zeros)'}.
-                  <br />
-                  • Remaining Loop Iterations (CX) = {8 - expBit3Step}.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <p className="text-emerald-400 font-bold">
-                  ✓ Loop Finished! CX reached 0.
-                </p>
-                <p className="text-slate-300">
-                  Counts saved to memory variables:
-                  <br />
-                  • <span className="font-bold text-emerald-400">ONES_COUNT = {expBit3Ones}</span>
-                  <br />
-                  • <span className="font-bold text-rose-400">ZEROS_COUNT = {expBit3Zeros}</span>
-                </p>
-                <p className="text-emerald-300 font-extrabold text-[12.5px] bg-emerald-950/45 p-2 rounded-lg border border-emerald-900/60 mt-2 font-sans leading-relaxed">
-                  Total Logical Ones: {expBit3Ones} | Total Logical Zeros: {expBit3Zeros}.
-                </p>
-              </div>
-            )}
-          </div>
-          
-          <div className="mt-4 flex justify-end gap-2 border-t border-slate-800 pt-3 shrink-0">
-            <button
-              onClick={() => {
-                setExpBit3Step(0);
-                setExpBit3AL(expBit3Input);
-                setExpBit3Ones(0);
-                setExpBit3Zeros(0);
-              }}
-              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold cursor-pointer"
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => stepSimulator('exp_bit3')}
-              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold cursor-pointer flex items-center gap-1"
-            >
-              {expBit3Step === 9 ? 'Restart' : 'Next Step'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderDynamicCalculations = () => {
-    switch (selectedLabId) {
-      case 'exp1':
-        return renderDynamicCalculationsExp1();
-      case 'exp2':
-        return renderDynamicCalculationsExp2();
-      case 'exp_math':
-        return renderDynamicCalculationsExpMath();
-      case 'exp3':
-        return renderDynamicCalculationsExp3();
-      case 'exp4':
-        return renderDynamicCalculationsExp4();
-      case 'exp5':
-        return renderDynamicCalculationsExp5();
-      case 'exp_bit1':
-        return renderDynamicCalculationsExpBit1();
-      case 'exp_bit2':
-        return renderDynamicCalculationsExpBit2();
-      case 'exp_bit3':
-        return renderDynamicCalculationsExpBit3();
-      default:
-        return renderStaticCalculations();
-    }
-  };
-
-  const renderPageContent = (pageIdx: number) => {
-    const activeLabData = labManualPagesData[selectedLabId] || labManualPagesData['exp1'];
-    const activeLab = labExperiments.find(l => l.id === selectedLabId) || labExperiments[0];
-
-    switch (pageIdx) {
-      case 0:
-        return (
-          <div className="space-y-4 flex-1 flex flex-col justify-between">
-            <div className="space-y-3">
-              <div className="bg-indigo-50 border border-indigo-150 p-3.5 rounded-2xl text-left">
-                <h4 className="text-[10.5px] font-bold font-mono text-indigo-700 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                  <Compass className="w-4 h-4 text-indigo-600" />
-                  Aim of Experiment
-                </h4>
-                <p className="text-[14px] font-medium leading-relaxed text-slate-800 text-justify">
-                  {activeLabData.aim}
-                </p>
-              </div>
-
-
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left">
-                <div className="bg-emerald-50/50 border border-emerald-200/60 p-3 rounded-xl">
-                  <h5 className="text-[10px] font-bold font-mono text-emerald-700 uppercase tracking-wider mb-1.5">Core Objective</h5>
-                  <p className="text-[13px] text-slate-700 leading-relaxed text-justify">
-                    {activeLabData.objectives[0]}
-                  </p>
-                </div>
-                <div className="bg-blue-50/50 border border-blue-200/60 p-3 rounded-xl">
-                  <h5 className="text-[10px] font-bold font-mono text-blue-700 uppercase tracking-wider mb-1.5">Key Focus Area</h5>
-                  <p className="text-[13px] text-slate-700 leading-relaxed text-justify">
-                    {activeLabData.objectives[1]}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-2 text-left">
-              <h4 className="text-[10px] font-bold font-mono text-slate-500 uppercase tracking-widest flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
-                Learning Outcomes
-              </h4>
-              <ul className="space-y-1.5">
-                {activeLabData.outcomes.map((o, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-[13px] text-slate-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5"></span>
-                    <span className="leading-tight text-justify">{o}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        );
-
-      case 1:
-        return (
-          <div className="space-y-4 flex-1 flex flex-col justify-center text-left">
-            <span className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest block mb-2">
-              Hardware & Software Components Table:
-            </span>
-            <div className="overflow-hidden border border-slate-200 rounded-2xl bg-white shadow-2xs">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-[10.5px] font-mono text-slate-500 uppercase tracking-wider font-extrabold">
-                    <th className="px-4 py-2.5 w-12 text-center border-r border-slate-200">S.No</th>
-                    <th className="px-4 py-2.5 border-r border-slate-200">Component / Tool</th>
-                    <th className="px-4 py-2.5 border-r border-slate-200">Specification</th>
-                    <th className="px-4 py-2.5">Purpose</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-150">
-                  {activeLabData.components.map((comp, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/55 transition-colors text-[13px] text-slate-700">
-                      <td className="px-4 py-2.5 font-mono font-bold text-center border-r border-slate-200 bg-slate-50/20">{idx + 1}</td>
-                      <td className="px-4 py-2.5 font-bold text-slate-900 border-r border-slate-200 flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                        {comp.name}
-                      </td>
-                      <td className="px-4 py-2.5 font-mono text-xs text-slate-600 border-r border-slate-200 bg-indigo-50/10">{comp.spec}</td>
-                      <td className="px-4 py-2.5 leading-snug text-justify">{comp.purpose}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-xl flex items-center gap-2 text-[11px] text-amber-900 font-medium">
-              <Info className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Note: Standard laboratory compilation requires DOSBox 0.74 shell mapping to local MASM bin directories.</span>
-            </div>
-          </div>
-        );
-
-      case 2:
-        return (
-          <div className="space-y-3 flex-1 flex flex-col justify-between text-left">
-            <span className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest block">Experimental Lab Procedure:</span>
-            <div className="flex flex-col gap-2 flex-1">
-              {activeLabData.procedureSteps.map((step, idx) => (
-                <div key={idx} className="bg-white border border-slate-150 p-3 rounded-xl flex gap-2.5 items-start shadow-3xs hover:border-indigo-200 hover:shadow-xs transition-all border-l-4 border-l-indigo-500">
-                  <span className="font-mono text-xs font-extrabold text-indigo-600 bg-indigo-50 border border-indigo-100 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
-                    {idx + 1}
-                  </span>
-                  <p className="text-[13px] leading-tight text-slate-700 text-justify flex-1 font-medium">
-                    {step}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-4 flex-1 flex flex-col justify-between text-left">
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest block">Technical Theory Context:</span>
-              <p className="text-[14px] text-slate-700 leading-relaxed text-justify bg-slate-50/60 p-3 rounded-xl border border-slate-200/60 font-medium">
-                {activeLabData.theoryText}
-              </p>
-            </div>
-            
-            {selectedLabId === 'exp1' ? (
-              <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-4">
-                <span className="text-[10px] font-bold font-mono text-indigo-600 uppercase tracking-widest block border-b border-slate-100 pb-2">
-                  Interactive Multi-precision Addition & Subtraction Simulator (8086 Pointer-based)
-                </span>
-                <MultiPrecisionTheoryVisualizer />
-              </div>
-            ) : selectedLabId === 'exp2' ? (
-              <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-4">
-                <span className="text-[10px] font-bold font-mono text-indigo-600 uppercase tracking-widest block border-b border-slate-100 pb-2">
-                  Interactive Signed & Unsigned Number Representation Converter
-                </span>
-                <SignedUnsignedVisualizer />
-              </div>
-            ) : selectedLabId === 'exp_math' ? (
-              <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-4">
-                <span className="text-[10px] font-bold font-mono text-indigo-600 uppercase tracking-widest block border-b border-slate-100 pb-2">
-                  Interactive Math Loop & Counter Simulator (CX-based)
-                </span>
-                <MathLoopTheoryVisualizer />
-              </div>
-            ) : selectedLabId === 'exp_bit1' ? (
-              <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-4">
-                <span className="text-[10px] font-bold font-mono text-indigo-600 uppercase tracking-widest block border-b border-slate-100 pb-2">
-                  Interactive Positive or Negative Logic Tester & Manual Calculator (8086 Bitwise AND)
-                </span>
-                <PositiveNegativeTheoryVisualizer />
-              </div>
-            ) : selectedLabId === 'exp_bit2' ? (
-              <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-4">
-                <span className="text-[10px] font-bold font-mono text-indigo-600 uppercase tracking-widest block border-b border-slate-100 pb-2">
-                  Interactive Odd or Even Logic Tester & Manual Calculator (8086 Bitwise AND)
-                </span>
-                <OddEvenTheoryVisualizer />
-              </div>
-            ) : selectedLabId === 'exp_bit3' ? (
-              <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-4">
-                <span className="text-[10px] font-bold font-mono text-indigo-600 uppercase tracking-widest block border-b border-slate-100 pb-2">
-                  Interactive 1s & 0s Counting Loop & Manual Shift Calculator (8086 SHR & Loop)
-                </span>
-                <OnesZerosTheoryVisualizer />
-              </div>
-            ) : (
-              <div className="bg-white border border-slate-200 p-3 rounded-2xl flex-1 flex flex-col justify-center items-center shadow-3xs min-h-[160px]">
-                <span className="text-[9px] font-bold font-mono text-indigo-500 uppercase tracking-widest mb-2">Interactive Schematic Diagram</span>
-                {renderSchematicDiagram(activeLabData.theoryDiagramType)}
-              </div>
-            )}
-          </div>
-        );
-
-      case 4:
-        return (
-          <div className="space-y-3 flex-1 flex flex-col justify-between text-left">
-            <span className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest block">Sequential Execution Steps:</span>
-            <div className="flex flex-col gap-2 flex-1">
-              {activeLabData.algorithmSteps.map((step, idx) => (
-                <div key={idx} className="bg-white border border-slate-150 p-3 rounded-xl flex gap-2.5 items-start shadow-3xs hover:border-indigo-200 hover:shadow-xs transition-all animate-fade-in">
-                  <span className="font-mono text-xs font-extrabold text-indigo-600 bg-indigo-50 border border-indigo-100 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
-                    {idx + 1}
-                  </span>
-                  <p className="text-[13px] leading-tight text-slate-700 text-justify flex-1 font-medium">
-                    {step}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="space-y-3 flex-1 flex flex-col justify-between text-left">
-            <div className="flex flex-col gap-1 shrink-0">
-              <span className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest block">Engineering Logic Flowchart:</span>
-              <div className="bg-indigo-50/80 border border-indigo-100 rounded-xl p-2.5 px-3 text-[11px] text-indigo-900 font-medium flex items-center gap-2 shadow-3xs">
-                <span className="bg-indigo-600 text-white rounded-full p-0.5 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-3.5 h-3.5" />
-                </span>
-                <span>
-                  <strong>Interactive Flow:</strong> Hover over the <span className="text-emerald-700 font-black">YES</span> or <span className="text-rose-700 font-black">NO</span> options on any decision card to light up its target step!
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-slate-50/70 border border-slate-200 rounded-2xl p-4 flex-1 flex flex-col items-center justify-start shadow-3xs">
-              <div className="flex flex-col items-center justify-start gap-1 w-full max-w-md py-4 px-4 sm:px-14">
-                {activeLabData.flowchartSteps.map((step, idx) => {
-                  const isStartStop = step.type === 'start' || step.type === 'stop';
-                  const isDecision = step.type === 'decision';
-                  const isIO = step.type === 'io';
-                  const isStepHovered = hoveredTargetStepIdx === idx;
-
+            {/* Grid Layout: Left List of Directives, Right Detail Card */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Left Directive Cards List */}
+              <div className="lg:col-span-6 grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[500px] overflow-y-auto pr-1">
+                {filteredDirectives.map((dir) => {
+                  const isSelected = dir.id === selectedDirectiveId;
                   return (
-                    <React.Fragment key={idx}>
-                      {idx > 0 && (
-                        <div className="flex flex-col items-center justify-center shrink-0 my-1 relative">
-                          <div className="w-[2px] h-4 bg-indigo-200" />
-                          <div className="bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-full p-0.5 shadow-3xs flex items-center justify-center relative">
-                            <ChevronDown className="w-3.5 h-3.5" />
-                            {activeLabData.flowchartSteps[idx - 1].type === 'decision' && (
-                              <div className="absolute left-6 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[8.5px] font-mono font-extrabold px-1.5 py-0.5 rounded shadow-3xs whitespace-nowrap">
-                                <span>YES</span>
-                                <span className="text-[7.5px] text-emerald-500 font-bold">(True)</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="w-[2px] h-4 bg-indigo-200" />
-                        </div>
-                      )}
-                      
-                      {isStartStop ? (
-                        <div className={`relative px-6 py-2.5 rounded-full shadow-3xs w-64 text-center flex items-center justify-center shrink-0 uppercase tracking-wider gap-1.5 transition-all duration-300 ${
-                          isStepHovered
-                            ? 'ring-4 ring-indigo-500/80 scale-[1.05] shadow-md bg-indigo-600 border-indigo-500 text-white'
-                            : 'bg-emerald-600 border border-emerald-500 text-white hover:bg-emerald-700'
+                    <button
+                      key={dir.id}
+                      onClick={() => setSelectedDirectiveId(dir.id)}
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        isSelected
+                          ? 'bg-indigo-50/80 border-indigo-400 ring-2 ring-indigo-300 shadow-sm'
+                          : 'bg-slate-50/50 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div>
+                        <span className={`text-[9px] font-mono font-bold uppercase block mb-1 ${
+                          isSelected ? 'text-indigo-600' : 'text-slate-400'
                         }`}>
-                          <span className="font-mono text-[8px] font-black text-emerald-100 bg-emerald-800/40 border border-emerald-500/30 px-1.5 py-0.5 rounded-full shrink-0">
-                            Step {idx + 1}
-                          </span>
-                          <span className="font-mono font-bold text-[11px]">{step.label}</span>
-                        </div>
-                      ) : isDecision ? (
-                        <div className="flex flex-col items-center justify-center gap-3 w-80">
-                          {/* CLASSIC FLOWCHART DIAMOND SHAPE */}
-                          <div className="relative w-44 h-44 flex items-center justify-center shrink-0">
-                            {/* Rotated background card to form the perfect geometric diamond */}
-                            <div className={`absolute inset-3 rotate-45 border-2 rounded-xl transition-all duration-300 ${
-                              isStepHovered
-                                ? 'border-indigo-500 bg-indigo-50/90 shadow-md ring-4 ring-indigo-500/30'
-                                : 'border-amber-300 bg-amber-50/95 hover:border-amber-400 shadow-3xs'
-                            }`} />
-                            
-                            {/* Upright, non-rotated content inside the diamond */}
-                            <div className="relative z-10 p-4 text-center flex flex-col items-center justify-center">
-                              <div className="font-mono text-[8.5px] font-black text-amber-800 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-full mb-1.5">
-                                Step {idx + 1}
-                              </div>
-                              <span className="text-amber-950 font-mono font-black text-[12px] leading-tight max-w-[110px]">
-                                {step.label}
-                              </span>
-                              <div className="text-[7.5px] text-amber-600 font-mono font-extrabold uppercase tracking-widest mt-1.5">
-                                Decision
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* HIGHLY-VISIBLE PATHWAY VISUALIZER (YES / NO FLOWS) */}
-                          <div className="w-full space-y-2 text-left text-[10.5px]">
-                            {(() => {
-                              const branches = getDecisionBranchInfo(selectedLabId, step.label);
-                              const targets = getBranchTargetIndices(selectedLabId, step.label);
-                              return (
-                                <div className="grid grid-cols-2 gap-2.5">
-                                  {/* YES PATHWAY CARD */}
-                                  <div 
-                                    onMouseEnter={() => setHoveredTargetStepIdx(targets.yes)}
-                                    onMouseLeave={() => setHoveredTargetStepIdx(null)}
-                                    className="flex flex-col bg-white border border-emerald-200 rounded-xl p-2.5 hover:bg-emerald-50/70 hover:border-emerald-400 hover:shadow-2xs transition-all cursor-pointer group/yes"
-                                  >
-                                    <div className="flex items-center justify-between gap-1 mb-1.5">
-                                      <span className="font-mono font-black text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">YES</span>
-                                      {targets.yes !== null && (
-                                        <span className="text-[8.5px] font-black text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded">
-                                          ➔ Step {targets.yes + 1}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <span className="text-slate-600 font-medium text-[10px] leading-snug group-hover/yes:text-slate-900 transition-colors">
-                                      {branches.yes}
-                                    </span>
-                                  </div>
-
-                                  {/* NO PATHWAY CARD */}
-                                  <div 
-                                    onMouseEnter={() => setHoveredTargetStepIdx(targets.no)}
-                                    onMouseLeave={() => setHoveredTargetStepIdx(null)}
-                                    className="flex flex-col bg-white border border-rose-200 rounded-xl p-2.5 hover:bg-rose-50/70 hover:border-rose-400 hover:shadow-2xs transition-all cursor-pointer group/no"
-                                  >
-                                    <div className="flex items-center justify-between gap-1 mb-1.5">
-                                      <span className="font-mono font-black text-[9px] text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">NO</span>
-                                      {targets.no !== null && (
-                                        <span className="text-[8.5px] font-black text-rose-600 bg-rose-50 px-1 py-0.5 rounded">
-                                          ➔ Step {targets.no + 1}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <span className="text-slate-600 font-medium text-[10px] leading-snug group-hover/no:text-slate-900 transition-colors">
-                                      {branches.no}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      ) : isIO ? (
-                        <div className={`relative rounded-2xl px-5 py-3.5 w-64 shadow-3xs transition-all duration-300 flex flex-col items-center justify-center text-center ${
-                          isStepHovered
-                            ? 'ring-4 ring-indigo-500/80 scale-[1.05] shadow-md border-indigo-400 bg-indigo-50/75'
-                            : 'bg-blue-50/90 border border-blue-200 hover:border-blue-300'
-                        }`}>
-                          <div className="absolute top-2 left-2 font-mono text-[8.5px] font-black text-blue-800 bg-blue-100 border border-blue-200 px-1.5 py-0.5 rounded-full">
-                            Step {idx + 1}
-                          </div>
-                          
-                          <div className="bg-blue-100 text-blue-600 text-[8px] font-mono font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full mb-1.5 mt-2">
-                            Input / Output
-                          </div>
-                          {renderFlowchartStepLabel(step.label)}
-                        </div>
-                      ) : (
-                        <div className={`relative rounded-2xl px-5 py-3.5 w-64 shadow-3xs transition-all duration-300 flex flex-col items-center justify-center text-center group ${
-                          isStepHovered
-                            ? 'ring-4 ring-indigo-500/80 scale-[1.05] shadow-md border-indigo-400 bg-indigo-50/75'
-                            : 'bg-white border border-slate-200 hover:border-indigo-200 hover:shadow-2xs'
-                        }`}>
-                          <div className="absolute top-2 left-2 font-mono text-[8.5px] font-black text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-full">
-                            Step {idx + 1}
-                          </div>
-                          
-                          <div className="bg-slate-100 text-slate-500 text-[8.5px] font-mono font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full mb-1.5 mt-2 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                            Process Block
-                          </div>
-                          {renderFlowchartStepLabel(step.label)}
-                        </div>
-                      )}
-                    </React.Fragment>
+                          {dir.category}
+                        </span>
+                        <h4 className="text-xs font-extrabold font-mono text-slate-900 tracking-tight">
+                          {dir.name}
+                        </h4>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono mt-2 block truncate">
+                        {dir.fullForm}
+                      </span>
+                    </button>
                   );
                 })}
               </div>
-            </div>
-          </div>
-        );
 
-      case 6:
-        return (
-          <div className="space-y-3 flex-1 flex flex-col justify-between text-left">
-            <div className="flex items-center justify-between">
-              <div className="flex gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/60">
-                <button
-                  onClick={() => setActiveLabStyle('simplified')}
-                  className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                    activeLabStyle === 'simplified'
-                      ? 'bg-indigo-600 text-white shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Simplified Model (.MODEL)
-                </button>
-                {activeLab.standardCode ? (
-                  <button
-                    onClick={() => setActiveLabStyle('standard')}
-                    className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                      activeLabStyle === 'standard'
-                        ? 'bg-indigo-600 text-white shadow-2xs'
-                        : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    Standard Segment (EXE)
-                  </button>
-                ) : null}
-              </div>
-
-              <button
-                onClick={() => copyToClipboard(
-                  activeLabStyle === 'standard' ? activeLab.standardCode : activeLab.simplifiedCode,
-                  activeLab.id + '_' + activeLabStyle
-                )}
-                className="text-[10px] font-bold text-slate-500 hover:text-indigo-600 transition-all flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl cursor-pointer"
-              >
-                {copiedStyle === (activeLab.id + '_' + activeLabStyle) ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-500" />
-                    <span className="text-emerald-600 font-extrabold">Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy Source Code</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <div className="bg-slate-950 border border-slate-850 rounded-2xl p-3 max-h-[220px] overflow-y-auto font-mono flex-1 relative shadow-inner">
-              <pre className="font-mono text-[11px] leading-relaxed text-indigo-300 select-text whitespace-pre text-left">
-                {activeLabStyle === 'standard' ? activeLab.standardCode : activeLab.simplifiedCode}
-              </pre>
-            </div>
-          </div>
-        );
-
-      case 7:
-        return (
-          <div className="space-y-3 flex-1 flex flex-col justify-between text-left">
-            <span className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest block">Expected Execution Outputs:</span>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 items-stretch min-h-[220px]">
-              <div className="bg-slate-950 rounded-2xl p-3 border border-slate-800 font-mono flex flex-col justify-between text-left shadow-inner">
-                <div className="text-[10px] font-mono font-bold text-indigo-400 border-b border-slate-800 pb-1.5 flex items-center gap-1.5">
-                  <Terminal className="w-3.5 h-3.5 text-indigo-500" />
-                  16-bit DEBUG.EXE Session Trace
-                </div>
-                <pre className="font-mono text-[10px] text-emerald-400 leading-normal whitespace-pre mt-1.5 select-text overflow-x-auto flex-1">
-                  {activeLabData.expectedOutput.terminalDump}
-                </pre>
-                <div className="text-[9px] text-slate-500 italic mt-1 font-mono">
-                  * Command -g executes the program and prints registers.
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-2xl p-3 flex flex-col justify-between shadow-3xs">
-                <span className="text-[10px] font-bold font-mono text-slate-500 uppercase tracking-wider block border-b border-slate-100 pb-1.5">Memory Variable Trace Map</span>
-                <div className="space-y-2 mt-2 flex-1 flex flex-col justify-center">
-                  {activeLabData.expectedOutput.inputs.map((inp, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-[13px] border-b border-slate-50 pb-1.5">
-                      <span className="font-bold text-slate-700">{inp.name} (Input):</span>
-                      <span className="font-mono text-[11.5px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-100 font-bold">{inp.val}</span>
+              {/* Right Directive Inspector Box */}
+              <div className="lg:col-span-6 bg-slate-900 text-slate-100 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-5 shadow-xl">
+                <div className="flex justify-between items-start border-b border-slate-800 pb-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-mono font-extrabold uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded-md">
+                        {selectedDirective.category}
+                      </span>
+                      <span className="text-[10px] font-mono font-extrabold uppercase bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md">
+                        {selectedDirective.styleAffiliation}
+                      </span>
                     </div>
-                  ))}
-                  {activeLabData.expectedOutput.outputs.map((out, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-[13px] border-b border-slate-50 pb-1.5">
-                      <span className="font-bold text-slate-700">{out.name} (Result):</span>
-                      <span className="font-mono text-[11.5px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-100 font-bold">{out.val}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="bg-indigo-50/50 p-2 rounded-xl text-[10px] text-indigo-900 border border-indigo-100 font-mono mt-1 font-bold">
-                  Expected Registers: {activeLabData.expectedOutput.registers}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 8:
-        return (
-          <div className="space-y-4 flex-1 flex flex-col justify-between text-left">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest block">
-                {activeLabData.manualCalculations.title}:
-              </span>
-              <span className="text-[9px] bg-indigo-50 border border-indigo-150 text-indigo-700 px-2 py-1 rounded-xl font-bold font-mono">
-                ⚡ LIVE CALCULATOR LINKED
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 items-stretch">
-              {/* Dynamic Live Walkthrough (LHS) */}
-              <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-2xl p-4 shadow-3xs flex flex-col gap-2.5">
-                <h4 className="font-display font-bold text-slate-900 text-[13px] flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                  <span className="w-2.5 h-2.5 bg-indigo-600 rounded-full shrink-0 animate-ping"></span>
-                  State-linked Step-by-Step Analyzer
-                </h4>
-                <div className="flex-1 overflow-y-auto max-h-[380px] pr-1 scrollbar-thin">
-                  {renderDynamicCalculations()}
-                </div>
-              </div>
-
-              {/* Lab Manual Standard Formulas (RHS) */}
-              <div className="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-2.5">
-                <h4 className="font-display font-bold text-slate-500 text-[11px] uppercase font-mono tracking-wider flex items-center gap-1.5 border-b border-slate-200/60 pb-2">
-                  <span>Lab Reference Manual Steps</span>
-                </h4>
-                <div className="flex-1 overflow-y-auto max-h-[380px] pr-1 flex flex-col gap-2 scrollbar-thin">
-                  {activeLabData.manualCalculations.steps.map((st, idx) => (
-                    <div key={idx} className="bg-white border border-slate-150 p-2.5 rounded-xl flex flex-col gap-1 shadow-3xs">
-                      <div className="flex items-center gap-1.5">
-                        <span className="bg-teal-50 border border-teal-100 text-teal-700 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase font-sans">
-                          Step {idx + 1}
-                        </span>
-                        <h5 className="font-bold text-[12px] text-slate-900">{st.step}</h5>
-                      </div>
-                      <p className="text-[11.5px] text-slate-500 leading-normal pl-2 border-l-2 border-slate-100 text-justify">
-                        {st.detail}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 9:
-        return (
-          <div className="space-y-4 flex-1 flex flex-col justify-center items-center text-center">
-            <div className="bg-white border border-slate-200 p-5 rounded-2xl text-center space-y-4 shadow-3xs max-w-lg w-full">
-              <div className="p-3 bg-emerald-50 text-emerald-700 rounded-full inline-block border border-emerald-200">
-                <CheckCircle2 className="w-10 h-10" />
-              </div>
-              <div>
-                <h4 className="font-display font-bold text-lg text-slate-900">Lab Experiment Completed</h4>
-                <p className="text-[14px] text-slate-700 mt-2 leading-relaxed text-justify px-3 font-medium">
-                  {activeLabData.resultText}
-                </p>
-              </div>
-            </div>
-
-            <div className="relative mt-2">
-              <div className="border-4 border-dashed border-red-500/75 p-3 px-6 rounded-2xl font-mono text-[11px] font-extrabold text-red-500/80 bg-red-50/25 tracking-wider text-center flex flex-col items-center rotate-[-3deg] shadow-3xs max-w-xs transition-transform hover:scale-[1.03]">
-                <span className="text-[9px] uppercase tracking-widest text-red-400 font-bold">UNIVERSITY LAB SYSTEM</span>
-                <span className="text-sm font-extrabold my-0.5">STATUS: GRADED A+ / CHECKED</span>
-                <span className="text-[9px] italic text-red-400 font-mono font-bold">FACULTY OF MICROPROCESSORS DEPT</span>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 10:
-        return (
-          <div className="space-y-3 flex-1 flex flex-col justify-between text-left">
-            <span className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest block">Core Laboratory Precautions:</span>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1 items-stretch min-h-[220px]">
-              {activeLabData.precautions.map((pre, idx) => (
-                <div key={idx} className="bg-white border border-slate-200 p-4 rounded-2xl flex flex-col justify-between shadow-3xs hover:border-amber-300 hover:shadow-xs transition-all border-l-4 border-l-amber-500">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-1.5 text-amber-800 font-bold text-xs font-mono uppercase tracking-wider">
-                      <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                      <span>Precaution {idx + 1}</span>
-                    </div>
-                    <p className="text-[14px] text-slate-700 leading-relaxed text-justify font-medium">
-                      {pre}
+                    <h3 className="text-lg font-mono font-black text-white tracking-tight">
+                      {selectedDirective.name}
+                    </h3>
+                    <p className="text-xs font-mono text-indigo-300 mt-0.5">
+                      {selectedDirective.fullForm}
                     </p>
                   </div>
-                  <div className="text-[9px] text-slate-400 font-mono font-bold uppercase tracking-wider mt-2">
-                    * SAFETY DIRECTIVE
+
+                  <div className="text-right">
+                    <span className="text-[9px] font-mono uppercase text-slate-400 block font-bold">Compile Size</span>
+                    <span className="text-xs font-mono font-bold text-emerald-400">
+                      {selectedDirective.bytesAllocated}
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        );
 
-      case 11:
-        return (
-          <div className="space-y-4 flex-1 flex flex-col justify-center text-left">
-            <div className="bg-fuchsia-50/50 border border-fuchsia-150 p-4 rounded-2xl space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-fuchsia-100 border border-fuchsia-200 rounded-xl text-fuchsia-700">
-                  <Award className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-[8.5px] font-mono font-bold text-fuchsia-500 block uppercase leading-none">Microprocessor Lab Challenge</span>
-                  <h4 className="font-extrabold text-[15px] text-fuchsia-950 mt-1">{activeLabData.studentTask.title}</h4>
-                </div>
-              </div>
-              
-              <p className="text-[13.5px] text-slate-700 leading-relaxed text-justify font-medium">
-                {activeLabData.studentTask.desc}
-              </p>
-
-              <div className="border-t border-fuchsia-100 pt-3">
-                <button
-                  onClick={() => setShowChallengeHint(!showChallengeHint)}
-                  className="flex items-center gap-1.5 text-xs font-bold text-fuchsia-700 hover:text-fuchsia-900 transition-colors bg-white hover:bg-fuchsia-50 border border-fuchsia-200 px-3 py-1.5 rounded-xl cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>{showChallengeHint ? "Hide Strategy Hint" : "Reveal Strategy Hint"}</span>
-                </button>
-
-                {showChallengeHint && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-2.5 bg-white border border-fuchsia-100 p-3 rounded-xl text-[12.5px] text-slate-600 leading-relaxed border-l-4 border-l-fuchsia-500 font-medium animate-fade-in"
-                  >
-                    <strong>Implementation Hint:</strong> {activeLabData.studentTask.hint}
-                  </motion.div>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-
-      case 12:
-        return (
-          <div className="space-y-3 flex-1 flex flex-col justify-between text-left">
-            <span className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest block">Real-World Industrial Applications:</span>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1 items-stretch min-h-[220px]">
-              {activeLabData.applications.map((app, idx) => (
-                <div key={idx} className="bg-white border border-slate-200 p-4 rounded-2xl flex flex-col justify-between shadow-3xs hover:border-indigo-300 hover:shadow-xs transition-all">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-600">
-                        {renderApplicationIcon(app.icon)}
-                      </div>
-                      <h5 className="font-bold text-xs text-slate-900 tracking-tight leading-tight">{app.title}</h5>
-                    </div>
-                    <p className="text-[13px] text-slate-600 leading-relaxed text-justify">
-                      {app.desc}
-                    </p>
-                  </div>
-                  <span className="text-[9px] font-mono font-bold text-indigo-500 uppercase tracking-widest mt-2 block">
-                    SYSTEM DEPLOYMENT
+                {/* Description */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-mono uppercase font-bold text-slate-400 block tracking-wider">
+                    Purpose & Compile-Time Behavior
                   </span>
+                  <p className="text-xs leading-relaxed text-slate-300 font-sans">
+                    {selectedDirective.desc}
+                  </p>
                 </div>
-              ))}
-            </div>
-          </div>
-        );
 
-      default:
-        return null;
-    }
-  };
-
-  const copyToClipboard = (text: string, styleId: string) => {
-    if (navigator && navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      setCopiedStyle(styleId);
-      setTimeout(() => setCopiedStyle(null), 2000);
-    }
-  };
-
-  const activeDirective = directivesData[hoveredDirective] || directivesData['DB'];
-
-  const selectAndHover = (directiveId: string) => {
-    setHoveredDirective(directiveId);
-  };
-
-  return (
-    <div id="directive-sandbox-simulator" className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 text-slate-800 flex flex-col justify-between shadow-xs min-h-[850px] h-[920px] overflow-hidden">
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden h-full">
-          {/* Experiment Content Details (Full Width) */}
-          <div className="flex-1 bg-slate-50/55 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between min-h-0 h-full overflow-hidden relative shadow-3xs">
-
-
-            {/* Sticky/Fixed Compact Section Quick Jumps */}
-            <div className="flex items-center gap-1.5 overflow-x-auto py-2 border-b border-slate-150 shrink-0 scrollbar-none text-[10px] text-slate-500 font-bold font-mono">
-              <span className="text-slate-400 uppercase tracking-wider text-[8.5px] shrink-0 mr-1 flex items-center gap-1">Jump to:</span>
-              {sections.map((sec, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    const el = document.getElementById(`sec-card-${sec.originalIdx}`);
-                    if (el) {
-                      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }
-                  }}
-                  className="px-2 py-0.5 rounded-md bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 transition-all cursor-pointer whitespace-nowrap"
-                >
-                  {idx + 1}. {sec.name.replace(' Concepts', '').replace(' trace', '').replace(' Required', '').replace(' Program', '')}
-                </button>
-              ))}
-            </div>
-
-            {/* Scrollable Single Page Document */}
-            <div className="flex-1 overflow-y-auto pr-1 space-y-5 py-3.5 scrollbar-thin scroll-smooth">
-              {sections.map((sec, idx) => {
-                let sectionIcon = <BookOpen className="w-4 h-4 text-indigo-600" />;
-                if (sec.originalIdx === 0) sectionIcon = <Compass className="w-4 h-4 text-indigo-600" />;
-                if (sec.originalIdx === 1) sectionIcon = <Database className="w-4 h-4 text-emerald-600" />;
-                if (sec.originalIdx === 2) sectionIcon = <ClipboardList className="w-4 h-4 text-blue-600" />;
-                if (sec.originalIdx === 3) sectionIcon = <Layers className="w-4 h-4 text-purple-600" />;
-                if (sec.originalIdx === 4) sectionIcon = <Code2 className="w-4 h-4 text-indigo-600" />;
-                if (sec.originalIdx === 5) sectionIcon = <TrendingUp className="w-4 h-4 text-amber-600" />;
-                if (sec.originalIdx === 6) sectionIcon = <FileCode className="w-4 h-4 text-rose-600" />;
-                if (sec.originalIdx === 7) sectionIcon = <Terminal className="w-4 h-4 text-violet-600" />;
-                if (sec.originalIdx === 8) sectionIcon = <Calculator className="w-4 h-4 text-teal-600" />;
-                if (sec.originalIdx === 9) sectionIcon = <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
-                if (sec.originalIdx === 10) sectionIcon = <AlertTriangle className="w-4 h-4 text-amber-600" />;
-                if (sec.originalIdx === 11) sectionIcon = <Award className="w-4 h-4 text-fuchsia-600" />;
-                if (sec.originalIdx === 12) sectionIcon = <Sparkles className="w-4 h-4 text-purple-600" />;
-
-                return (
-                  <div
-                    id={`sec-card-${sec.originalIdx}`}
-                    key={idx}
-                    className="bg-white border border-slate-200 rounded-2xl p-4 shadow-3xs relative overflow-hidden transition-all hover:border-slate-300 text-left"
-                  >
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-xl bg-slate-50 border border-slate-150">
-                          {sectionIcon}
-                        </div>
-                        <div>
-                          <span className="text-[8.5px] font-mono font-bold text-slate-400 block uppercase leading-none">SECTION 0{idx + 1}</span>
-                          <h4 className="font-extrabold text-xs text-slate-900 tracking-tight uppercase mt-0.5">{sec.name}</h4>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-mono font-bold text-slate-300">#sec-{idx + 1}</span>
-                    </div>
-                    <div className="text-slate-700">
-                      {renderPageContent(sec.originalIdx)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-function SignedUnsignedVisualizer() {
-  const [activeSubTab, setActiveSubTab] = useState<'representation' | 'arithmetic'>('representation');
-
-  // --- Sub-Tab 1: Binary Representation State ---
-  const [bitSize, setBitSize] = useState<8 | 16>(8);
-  const [value, setValue] = useState<number>(149); // Default: decimal 149 (unsigned) / -107 (signed)
-  const [inputValue, setInputValue] = useState<string>('149');
-
-  // --- Sub-Tab 2: Signed/Unsigned Arithmetic State ---
-  const [opMode, setOpMode] = useState<'MUL_IMUL' | 'DIV_IDIV'>('MUL_IMUL');
-  const [opBitSize, setOpBitSize] = useState<8 | 16>(8);
-  const [inputOp1, setInputOp1] = useState<string>('F2');
-  const [inputOp2, setInputOp2] = useState<string>('03');
-
-  // Sync representation state when bit width changes
-  useEffect(() => {
-    const maxVal = Math.pow(2, bitSize) - 1;
-    if (value > maxVal) {
-      const clamped = value & maxVal;
-      setValue(clamped);
-      setInputValue(clamped.toString(10));
-    }
-  }, [bitSize]);
-
-  // Sync arithmetic default presets when operation mode or size changes
-  useEffect(() => {
-    if (opMode === 'MUL_IMUL') {
-      if (opBitSize === 8) {
-        setInputOp1('F2'); // -14 signed, 242 unsigned
-        setInputOp2('03'); // 3 signed, 3 unsigned
-      } else {
-        setInputOp1('FFA1'); // -95 signed, 65441 unsigned
-        setInputOp2('0005'); // 5 signed, 5 unsigned
-      }
-    } else { // Division
-      if (opBitSize === 8) {
-        setInputOp1('00F2'); // 242 signed/unsigned dividend (AX)
-        setInputOp2('10');   // 16 divisor (BL)
-      } else {
-        setInputOp1('0000A120'); // 41248 dividend (DX:AX)
-        setInputOp2('0050');     // 80 divisor (BX)
-      }
-    }
-  }, [opMode, opBitSize]);
-
-  const toggleBit = (idx: number) => {
-    const newValue = value ^ (1 << idx);
-    setValue(newValue);
-    setInputValue(newValue.toString(10));
-  };
-
-  const handleDecimalChange = (valStr: string) => {
-    setInputValue(valStr);
-    const parsed = parseInt(valStr, 10);
-    if (!isNaN(parsed)) {
-      const maxUnsigned = Math.pow(2, bitSize) - 1;
-      const minSigned = -Math.pow(2, bitSize - 1);
-      
-      if (parsed >= minSigned && parsed <= maxUnsigned) {
-        let normalized = parsed;
-        if (parsed < 0) {
-          normalized = Math.pow(2, bitSize) + parsed;
-        }
-        setValue(normalized);
-      }
-    }
-  };
-
-  const handleHexChange = (hexStr: string) => {
-    const cleaned = hexStr.toUpperCase().replace(/[^0-9A-F]/g, '');
-    const parsed = parseInt(cleaned || '0', 16);
-    const maxUnsigned = Math.pow(2, bitSize) - 1;
-    if (parsed <= maxUnsigned) {
-      setValue(parsed);
-      setInputValue(parsed.toString(10));
-    }
-  };
-
-  const setPreset = (dec: number) => {
-    let normalized = dec;
-    if (dec < 0) {
-      normalized = Math.pow(2, bitSize) + dec;
-    }
-    setValue(normalized);
-    setInputValue(dec.toString(10));
-  };
-
-  const unsignedVal = value;
-  const halfRange = Math.pow(2, bitSize - 1);
-  const signedVal = value >= halfRange ? value - Math.pow(2, bitSize) : value;
-  const hexString = value.toString(16).toUpperCase().padStart(bitSize / 4, '0');
-
-  // Helper to extract bit array of length bitSize
-  const bits = Array.from({ length: bitSize }, (_, idx) => {
-    return (value >> idx) & 1;
-  });
-
-  // We can render bits from MSB (left) to LSB (right)
-  const renderByteRow = (startIdx: number, endIdx: number, label: string) => {
-    const byteBits = [];
-    for (let i = startIdx; i >= endIdx; i--) {
-      const bitVal = (value >> i) & 1;
-      const isMSB = i === bitSize - 1;
-      const weight = Math.pow(2, i);
-      const signedWeight = isMSB ? -weight : weight;
-
-      byteBits.push(
-        <button
-          key={i}
-          onClick={() => toggleBit(i)}
-          className={`flex-1 flex flex-col items-center justify-between p-2 rounded-xl border-2 transition-all cursor-pointer select-none ${
-            bitVal === 1
-              ? isMSB
-                ? 'bg-rose-500/15 border-rose-500 text-rose-900 font-black shadow-3xs'
-                : 'bg-indigo-600 border-indigo-600 text-white font-black shadow-3xs animate-fade-in'
-              : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-3xs'
-          }`}
-        >
-          <div className={`text-[9px] font-extrabold block ${bitVal === 1 ? (isMSB ? 'text-rose-700' : 'text-indigo-200') : 'text-slate-500'}`}>
-            B{i}
-          </div>
-          <div className="text-sm font-extrabold my-1">
-            {bitVal}
-          </div>
-          <div className={`text-[8.5px] font-mono leading-none tracking-tighter uppercase font-black ${bitVal === 1 ? (isMSB ? 'text-rose-800' : 'text-indigo-100') : 'text-slate-500'}`}>
-            {isMSB ? `${signedWeight}` : `+${weight}`}
-          </div>
-        </button>
-      );
-    }
-
-    return (
-      <div className="space-y-1.5 flex-1">
-        <div className="flex justify-between items-center text-[9.5px] text-slate-600 font-black uppercase tracking-wider px-1">
-          <span>{label}</span>
-          <span>(MSB ➔ LSB)</span>
-        </div>
-        <div className="flex gap-1.5">
-          {byteBits}
-        </div>
-      </div>
-    );
-  };
-
-  // --- Sub-Tab 2: Arithmetic Helper Parsing & Operations ---
-  const parseHexCustom = (hex: string, maxBits: 8 | 16 | 32) => {
-    const cleaned = hex.toUpperCase().replace(/[^0-9A-F]/g, '');
-    if (!cleaned) return { unsigned: 0, signed: 0, isValid: false };
-    const uVal = parseInt(cleaned, 16);
-    if (isNaN(uVal)) return { unsigned: 0, signed: 0, isValid: false };
-    const limit = Math.pow(2, maxBits);
-    const halfLimit = Math.pow(2, maxBits - 1);
-    const uValClamped = uVal % limit;
-    const sVal = uValClamped >= halfLimit ? uValClamped - limit : uValClamped;
-    return { unsigned: uValClamped, signed: sVal, isValid: true };
-  };
-
-  const isMul = opMode === 'MUL_IMUL';
-  const is8Bit = opBitSize === 8;
-  const op1Bits = isMul ? (is8Bit ? 8 : 16) : (is8Bit ? 16 : 32);
-  const op2Bits = is8Bit ? 8 : 16;
-
-  const parsedOp1 = parseHexCustom(inputOp1, op1Bits);
-  const parsedOp2 = parseHexCustom(inputOp2, op2Bits);
-
-  let unsignedExpr = '';
-  let signedExpr = '';
-  let unsignedResultText = '';
-  let signedResultText = '';
-  let unsignedRegisters: Array<{ name: string; val: string; desc: string }> = [];
-  let signedRegisters: Array<{ name: string; val: string; desc: string }> = [];
-
-  if (parsedOp1.isValid && parsedOp2.isValid) {
-    const u1 = parsedOp1.unsigned;
-    const u2 = parsedOp2.unsigned;
-    const s1 = parsedOp1.signed;
-    const s2 = parsedOp2.signed;
-
-    if (isMul) {
-      if (is8Bit) {
-        const uProd = u1 * u2;
-        const sProd = s1 * s2;
-
-        unsignedExpr = `${u1} (AL) × ${u2} (BL) = ${uProd}`;
-        signedExpr = `${s1} (AL) × ${s2} (BL) = ${sProd}`;
-
-        unsignedResultText = `AX = ${uProd.toString(16).toUpperCase().padStart(4, '0')}H (${uProd})`;
-        const sProdHex = (sProd < 0 ? (0x10000 + sProd) : sProd).toString(16).toUpperCase().padStart(4, '0');
-        signedResultText = `AX = ${sProdHex}H (${sProd})`;
-
-        unsignedRegisters = [
-          { name: 'AL (Multiplicand)', val: u1.toString(16).toUpperCase().padStart(2, '0') + 'H', desc: `Unsigned: ${u1}` },
-          { name: 'BL (Multiplier)', val: u2.toString(16).toUpperCase().padStart(2, '0') + 'H', desc: `Unsigned: ${u2}` },
-          { name: 'AX (Product Result)', val: uProd.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Unsigned: ${uProd}` }
-        ];
-
-        signedRegisters = [
-          { name: 'AL (Multiplicand)', val: (s1 < 0 ? 256 + s1 : s1).toString(16).toUpperCase().padStart(2, '0') + 'H', desc: `Signed: ${s1}` },
-          { name: 'BL (Multiplier)', val: (s2 < 0 ? 256 + s2 : s2).toString(16).toUpperCase().padStart(2, '0') + 'H', desc: `Signed: ${s2}` },
-          { name: 'AX (Product Result)', val: sProdHex + 'H', desc: `Signed: ${sProd}` }
-        ];
-      } else {
-        const uProd = u1 * u2;
-        const sProd = s1 * s2;
-
-        unsignedExpr = `${u1} (AX) × ${u2} (BX) = ${uProd}`;
-        signedExpr = `${s1} (AX) × ${s2} (BX) = ${sProd}`;
-
-        const uProdDX = Math.floor(uProd / 65536);
-        const uProdAX = uProd % 65536;
-        unsignedResultText = `DX:AX = ${uProdDX.toString(16).toUpperCase().padStart(4, '0')}:${uProdAX.toString(16).toUpperCase().padStart(4, '0')}H (${uProd})`;
-
-        const sProdRaw = sProd < 0 ? (0x100000000 + sProd) : sProd;
-        const sProdDX = Math.floor(sProdRaw / 65536) % 65536;
-        const sProdAX = sProdRaw % 65536;
-        signedResultText = `DX:AX = ${sProdDX.toString(16).toUpperCase().padStart(4, '0')}:${sProdAX.toString(16).toUpperCase().padStart(4, '0')}H (${sProd})`;
-
-        unsignedRegisters = [
-          { name: 'AX (Multiplicand)', val: u1.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Unsigned: ${u1}` },
-          { name: 'BX (Multiplier)', val: u2.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Unsigned: ${u2}` },
-          { name: 'DX (Upper Product)', val: uProdDX.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Unsigned: ${uProdDX}` },
-          { name: 'AX (Lower Product)', val: uProdAX.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Unsigned: ${uProdAX}` }
-        ];
-
-        signedRegisters = [
-          { name: 'AX (Multiplicand)', val: (s1 < 0 ? 65536 + s1 : s1).toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Signed: ${s1}` },
-          { name: 'BX (Multiplier)', val: (s2 < 0 ? 65536 + s2 : s2).toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Signed: ${s2}` },
-          { name: 'DX (Upper Product)', val: sProdDX.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Signed: ${sProdDX}` },
-          { name: 'AX (Lower Product)', val: sProdAX.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Signed: ${sProdAX}` }
-        ];
-      }
-    } else {
-      // Division
-      if (is8Bit) {
-        unsignedExpr = `${u1} (AX) ÷ ${u2} (BL)`;
-        signedExpr = `${s1} (AX) ÷ ${s2} (BL)`;
-
-        if (u2 === 0) {
-          unsignedResultText = 'Division by Zero (INT 00H Error)';
-        } else {
-          const uQuot = Math.floor(u1 / u2);
-          const uRem = u1 % u2;
-          if (uQuot > 255) {
-            unsignedResultText = 'Divide Overflow Error (Quotient > 255)';
-          } else {
-            unsignedResultText = `Quotient = ${uQuot}, Remainder = ${uRem} (AL=${uQuot.toString(16).toUpperCase().padStart(2, '0')}H, AH=${uRem.toString(16).toUpperCase().padStart(2, '0')}H)`;
-          }
-        }
-
-        if (s2 === 0) {
-          signedResultText = 'Division by Zero (INT 00H Error)';
-        } else {
-          const sQuot = Math.trunc(s1 / s2);
-          const sRem = s1 % s2;
-          if (sQuot > 127 || sQuot < -128) {
-            signedResultText = 'Divide Overflow Error (Quotient outside -128..127)';
-          } else {
-            const sQuotHex = (sQuot < 0 ? 256 + sQuot : sQuot).toString(16).toUpperCase().padStart(2, '0');
-            const sRemHex = (sRem < 0 ? 256 + sRem : sRem).toString(16).toUpperCase().padStart(2, '0');
-            signedResultText = `Quotient = ${sQuot}, Remainder = ${sRem} (AL=${sQuotHex}H, AH=${sRemHex}H)`;
-          }
-        }
-
-        unsignedRegisters = [
-          { name: 'AX (Dividend)', val: u1.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Unsigned: ${u1}` },
-          { name: 'BL (Divisor)', val: u2.toString(16).toUpperCase().padStart(2, '0') + 'H', desc: `Unsigned: ${u2}` }
-        ];
-        if (u2 !== 0 && Math.floor(u1 / u2) <= 255) {
-          const uQuot = Math.floor(u1 / u2);
-          const uRem = u1 % u2;
-          unsignedRegisters.push({ name: 'AL (Quotient)', val: uQuot.toString(16).toUpperCase().padStart(2, '0') + 'H', desc: `Unsigned: ${uQuot}` });
-          unsignedRegisters.push({ name: 'AH (Remainder)', val: uRem.toString(16).toUpperCase().padStart(2, '0') + 'H', desc: `Unsigned: ${uRem}` });
-        }
-
-        signedRegisters = [
-          { name: 'AX (Dividend)', val: (s1 < 0 ? 65536 + s1 : s1).toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Signed: ${s1}` },
-          { name: 'BL (Divisor)', val: (s2 < 0 ? 256 + s2 : s2).toString(16).toUpperCase().padStart(2, '0') + 'H', desc: `Signed: ${s2}` }
-        ];
-        if (s2 !== 0) {
-          const sQuot = Math.trunc(s1 / s2);
-          const sRem = s1 % s2;
-          if (sQuot >= -128 && sQuot <= 127) {
-            const sQuotHex = (sQuot < 0 ? 256 + sQuot : sQuot).toString(16).toUpperCase().padStart(2, '0');
-            const sRemHex = (sRem < 0 ? 256 + sRem : sRem).toString(16).toUpperCase().padStart(2, '0');
-            signedRegisters.push({ name: 'AL (Quotient)', val: sQuotHex + 'H', desc: `Signed: ${sQuot}` });
-            signedRegisters.push({ name: 'AH (Remainder)', val: sRemHex + 'H', desc: `Signed: ${sRem}` });
-          }
-        }
-      } else {
-        // 16-bit division (DX:AX / BX)
-        unsignedExpr = `${u1} (DX:AX) ÷ ${u2} (BX)`;
-        signedExpr = `${s1} (DX:AX) ÷ ${s2} (BX)`;
-
-        const uDividendDX = Math.floor(u1 / 65536);
-        const uDividendAX = u1 % 65536;
-
-        const sDividendRaw = s1 < 0 ? (0x100000000 + s1) : s1;
-        const sDividendDX = Math.floor(sDividendRaw / 65536) % 65536;
-        const sDividendAX = sDividendRaw % 65536;
-
-        if (u2 === 0) {
-          unsignedResultText = 'Division by Zero (INT 00H Error)';
-        } else {
-          const uQuot = Math.floor(u1 / u2);
-          const uRem = u1 % u2;
-          if (uQuot > 65535) {
-            unsignedResultText = 'Divide Overflow Error (Quotient > 65535)';
-          } else {
-            unsignedResultText = `Quotient = ${uQuot}, Remainder = ${uRem} (AX=${uQuot.toString(16).toUpperCase().padStart(4, '0')}H, DX=${uRem.toString(16).toUpperCase().padStart(4, '0')}H)`;
-          }
-        }
-
-        if (s2 === 0) {
-          signedResultText = 'Division by Zero (INT 00H Error)';
-        } else {
-          const sQuot = Math.trunc(s1 / s2);
-          const sRem = s1 % s2;
-          if (sQuot > 32767 || sQuot < -32768) {
-            signedResultText = 'Divide Overflow Error (Quotient outside -32768..32767)';
-          } else {
-            const sQuotHex = (sQuot < 0 ? 65536 + sQuot : sQuot).toString(16).toUpperCase().padStart(4, '0');
-            const sRemHex = (sRem < 0 ? 65536 + sRem : sRem).toString(16).toUpperCase().padStart(4, '0');
-            signedResultText = `Quotient = ${sQuot}, Remainder = ${sRem} (AX=${sQuotHex}H, DX=${sRemHex}H)`;
-          }
-        }
-
-        unsignedRegisters = [
-          { name: 'DX (Dividend High)', val: uDividendDX.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Unsigned: ${uDividendDX}` },
-          { name: 'AX (Dividend Low)', val: uDividendAX.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Unsigned: ${uDividendAX}` },
-          { name: 'BX (Divisor)', val: u2.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Unsigned: ${u2}` }
-        ];
-        if (u2 !== 0 && Math.floor(u1 / u2) <= 65535) {
-          const uQuot = Math.floor(u1 / u2);
-          const uRem = u1 % u2;
-          unsignedRegisters.push({ name: 'AX (Quotient)', val: uQuot.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Unsigned: ${uQuot}` });
-          unsignedRegisters.push({ name: 'DX (Remainder)', val: uRem.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Unsigned: ${uRem}` });
-        }
-
-        signedRegisters = [
-          { name: 'DX (Dividend High)', val: sDividendDX.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Signed: ${s1 < 0 ? Math.floor(sDividendRaw / 65536) - 65536 : sDividendDX}` },
-          { name: 'AX (Dividend Low)', val: sDividendAX.toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Signed: ${sDividendAX}` },
-          { name: 'BX (Divisor)', val: (s2 < 0 ? 65536 + s2 : s2).toString(16).toUpperCase().padStart(4, '0') + 'H', desc: `Signed: ${s2}` }
-        ];
-        if (s2 !== 0) {
-          const sQuot = Math.trunc(s1 / s2);
-          const sRem = s1 % s2;
-          if (sQuot >= -32768 && sQuot <= 32767) {
-            const sQuotHex = (sQuot < 0 ? 65536 + sQuot : sQuot).toString(16).toUpperCase().padStart(4, '0');
-            const sRemHex = (sRem < 0 ? 65536 + sRem : sRem).toString(16).toUpperCase().padStart(4, '0');
-            signedRegisters.push({ name: 'AX (Quotient)', val: sQuotHex + 'H', desc: `Signed: ${sQuot}` });
-            signedRegisters.push({ name: 'DX (Remainder)', val: sRemHex + 'H', desc: `Signed: ${sRem}` });
-          }
-        }
-      }
-    }
-  }
-
-  return (
-    <div className="w-full text-slate-800 space-y-4">
-      {/* Tab Switcher */}
-      <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-        <button
-          onClick={() => setActiveSubTab('representation')}
-          className={`flex-1 py-2 text-xs font-black rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'representation'
-              ? 'bg-white text-indigo-700 shadow-2xs border border-slate-200/50'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Cpu className="w-3.5 h-3.5 text-indigo-500" />
-          Binary Representation & Converter
-        </button>
-        <button
-          onClick={() => setActiveSubTab('arithmetic')}
-          className={`flex-1 py-2 text-xs font-black rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'arithmetic'
-              ? 'bg-white text-indigo-700 shadow-2xs border border-slate-200/50'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Calculator className="w-3.5 h-3.5 text-indigo-500" />
-          Signed / Unsigned Arithmetic Simulator
-        </button>
-      </div>
-
-      {activeSubTab === 'representation' ? (
-        <div className="space-y-4">
-          {/* Bit Width Selector */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 p-2 rounded-xl border border-slate-150">
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] font-black text-slate-500 uppercase mr-1.5">Register Size:</span>
-              <button
-                onClick={() => setBitSize(8)}
-                className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                  bitSize === 8
-                    ? 'bg-indigo-600 text-white shadow-2xs'
-                    : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200'
-                }`}
-              >
-                8-Bit (AL / BL)
-              </button>
-              <button
-                onClick={() => setBitSize(16)}
-                className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                  bitSize === 16
-                    ? 'bg-indigo-600 text-white shadow-2xs'
-                    : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200'
-                }`}
-              >
-                16-Bit (AX / BX)
-              </button>
-            </div>
-
-            {/* Quick Presets */}
-            <div className="flex items-center gap-1 flex-wrap justify-end">
-              <span className="text-[9px] font-bold text-slate-400 uppercase">Presets:</span>
-              {bitSize === 8 ? (
-                <>
-                  <button onClick={() => setPreset(0)} className="bg-white border border-slate-200 hover:border-slate-350 text-[10px] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer">0</button>
-                  <button onClick={() => setPreset(127)} className="bg-white border border-slate-200 hover:border-slate-350 text-[10px] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer">+127 (Max)</button>
-                  <button onClick={() => setPreset(-128)} className="bg-white border border-rose-300 hover:border-rose-450 text-[10px] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer text-rose-700">-128 (Min)</button>
-                  <button onClick={() => setPreset(-1)} className="bg-white border border-slate-250 hover:border-slate-350 text-[10px] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer">-1</button>
-                  <button onClick={() => setPreset(255)} className="bg-white border border-indigo-200 hover:border-indigo-350 text-[10px] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer text-indigo-700">255</button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => setPreset(0)} className="bg-white border border-slate-200 hover:border-slate-350 text-[10px] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer">0</button>
-                  <button onClick={() => setPreset(32767)} className="bg-white border border-slate-200 hover:border-slate-350 text-[10px] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer">+32767</button>
-                  <button onClick={() => setPreset(-32768)} className="bg-white border border-rose-300 hover:border-rose-450 text-[10px] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer text-rose-700">-32768</button>
-                  <button onClick={() => setPreset(-1)} className="bg-white border border-slate-250 hover:border-slate-350 text-[10px] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer">-1</button>
-                  <button onClick={() => setPreset(65535)} className="bg-white border border-indigo-200 hover:border-indigo-350 text-[10px] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer text-indigo-700">65535</button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Manual Value Inputs */}
-          <div className="grid grid-cols-2 gap-4 items-center bg-slate-50/25 p-3 rounded-2xl border border-slate-150">
-            <div className="space-y-1.5 text-left">
-              <label className="text-[10px] font-extrabold text-slate-500 block uppercase">
-                Decimal Value ({bitSize === 8 ? '-128 to 255' : '-32768 to 65535'})
-              </label>
-              <input
-                type="number"
-                value={inputValue}
-                onChange={(e) => handleDecimalChange(e.target.value)}
-                className="w-full bg-white border border-slate-200 hover:border-indigo-350 focus:border-indigo-500 rounded-lg p-2 font-mono font-black text-slate-900 text-xs focus:outline-none shadow-3xs"
-              />
-            </div>
-
-            <div className="space-y-1.5 text-left">
-              <label className="text-[10px] font-extrabold text-slate-500 block uppercase">
-                Hexadecimal Value ({bitSize === 8 ? '00 to FF' : '0000 to FFFF'})
-              </label>
-              <div className="relative flex items-center">
-                <span className="absolute left-2.5 text-slate-400 font-bold text-xs font-mono">0x</span>
-                <input
-                  type="text"
-                  maxLength={bitSize / 4}
-                  value={hexString}
-                  onChange={(e) => handleHexChange(e.target.value)}
-                  className="w-full bg-white border border-slate-200 hover:border-indigo-350 focus:border-indigo-500 rounded-lg p-2 pl-7 font-mono font-black text-slate-900 text-xs focus:outline-none shadow-3xs"
-                />
-                <span className="absolute right-2.5 text-slate-400 font-bold text-[10px] font-mono">H</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive Bit Lanes */}
-          <div className="space-y-3 p-3 bg-white border border-slate-150 rounded-2xl shadow-3xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[10.5px] font-extrabold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
-                Tactile Bit-flip Register
-              </span>
-              <span className="text-[10px] text-slate-600 font-extrabold italic">Click any bit block to toggle value</span>
-            </div>
-
-            {bitSize === 8 ? (
-              <div className="flex gap-2">
-                {renderByteRow(7, 0, '8-Bit Register')}
-              </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row gap-4">
-                {renderByteRow(15, 8, 'Upper Byte (AH / BH)')}
-                {renderByteRow(7, 0, 'Lower Byte (AL / BL)')}
-              </div>
-            )}
-          </div>
-
-          {/* Decoders Grid (Signed vs Unsigned Interpretation) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Unsigned Box */}
-            <div className="bg-indigo-50/45 border border-indigo-150/80 rounded-2xl p-3 text-left flex flex-col justify-between shadow-3xs">
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold text-indigo-700 uppercase tracking-widest">Unsigned Interpretation</span>
-                  <span className="bg-indigo-100 text-indigo-700 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase">MUL / DIV</span>
-                </div>
-                <div className="text-2xl font-black text-slate-900 font-mono">
-                  {unsignedVal}
-                </div>
-                <p className="text-[10.5px] text-slate-500 leading-normal">
-                  Binary is parsed as a simple positive integer. The sign bit (MSB) acts as a standard positive power-of-two.
-                </p>
-              </div>
-
-              <div className="bg-white/70 border border-slate-200/50 rounded-xl p-2 mt-3 font-mono text-[10px] text-slate-600 leading-relaxed space-y-1">
-                <strong className="text-slate-700 font-bold block uppercase text-[8.5px] tracking-wider mb-0.5">Sum of Weights Calculation:</strong>
-                <div className="truncate">
-                  {bits.map((b, i) => b === 1 ? `2^${i}` : '').filter(Boolean).reverse().join(' + ') || '0'}
-                </div>
-                <div className="border-t border-slate-100 pt-1 mt-1 text-slate-800 font-bold truncate">
-                  ➔ {bits.map((b, i) => b === 1 ? Math.pow(2, i) : '').filter(Boolean).reverse().join(' + ') || '0'} = {unsignedVal}
-                </div>
-              </div>
-            </div>
-
-            {/* Signed Box */}
-            <div className="bg-rose-50/45 border border-rose-150/80 rounded-2xl p-3 text-left flex flex-col justify-between shadow-3xs">
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold text-rose-700 uppercase tracking-widest">Signed Representation (Two's Complement)</span>
-                  <span className="bg-rose-100 text-rose-700 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase font-sans">IMUL / IDIV</span>
-                </div>
-                <div className="text-2xl font-black text-slate-900 font-mono flex items-center gap-2">
-                  <span className={signedVal < 0 ? 'text-rose-600' : 'text-slate-900'}>{signedVal}</span>
-                  {signedVal < 0 && (
-                    <span className="text-[10px] bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded font-bold font-sans">NEGATIVE</span>
-                  )}
-                </div>
-                <p className="text-[10.5px] text-slate-500 leading-normal">
-                  The sign bit (MSB) acts as a negative weight (e.g., -128 or -32768). All other bits remain positive contributors.
-                </p>
-              </div>
-
-              <div className="bg-white/70 border border-slate-200/50 rounded-xl p-2 mt-3 font-mono text-[10px] text-slate-600 leading-relaxed space-y-1">
-                <strong className="text-slate-700 font-bold block uppercase text-[8.5px] tracking-wider mb-0.5">Two's Complement weight calculation:</strong>
-                <div className="truncate">
-                  {bits.map((b, i) => {
-                    if (b === 1) {
-                      return i === bitSize - 1 ? `(-2^${i})` : `2^${i}`;
-                    }
-                    return '';
-                  }).filter(Boolean).reverse().join(' + ') || '0'}
-                </div>
-                <div className="border-t border-slate-100 pt-1 mt-1 text-slate-800 font-bold truncate">
-                  ➔ {bits.map((b, i) => {
-                    if (b === 1) {
-                      return i === bitSize - 1 ? `-${Math.pow(2, i)}` : `+${Math.pow(2, i)}`;
-                    }
-                    return '';
-                  }).filter(Boolean).reverse().join(' ').replace(/^\s*\+\s*/, '') || '0'} = {signedVal}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Visual byte layout context */}
-          <div className="bg-indigo-950 text-indigo-200 p-3 rounded-2xl text-[11px] leading-relaxed font-sans flex items-start gap-2.5 border border-indigo-900 text-left">
-            <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-            <p className="font-sans">
-              <strong>Pedagogical Insight:</strong> Notice how entering <strong className="font-mono text-white">FFH</strong> or <strong className="font-mono text-white">FFFFH</strong> fills all bits with <span className="font-mono font-bold text-white">1</span>. In Unsigned mode, this is the absolute maximum value (<strong className="font-mono text-white">{bitSize === 8 ? '255' : '65535'}</strong>). In Signed mode, because the negative MSB value is added to all other positive values, the resulting sum is exactly <strong className="font-mono text-rose-300 font-extrabold">-1</strong>! Flip bit B{bitSize - 1} and watch the sign changes in real-time.
-            </p>
-          </div>
-        </div>
-      ) : (
-        // --- Arithmetic Tab Layout ---
-        <div className="space-y-4">
-          {/* Controls Segment */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/60 p-2 rounded-xl border border-slate-150">
-            {/* Op Selector */}
-            <div className="flex gap-1 bg-white p-1 rounded-lg border border-slate-200">
-              <button
-                onClick={() => setOpMode('MUL_IMUL')}
-                className={`flex-1 py-1.5 rounded-md text-xs font-black transition-all cursor-pointer ${
-                  opMode === 'MUL_IMUL' ? 'bg-indigo-50 text-indigo-700 shadow-3xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Multiplication (MUL / IMUL)
-              </button>
-              <button
-                onClick={() => setOpMode('DIV_IDIV')}
-                className={`flex-1 py-1.5 rounded-md text-xs font-black transition-all cursor-pointer ${
-                  opMode === 'DIV_IDIV' ? 'bg-indigo-50 text-indigo-700 shadow-3xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Division (DIV / IDIV)
-              </button>
-            </div>
-
-            {/* Bit Size Selector */}
-            <div className="flex gap-1 bg-white p-1 rounded-lg border border-slate-200">
-              <button
-                onClick={() => setOpBitSize(8)}
-                className={`flex-1 py-1.5 rounded-md text-xs font-black transition-all cursor-pointer ${
-                  opBitSize === 8 ? 'bg-indigo-600 text-white shadow-3xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                8-Bit Registers (AL, BL)
-              </button>
-              <button
-                onClick={() => setOpBitSize(16)}
-                className={`flex-1 py-1.5 rounded-md text-xs font-black transition-all cursor-pointer ${
-                  opBitSize === 16 ? 'bg-indigo-600 text-white shadow-3xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                16-Bit Registers (AX, BX)
-              </button>
-            </div>
-          </div>
-
-          {/* Hexadecimal Operands Inputs */}
-          <div className="grid grid-cols-2 gap-4 bg-white/40 p-3 rounded-2xl border border-slate-150">
-            <div className="space-y-1 text-left">
-              <label className="text-[10px] font-bold text-slate-500 uppercase flex justify-between">
-                <span>Operand 1 ({isMul ? (is8Bit ? 'AL' : 'AX') : (is8Bit ? 'AX' : 'DX:AX')})</span>
-                <span className="text-indigo-600 font-extrabold">{op1Bits}-bit Hex</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-2.5 top-2 text-slate-400 font-bold text-xs font-mono">0x</span>
-                <input
-                  type="text"
-                  maxLength={op1Bits / 4}
-                  value={inputOp1}
-                  onChange={(e) => setInputOp1(e.target.value.toUpperCase().replace(/[^0-9A-F]/g, ''))}
-                  className="w-full bg-white border border-slate-200 hover:border-indigo-350 focus:border-indigo-500 rounded-lg p-1.5 pl-7 font-mono font-black text-slate-900 text-xs focus:outline-none shadow-3xs"
-                />
-              </div>
-              <span className="text-[9px] text-slate-400 font-bold leading-none mt-1 block">
-                {isMul ? 'Multiplicand (Value 1)' : 'Dividend (Numerator)'}
-              </span>
-              {parsedOp1.isValid && (
-                <div className="text-[9.5px] text-slate-500 bg-slate-50 border border-slate-200 rounded p-1 font-mono mt-1 flex justify-between">
-                  <span>Uns: {parsedOp1.unsigned}</span>
-                  <span className={parsedOp1.signed < 0 ? 'text-rose-600 font-semibold' : 'text-emerald-600'}>Sig: {parsedOp1.signed}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1 text-left">
-              <label className="text-[10px] font-bold text-slate-500 uppercase flex justify-between">
-                <span>Operand 2 ({is8Bit ? 'BL' : 'BX'})</span>
-                <span className="text-indigo-600 font-extrabold">{op2Bits}-bit Hex</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-2.5 top-2 text-slate-400 font-bold text-xs font-mono">0x</span>
-                <input
-                  type="text"
-                  maxLength={op2Bits / 4}
-                  value={inputOp2}
-                  onChange={(e) => setInputOp2(e.target.value.toUpperCase().replace(/[^0-9A-F]/g, ''))}
-                  className="w-full bg-white border border-slate-200 hover:border-indigo-350 focus:border-indigo-500 rounded-lg p-1.5 pl-7 font-mono font-black text-slate-900 text-xs focus:outline-none shadow-3xs"
-                />
-              </div>
-              <span className="text-[9px] text-slate-400 font-bold leading-none mt-1 block">
-                {isMul ? 'Multiplier (Value 2)' : 'Divisor (Denominator)'}
-              </span>
-              {parsedOp2.isValid && (
-                <div className="text-[9.5px] text-slate-500 bg-slate-50 border border-slate-200 rounded p-1 font-mono mt-1 flex justify-between">
-                  <span>Uns: {parsedOp2.unsigned}</span>
-                  <span className={parsedOp2.signed < 0 ? 'text-rose-600 font-semibold' : 'text-emerald-600'}>Sig: {parsedOp2.signed}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Dual Lane Comparison Display */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Lane 1: Unsigned Arithmetic */}
-            <div className="bg-indigo-50/45 border border-indigo-150/80 rounded-2xl p-3.5 text-left flex flex-col justify-between shadow-3xs space-y-3">
-              <div>
-                <div className="flex items-center justify-between border-b border-indigo-100/60 pb-1.5">
-                  <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">
-                    Unsigned: {opMode === 'MUL_IMUL' ? 'MUL' : 'DIV'}
-                  </span>
-                  <span className="bg-indigo-100/70 text-indigo-700 text-[8px] font-bold px-1.5 py-0.5 rounded font-mono uppercase">
-                    MAGNITUDE
-                  </span>
-                </div>
-                <div className="mt-2 text-[11px] font-mono text-slate-500 leading-tight">
-                  Decimal Calculation:
-                  <div className="text-slate-800 font-black mt-0.5 truncate text-[11.5px]">
-                    {unsignedExpr || 'Invalid inputs'}
-                  </div>
-                </div>
-                <div className="mt-2 text-[11px] font-mono text-slate-500 leading-tight">
-                  Execution Output:
-                  <div className="text-indigo-600 font-black mt-0.5 truncate text-[12px]">
-                    {unsignedResultText}
-                  </div>
-                </div>
-              </div>
-
-              {/* Registers Dump Unsigned */}
-              <div className="bg-white/70 border border-slate-200/50 rounded-xl p-2 font-mono text-[10px] space-y-1.5">
-                <span className="text-[8.5px] font-extrabold text-slate-400 uppercase block tracking-wider">Resulting CPU registers</span>
-                {unsignedRegisters.map((reg, rIdx) => (
-                  <div key={rIdx} className="flex justify-between border-b border-slate-100/60 pb-0.5 last:border-0 last:pb-0">
-                    <span className="text-slate-600 font-semibold">{reg.name}</span>
-                    <span className="font-bold text-slate-900 bg-slate-100 px-1 rounded font-mono">{reg.val} <span className="text-[8.5px] text-slate-400 font-normal">({reg.desc})</span></span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Lane 2: Signed Arithmetic */}
-            <div className="bg-rose-50/45 border border-rose-150/80 rounded-2xl p-3.5 text-left flex flex-col justify-between shadow-3xs space-y-3">
-              <div>
-                <div className="flex items-center justify-between border-b border-rose-100/60 pb-1.5">
-                  <span className="text-[10px] font-black text-rose-700 uppercase tracking-widest">
-                    Signed: {opMode === 'MUL_IMUL' ? 'IMUL' : 'IDIV'}
-                  </span>
-                  <span className="bg-rose-100/70 text-rose-700 text-[8px] font-bold px-1.5 py-0.5 rounded font-mono uppercase">
-                    2's COMPLEMENT
-                  </span>
-                </div>
-                <div className="mt-2 text-[11px] font-mono text-slate-500 leading-tight">
-                  Decimal Calculation:
-                  <div className="text-slate-800 font-black mt-0.5 truncate text-[11.5px]">
-                    {signedExpr || 'Invalid inputs'}
-                  </div>
-                </div>
-                <div className="mt-2 text-[11px] font-mono text-slate-500 leading-tight">
-                  Execution Output:
-                  <div className="text-rose-600 font-black mt-0.5 truncate text-[12px]">
-                    {signedResultText}
-                  </div>
-                </div>
-              </div>
-
-              {/* Registers Dump Signed */}
-              <div className="bg-white/70 border border-slate-200/50 rounded-xl p-2 font-mono text-[10px] space-y-1.5">
-                <span className="text-[8.5px] font-extrabold text-slate-400 uppercase block tracking-wider">Resulting CPU registers</span>
-                {signedRegisters.map((reg, rIdx) => (
-                  <div key={rIdx} className="flex justify-between border-b border-slate-100/60 pb-0.5 last:border-0 last:pb-0">
-                    <span className="text-slate-600 font-semibold">{reg.name}</span>
-                    <span className="font-bold text-slate-900 bg-slate-100 px-1 rounded font-mono">{reg.val} <span className="text-[8.5px] text-slate-450 font-normal">({reg.desc})</span></span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Technical Explainer */}
-          <div className="bg-slate-950 text-slate-200 p-3 rounded-2xl text-[11px] leading-relaxed font-sans flex items-start gap-2.5 border border-slate-800 text-left shadow-3xs">
-            <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-            <div className="space-y-1 font-sans">
-              <strong className="text-indigo-300 font-bold font-sans uppercase text-[9px] tracking-wider block">Why are these results different?</strong>
-              <p className="font-sans text-slate-300">
-                In standard <strong className="font-mono text-white text-[10.5px]">MUL</strong> and <strong className="font-mono text-white text-[10.5px]">DIV</strong>, the CPU interprets the binary bit patterns as direct magnitude (positive weights only). 
-                However, <strong className="font-mono text-white text-[10.5px]">IMUL</strong> and <strong className="font-mono text-white text-[10.5px]">IDIV</strong> treat the Most Significant Bit (MSB) as a sign weight (e.g. <span className="text-rose-300 font-bold">-128</span> for 8-bit operands, or <span className="text-rose-300 font-bold">-32768</span> for 16-bit operands). 
-                If the input has its MSB set to <strong className="font-mono text-white">1</strong> (i.e. hex values starting with <strong className="font-mono text-white">8</strong> through <strong className="font-mono text-white">F</strong>), the signed instructions automatically treat it as a negative value!
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PositiveNegativeTheoryVisualizer() {
-  const [testInput, setTestInput] = useState<number>(0x7F);
-
-  const presets = [
-    { label: '01H', value: 0x01, name: '01H (+1)' },
-    { label: '7FH', value: 0x7F, name: '7FH (+127)' },
-    { label: '80H', value: 0x80, name: '80H (-128)' },
-    { label: 'FFH', value: 0xFF, name: 'FFH (-1)' },
-  ];
-
-  const binInput = testInput.toString(2).padStart(8, '0');
-  const binMask = '10000000';
-  const andResult = testInput & 0x80;
-  const binResult = andResult.toString(2).padStart(8, '0');
-  const zfVal = andResult === 0 ? 1 : 0;
-  const isNegVal = testInput >= 128 ? 1 : 0;
-
-  return (
-    <div className="space-y-4 text-left font-mono text-xs text-slate-800">
-      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-4 shadow-3xs">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Interactive Manual Calculations (TEST AL, 80H)</span>
-          <span className="text-[9px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-bold">Theory Sandbox</span>
-        </div>
-
-        {/* Quick presets buttons */}
-        <div className="space-y-1.5">
-          <span className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider block">Select test value to watch manual calculation:</span>
-          <div className="flex flex-wrap gap-2">
-            {presets.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setTestInput(p.value)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
-                  testInput === p.value
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-3xs scale-[1.02]'
-                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <span className={`w-2 h-2 rounded-full ${p.value < 128 ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
-                {p.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Bitwise Calculation Layout */}
-        <div className="bg-white border border-slate-150 p-4 rounded-xl space-y-3 shadow-3xs">
-          <div className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider border-b border-slate-100 pb-1">
-            Bitwise AND Walkthrough (TEST Instruction)
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-[110px_1fr] gap-x-4 gap-y-3.5 items-center font-mono">
-            <span className="text-slate-400 font-bold text-[10px] uppercase">Input (AL):</span>
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="bg-slate-100 px-2 py-0.5 rounded font-black text-slate-800 text-sm">
-                {testInput.toString(16).toUpperCase().padStart(2, '0')}H
-              </span>
-              <span className="text-slate-300">→</span>
-              <div className="flex gap-0.5 font-bold">
-                {binInput.split('').map((bit, idx) => (
-                  <span
-                    key={idx}
-                    className={`w-6 h-6 flex items-center justify-center rounded text-xs transition-all ${
-                      idx === 0
-                        ? 'bg-red-50 border border-red-300 text-red-700 font-extrabold shadow-3xs ring-2 ring-red-400/10'
-                        : 'bg-slate-50 border border-slate-150 text-slate-600'
-                    }`}
-                  >
-                    {bit}
-                  </span>
-                ))}
-              </div>
-              <span className="text-[9.5px] font-bold text-slate-500 ml-1">
-                ({testInput >= 128 ? 'MSB=1 Negative' : 'MSB=0 Positive'})
-              </span>
-            </div>
-
-            <span className="text-slate-400 font-bold text-[10px] uppercase">Mask (80H):</span>
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="bg-slate-100 px-2 py-0.5 rounded font-black text-slate-800 text-sm">
-                80H
-              </span>
-              <span className="text-slate-300">→</span>
-              <div className="flex gap-0.5 font-bold">
-                {binMask.split('').map((bit, idx) => (
-                  <span
-                    key={idx}
-                    className={`w-6 h-6 flex items-center justify-center rounded text-xs ${
-                      idx === 0
-                        ? 'bg-indigo-50 border border-indigo-200 text-indigo-700 font-extrabold'
-                        : 'bg-slate-50 border border-slate-150 text-slate-400'
-                    }`}
-                  >
-                    {bit}
-                  </span>
-                ))}
-              </div>
-              <span className="text-[9.5px] text-slate-400 ml-1">
-                (Isolates Bit 7 only)
-              </span>
-            </div>
-
-            {/* Separator */}
-            <div className="col-span-1 md:col-span-2 border-t border-slate-100 my-1" />
-
-            <span className="text-slate-400 font-bold text-[10px] uppercase">AND Outcome:</span>
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="bg-slate-100 px-2 py-0.5 rounded font-black text-slate-800 text-sm">
-                {andResult.toString(16).toUpperCase().padStart(2, '0')}H
-              </span>
-              <span className="text-slate-300">→</span>
-              <div className="flex gap-0.5 font-bold">
-                {binResult.split('').map((bit, idx) => (
-                  <span
-                    key={idx}
-                    className={`w-6 h-6 flex items-center justify-center rounded text-xs transition-all ${
-                      idx === 0 && bit === '1'
-                        ? 'bg-rose-50 border border-rose-300 text-rose-700 font-extrabold shadow-3xs'
-                        : idx === 0
-                        ? 'bg-emerald-50 border border-emerald-300 text-emerald-700 font-extrabold shadow-3xs'
-                        : 'bg-slate-50 border border-slate-150 text-slate-300'
-                    }`}
-                  >
-                    {bit}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Step-by-Step Decision Logic Table */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-3xs">
-          <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-[10px] font-black text-indigo-700 uppercase tracking-wider">
-              Step-by-Step Logic Execution Table
-            </span>
-            <span className={`text-[9.5px] px-2 py-0.5 rounded-full font-bold uppercase border ${
-              isNegVal === 1 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-            }`}>
-              Detected: {isNegVal === 1 ? 'Negative' : 'Positive'}
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono min-w-[500px]">
-              <thead>
-                <tr className="bg-slate-50/50 text-slate-400 text-[9.5px] uppercase border-b border-slate-200">
-                  <th className="p-3 font-bold">Step</th>
-                  <th className="p-3 font-bold">Instruction / Operation</th>
-                  <th className="p-3 font-bold">Details / Calculation</th>
-                  <th className="p-3 font-bold text-center">ZF</th>
-                  <th className="p-3 font-bold text-right">Result Storage</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                <tr className={zfVal === 1 ? 'bg-emerald-50/20' : ''}>
-                  <td className="p-3 font-bold text-indigo-600">1</td>
-                  <td className="p-3 font-bold">TEST AL, 80H</td>
-                  <td className="p-3">
-                    <code className="text-[11px] font-semibold bg-slate-50 px-1.5 py-0.5 rounded border border-slate-150">
-                      {binInput} AND {binMask} = {binResult}
-                    </code>
-                  </td>
-                  <td className="p-3 text-center font-bold font-mono text-indigo-700 text-sm">
-                    {zfVal}
-                  </td>
-                  <td className="p-3 text-right font-bold text-slate-500">
-                    {zfVal === 1 ? 'Zero Result (ZF=1)' : 'Non-Zero Result (ZF=0)'}
-                  </td>
-                </tr>
-                <tr className={zfVal === 1 ? 'bg-emerald-50/20' : 'bg-rose-50/10'}>
-                  <td className="p-3 font-bold text-indigo-600">2</td>
-                  <td className="p-3 font-bold">JZ STORE_RESULT</td>
-                  <td className="p-3">
-                    {zfVal === 1 ? (
-                      <span className="text-emerald-700 font-semibold">
-                        ZF = 1 → JUMP to STORE_RESULT (Skip BL=01H)
-                      </span>
-                    ) : (
-                      <span className="text-rose-700 font-semibold">
-                        ZF = 0 → JUMP NOT taken (Execute next line)
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-3 text-center text-slate-300">—</td>
-                  <td className="p-3 text-right font-bold text-slate-700">
-                    BL ← {isNegVal === 1 ? '01H (Negative)' : '00H (Positive)'}
-                  </td>
-                </tr>
-                <tr className="bg-slate-50/40">
-                  <td className="p-3 font-bold text-indigo-600">3</td>
-                  <td className="p-3 font-bold">MOV IS_NEG, BL</td>
-                  <td className="p-3">
-                    Store final result flag into memory variable <code className="bg-slate-100 px-1 py-0.5 rounded text-[10.5px]">IS_NEG</code>
-                  </td>
-                  <td className="p-3 text-center text-slate-300">—</td>
-                  <td className="p-3 text-right font-bold text-indigo-700 text-[13px]">
-                    IS_NEG = {isNegVal === 1 ? '01H' : '00H'}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Dynamic educational note */}
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-[11px] text-blue-900 leading-relaxed font-sans">
-          <strong className="text-blue-950 font-bold block mb-0.5">💡 Crucial 8086 Architectural Note:</strong>
-          Unlike the <code className="font-mono bg-blue-100 px-1 py-0.5 rounded text-[10px] font-bold">AND AL, 80H</code> instruction, the 
-          <code className="font-mono bg-blue-100 px-1 py-0.5 rounded text-[10px] font-bold ml-1 mr-1">TEST AL, 80H</code> instruction 
-          <strong> does not modify</strong> the contents of the AL register. It performs the bitwise multiplication, updates the 
-          <strong> Zero Flag (ZF)</strong> and <strong>Sign Flag (SF)</strong>, and safely discards the mathematical result. This preserves the original data inside AL for downstream tasks!
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function OddEvenTheoryVisualizer() {
-  const [testInput, setTestInput] = useState<number>(0x03);
-
-  const presets = [
-    { label: '02H (Even)', value: 0x02, name: '02H (Even)' },
-    { label: '03H (Odd)', value: 0x03, name: '03H (Odd)' },
-    { label: 'A5H (Odd)', value: 0xA5, name: 'A5H (Odd)' },
-    { label: '3CH (Even)', value: 0x3C, name: '3CH (Even)' },
-    { label: 'FFH (Odd)', value: 0xFF, name: 'FFH (Odd)' },
-    { label: '10H (Even)', value: 0x10, name: '10H (Even)' },
-  ];
-
-  const binInput = testInput.toString(2).padStart(8, '0');
-  const binMask = '00000001';
-  const andResult = testInput & 0x01;
-  const binResult = andResult.toString(2).padStart(8, '0');
-  const zfVal = andResult === 0 ? 1 : 0;
-  const isOdd = (testInput & 0x01) !== 0;
-
-  return (
-    <div className="space-y-4 text-left font-mono text-xs text-slate-800">
-      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-4 shadow-3xs">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Interactive Manual Calculations (TEST AL, 01H)</span>
-          <span className="text-[9px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-bold">Theory Sandbox</span>
-        </div>
-
-        {/* Quick presets buttons */}
-        <div className="space-y-1.5">
-          <span className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider block">Select test value to watch manual calculation:</span>
-          <div className="flex flex-wrap gap-2">
-            {presets.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setTestInput(p.value)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
-                  testInput === p.value
-                    ? 'bg-purple-600 text-white border-purple-600 shadow-3xs scale-[1.02]'
-                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <span className={`w-2 h-2 rounded-full ${!((p.value & 0x01) !== 0) ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                {p.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Bitwise Calculation Layout */}
-        <div className="bg-white border border-slate-150 p-4 rounded-xl space-y-3 shadow-3xs">
-          <div className="text-[10px] font-bold text-purple-600 uppercase tracking-wider border-b border-slate-100 pb-1">
-            Bitwise AND Walkthrough (TEST Instruction)
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-[110px_1fr] gap-x-4 gap-y-3.5 items-center font-mono">
-            <span className="text-slate-400 font-bold text-[10px] uppercase">Input (AL):</span>
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="bg-slate-100 px-2 py-0.5 rounded font-black text-slate-800 text-sm">
-                {testInput.toString(16).toUpperCase().padStart(2, '0')}H
-              </span>
-              <span className="text-slate-300">→</span>
-              <div className="flex gap-0.5 font-bold">
-                {binInput.split('').map((bit, idx) => (
-                  <span
-                    key={idx}
-                    className={`w-6 h-6 flex items-center justify-center rounded text-xs transition-all ${
-                      idx === 7
-                        ? 'bg-purple-50 border border-purple-300 text-purple-700 font-extrabold shadow-3xs ring-2 ring-purple-400/10'
-                        : 'bg-slate-50 border border-slate-150 text-slate-600'
-                    }`}
-                  >
-                    {bit}
-                  </span>
-                ))}
-              </div>
-              <span className="text-[9.5px] font-bold text-slate-500 ml-1">
-                ({isOdd ? 'LSB=1 Odd' : 'LSB=0 Even'})
-              </span>
-            </div>
-
-            <span className="text-slate-400 font-bold text-[10px] uppercase">Mask (01H):</span>
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="bg-slate-100 px-2 py-0.5 rounded font-black text-slate-800 text-sm">
-                01H
-              </span>
-              <span className="text-slate-300">→</span>
-              <div className="flex gap-0.5 font-bold">
-                {binMask.split('').map((bit, idx) => (
-                  <span
-                    key={idx}
-                    className={`w-6 h-6 flex items-center justify-center rounded text-xs ${
-                      idx === 7
-                        ? 'bg-purple-50 border border-purple-200 text-purple-700 font-extrabold'
-                        : 'bg-slate-50 border border-slate-150 text-slate-400'
-                    }`}
-                  >
-                    {bit}
-                  </span>
-                ))}
-              </div>
-              <span className="text-[9.5px] text-slate-400 ml-1">
-                (Isolates Bit 0 only)
-              </span>
-            </div>
-
-            {/* Separator */}
-            <div className="col-span-1 md:col-span-2 border-t border-slate-100 my-1" />
-
-            <span className="text-slate-400 font-bold text-[10px] uppercase">AND Outcome:</span>
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="bg-slate-100 px-2 py-0.5 rounded font-black text-slate-800 text-sm">
-                {andResult.toString(16).toUpperCase().padStart(2, '0')}H
-              </span>
-              <span className="text-slate-300">→</span>
-              <div className="flex gap-0.5 font-bold">
-                {binResult.split('').map((bit, idx) => (
-                  <span
-                    key={idx}
-                    className={`w-6 h-6 flex items-center justify-center rounded text-xs transition-all ${
-                      idx === 7 && bit === '1'
-                        ? 'bg-amber-50 border border-amber-300 text-amber-700 font-extrabold shadow-3xs'
-                        : idx === 7
-                        ? 'bg-emerald-50 border border-emerald-300 text-emerald-700 font-extrabold shadow-3xs'
-                        : 'bg-slate-50 border border-slate-150 text-slate-300'
-                    }`}
-                  >
-                    {bit}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Step-by-Step Decision Logic Table */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-3xs">
-          <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-[10px] font-black text-purple-700 uppercase tracking-wider">
-              Step-by-Step Logic Execution Table
-            </span>
-            <span className={`text-[9.5px] px-2 py-0.5 rounded-full font-bold uppercase border ${
-              isOdd ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-            }`}>
-              Detected: {isOdd ? 'Odd' : 'Even'}
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono min-w-[500px]">
-              <thead>
-                <tr className="bg-slate-50/50 text-slate-400 text-[9.5px] uppercase border-b border-slate-200">
-                  <th className="p-3 font-bold">Step</th>
-                  <th className="p-3 font-bold">Instruction / Operation</th>
-                  <th className="p-3 font-bold">Details / Calculation</th>
-                  <th className="p-3 font-bold text-center">ZF</th>
-                  <th className="p-3 font-bold text-right">Result Storage</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                <tr className={zfVal === 1 ? 'bg-emerald-50/20' : ''}>
-                  <td className="p-3 font-bold text-purple-600">1</td>
-                  <td className="p-3 font-bold">TEST AL, 01H</td>
-                  <td className="p-3">
-                    <code className="text-[11px] font-semibold bg-slate-50 px-1.5 py-0.5 rounded border border-slate-150">
-                      {binInput} AND {binMask} = {binResult}
-                    </code>
-                  </td>
-                  <td className="p-3 text-center font-bold font-mono text-purple-700 text-sm">
-                    {zfVal}
-                  </td>
-                  <td className="p-3 text-right font-bold text-slate-500">
-                    {zfVal === 1 ? 'Zero Result (ZF=1)' : 'Non-Zero Result (ZF=0)'}
-                  </td>
-                </tr>
-                <tr className={zfVal === 1 ? 'bg-emerald-50/20' : 'bg-amber-50/10'}>
-                  <td className="p-3 font-bold text-purple-600">2</td>
-                  <td className="p-3 font-bold">JZ STORE_RESULT</td>
-                  <td className="p-3">
-                    {zfVal === 1 ? (
-                      <span className="text-emerald-700 font-semibold">
-                        ZF = 1 → JUMP to STORE_RESULT (Skip BL=01H)
-                      </span>
-                    ) : (
-                      <span className="text-amber-700 font-semibold">
-                        ZF = 0 → JUMP NOT taken (Execute next line)
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-3 text-center text-slate-300">—</td>
-                  <td className="p-3 text-right font-bold text-slate-700">
-                    BL ← {isOdd ? '01H (Odd)' : '00H (Even)'}
-                  </td>
-                </tr>
-                <tr className="bg-slate-50/40">
-                  <td className="p-3 font-bold text-purple-600">3</td>
-                  <td className="p-3 font-bold">MOV IS_ODD, BL</td>
-                  <td className="p-3">
-                    Store final result flag into memory variable <code className="bg-slate-100 px-1 py-0.5 rounded text-[10.5px]">IS_ODD</code>
-                  </td>
-                  <td className="p-3 text-center text-slate-300">—</td>
-                  <td className="p-3 text-right font-bold text-purple-700 text-[13px]">
-                    IS_ODD = {isOdd ? '01H' : '00H'}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Dynamic educational note */}
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-[11px] text-blue-900 leading-relaxed font-sans">
-          <strong className="text-blue-950 font-bold block mb-0.5">💡 Crucial Parity Flag (PF) vs LSB Note:</strong>
-          Do not confuse this with the 8086 hardware <strong>Parity Flag (PF)</strong>. The hardware Parity Flag (PF) is set to 1 if the total count of 1-bits in the low byte is even (representing even weight of ones), whereas the mathematical "even/odd" property of an integer is strictly determined by its Least Significant Bit (LSB / Bit 0).
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function OnesZerosTheoryVisualizer() {
-  const [testInput, setTestInput] = useState<number>(0xA5);
-  const [shiftStep, setShiftStep] = useState<number>(0);
-
-  const presets = [
-    { label: '05H (2 Ones)', value: 0x05 },
-    { label: '55H (4 Ones)', value: 0x55 },
-    { label: 'AAH (4 Ones)', value: 0xAA },
-    { label: '3CH (4 Ones)', value: 0x3C },
-    { label: 'A5H (4 Ones)', value: 0xA5 },
-    { label: 'FFH (8 Ones)', value: 0xFF }
-  ];
-
-  const origHex = testInput.toString(16).toUpperCase().padStart(2, '0');
-  const binInput = testInput.toString(2).padStart(8, '0');
-
-  // Compute stats up to a given step
-  const getStepStats = (stepNum: number) => {
-    let ones = 0;
-    for (let i = 0; i < stepNum; i++) {
-      if (((testInput >> i) & 1) === 1) {
-        ones++;
-      }
-    }
-    const zeros = stepNum - ones;
-    const alVal = testInput >> stepNum;
-    const carry = stepNum > 0 ? ((testInput >> (stepNum - 1)) & 1) : null;
-    return { ones, zeros, alVal, carry };
-  };
-
-  const currentStats = getStepStats(shiftStep);
-
-  return (
-    <div className="space-y-4 text-left font-mono text-xs text-slate-800">
-      {/* Unified Input and Conversions Control Panel */}
-      <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-3.5 shadow-3xs">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Input Value Controller</span>
-          <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold font-mono">8-Bit Mode</span>
-        </div>
-
-        {/* Presets */}
-        <div className="space-y-1.5">
-          <span className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider block">Lab Manual Task Presets:</span>
-          <div className="flex flex-wrap gap-2">
-            {presets.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => {
-                  setTestInput(p.value);
-                  setShiftStep(0);
-                }}
-                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 ${
-                  testInput === p.value
-                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/10 scale-[1.02]'
-                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Dual Input Systems */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
-          <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
-            <span className="text-[9px] text-slate-400 font-bold block mb-1">HEXADECIMAL</span>
-            <div className="flex items-center gap-1.5">
-              <input
-                type="text"
-                maxLength={2}
-                value={origHex}
-                onChange={(e) => {
-                  const clean = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, '');
-                  if (clean === '') {
-                    setTestInput(0);
-                  } else {
-                    const val = parseInt(clean, 16);
-                    if (!isNaN(val) && val >= 0 && val <= 255) {
-                      setTestInput(val);
-                    }
-                  }
-                  setShiftStep(0);
-                }}
-                className="w-full text-center font-mono font-black text-sm bg-slate-50 border border-slate-200 p-1.5 rounded-lg text-emerald-700 focus:outline-none focus:border-emerald-500 focus:bg-white"
-                placeholder="00"
-              />
-              <span className="text-xs font-bold text-slate-400 font-mono">H</span>
-            </div>
-          </div>
-
-          <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between">
-            <span className="text-[9px] text-slate-400 font-bold block mb-1">UNSIGNED DECIMAL</span>
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                min={0}
-                max={255}
-                value={testInput}
-                onChange={(e) => {
-                  let val = parseInt(e.target.value, 10);
-                  if (isNaN(val)) val = 0;
-                  val = Math.max(0, Math.min(255, val));
-                  setTestInput(val);
-                  setShiftStep(0);
-                }}
-                className="w-full text-center font-mono font-black text-sm bg-slate-50 border border-slate-200 p-1.5 rounded-lg text-emerald-700 focus:outline-none focus:border-emerald-500 focus:bg-white"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Interactive slider */}
-        <div className="space-y-1.5 pt-1 border-t border-slate-100">
-          <div className="flex items-center justify-between text-[10px] text-slate-500 font-bold">
-            <span>UNIFIED SLIDER VALUE (0-255):</span>
-            <span className="font-mono text-emerald-600 font-bold">Unsigned: {testInput}</span>
-          </div>
-          <input 
-            type="range"
-            min={0}
-            max={255}
-            value={testInput}
-            onChange={(e) => {
-              const val = parseInt(e.target.value, 10);
-              setTestInput(val);
-              setShiftStep(0);
-            }}
-            className="w-full accent-emerald-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
-          />
-        </div>
-      </div>
-
-      {/* Dynamic Simulation Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {/* Shifting Register AL */}
-        <div className="bg-white border border-slate-200 p-3 rounded-xl flex flex-col items-center justify-center text-center shadow-3xs">
-          <span className="text-[8px] font-bold text-slate-400 block mb-1">REGISTER AL (SHIFT STATE)</span>
-          <span className="text-sm font-black text-slate-800 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
-            {currentStats.alVal.toString(16).toUpperCase().padStart(2, '0')}H
-          </span>
-          <span className="text-[9.5px] font-mono text-slate-500 mt-1.5 font-bold tracking-wider">
-            {currentStats.alVal.toString(2).padStart(8, '0').split('').map((bit, idx, arr) => {
-              const isAboutToShiftOut = idx === 7 && shiftStep < 8;
-              return (
-                <span
-                  key={idx}
-                  className={`${isAboutToShiftOut ? 'text-amber-500 font-black animate-pulse bg-amber-50 px-0.5 rounded' : ''}`}
-                >
-                  {bit}
-                </span>
-              );
-            })}
-          </span>
-        </div>
-
-        {/* BL (Ones count) */}
-        <div className="bg-emerald-50/50 border border-emerald-150 p-3 rounded-xl flex flex-col items-center justify-center text-center">
-          <span className="text-[8px] font-bold text-emerald-600 block mb-1">ONES COUNT (BL)</span>
-          <span className="text-lg font-black text-emerald-700">
-            {currentStats.ones}
-          </span>
-          <span className="text-[9px] text-emerald-600 font-bold mt-1 uppercase">
-            {shiftStep > 0 && currentStats.carry === 1 ? 'CF = 1 (+1 ONES)' : 'No addition'}
-          </span>
-        </div>
-
-        {/* BH (Zeros count) */}
-        <div className="bg-rose-50/50 border border-rose-150 p-3 rounded-xl flex flex-col items-center justify-center text-center">
-          <span className="text-[8px] font-bold text-rose-600 block mb-1">ZEROS COUNT (BH)</span>
-          <span className="text-lg font-black text-rose-700">
-            {currentStats.zeros}
-          </span>
-          <span className="text-[9px] text-rose-600 font-bold mt-1 uppercase">
-            {shiftStep > 0 && currentStats.carry === 0 ? 'CF = 0 (+1 ZEROS)' : 'No addition'}
-          </span>
-        </div>
-      </div>
-
-      {/* Manual Step Controller */}
-      <div className="bg-slate-900 text-slate-100 p-3.5 rounded-2xl border border-slate-800 font-mono space-y-2">
-        <div className="flex items-center justify-between text-[9px] text-emerald-400 font-bold border-b border-slate-800 pb-2">
-          <span>LOOP SHIFT MANUAL CONTROLLER</span>
-          <span className="bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded uppercase font-black">
-            {shiftStep === 0 ? 'INITIAL' : shiftStep === 8 ? 'COMPLETED' : `STEP ${shiftStep} / 8`}
-          </span>
-        </div>
-
-        <div className="text-[11.5px] leading-relaxed min-h-[50px] text-slate-300">
-          {shiftStep === 0 ? (
-            <p className="italic text-slate-400">
-              AX is loaded with {origHex}H ({binInput}B). Registers BL and BH are cleared to 00H. CX is preloaded with 08H loop counter.
-            </p>
-          ) : (
-            <div className="space-y-1">
-              <p>
-                <strong className="text-emerald-400">Shift #{shiftStep}:</strong> SHR AL, 1
-              </p>
-              <p>
-                The LSB bit <strong className="text-amber-400">{currentStats.carry}</strong> was shifted right into the <strong className="text-amber-400">Carry Flag (CF)</strong>.
-              </p>
-              <p>
-                {currentStats.carry === 1 ? (
-                  <span className="text-emerald-400 font-bold">✔ CF = 1 → Jump to INC_BL. BL incremented to {currentStats.ones}H.</span>
-                ) : (
-                  <span className="text-rose-400 font-bold">✔ CF = 0 → No carry. BH incremented to {currentStats.zeros}H.</span>
-                )}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-between gap-2 pt-1 border-t border-slate-800">
-          <button
-            onClick={() => setShiftStep(Math.max(0, shiftStep - 1))}
-            disabled={shiftStep === 0}
-            className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-1 px-3 rounded-lg text-xs disabled:opacity-40 transition-colors cursor-pointer"
-          >
-            ◀ PREVIOUS SHIFT
-          </button>
-          <button
-            onClick={() => setShiftStep(0)}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-1 px-3 rounded-lg text-xs transition-colors cursor-pointer"
-          >
-            RESET
-          </button>
-          <button
-            onClick={() => setShiftStep(Math.min(8, shiftStep + 1))}
-            disabled={shiftStep === 8}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1 px-3 rounded-lg text-xs disabled:opacity-40 transition-colors cursor-pointer"
-          >
-            NEXT SHIFT ▶
-          </button>
-        </div>
-      </div>
-
-      {/* Bitwise Walkthrough Calculation Grid */}
-      <div className="bg-white border border-slate-150 p-4 rounded-xl space-y-3 shadow-3xs">
-        <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider border-b border-slate-100 pb-1">
-          SHR Bit Transfer Walkthrough
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-[115px_1fr] gap-x-4 gap-y-3.5 items-center font-mono">
-          <span className="text-slate-400 font-bold text-[10px] uppercase">Original (AL):</span>
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="bg-slate-100 px-2 py-0.5 rounded font-black text-slate-800 text-sm">
-              {origHex}H
-            </span>
-            <span className="text-slate-300">→</span>
-            <div className="flex gap-0.5 font-bold">
-              {binInput.split('').map((bit, idx) => {
-                const isTargetBit = shiftStep > 0 && idx === 8 - shiftStep;
-                return (
-                  <span
-                    key={idx}
-                    className={`w-6 h-6 flex items-center justify-center rounded text-xs transition-all ${
-                      isTargetBit
-                        ? 'bg-amber-50 border border-amber-300 text-amber-700 font-extrabold shadow-3xs ring-2 ring-amber-400/10 scale-[1.05]'
-                        : 'bg-slate-50 border border-slate-150 text-slate-600'
-                    }`}
-                  >
-                    {bit}
-                  </span>
-                );
-              })}
-            </div>
-            <span className="text-[9.5px] font-bold text-slate-400 ml-1">
-              (LSB is rightmost bit)
-            </span>
-          </div>
-
-          <span className="text-slate-400 font-bold text-[10px] uppercase">Carry Flag (CF):</span>
-          <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 flex items-center justify-center rounded-lg border text-sm font-black transition-all ${
-              shiftStep === 0
-                ? 'bg-slate-50 text-slate-300 border-slate-200'
-                : currentStats.carry === 1
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 shadow-3xs'
-                : 'bg-rose-50 text-rose-700 border-rose-300 shadow-3xs'
-            }`}>
-              {shiftStep === 0 ? '—' : currentStats.carry}
-            </div>
-            <span className="text-[10px] text-slate-400 font-bold">
-              {shiftStep === 0 ? 'Not shifted yet' : `Captured bit ${shiftStep - 1} on right shift`}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Complete Step-by-step logic execution table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-3xs">
-        <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-          <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider">
-            Loop Shift Iteration State History Table
-          </span>
-          <span className="text-[9.5px] px-2 py-0.5 rounded-full font-bold uppercase border bg-slate-100 text-slate-700">
-            Total 1s: {getStepStats(8).ones} | Total 0s: {getStepStats(8).zeros}
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-mono min-w-[550px]">
-            <thead>
-              <tr className="bg-slate-50/50 text-slate-400 text-[9.5px] uppercase border-b border-slate-200">
-                <th className="p-3 font-bold">Iteration</th>
-                <th className="p-3 font-bold">AL (After SHR)</th>
-                <th className="p-3 font-bold text-center">CF</th>
-                <th className="p-3 font-bold text-center">Ones (BL)</th>
-                <th className="p-3 font-bold text-center">Zeros (BH)</th>
-                <th className="p-3 font-bold text-right">CX Loop Counter</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              <tr className={shiftStep === 0 ? 'bg-indigo-50/20 font-bold' : ''}>
-                <td className="p-3 text-slate-400">0 (Start)</td>
-                <td className="p-3">{origHex}H ({binInput}B)</td>
-                <td className="p-3 text-center text-slate-300">—</td>
-                <td className="p-3 text-center text-slate-400">0</td>
-                <td className="p-3 text-center text-slate-400">0</td>
-                <td className="p-3 text-right font-bold text-slate-500">08H</td>
-              </tr>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((stepNum) => {
-                const stats = getStepStats(stepNum);
-                const isCurrent = shiftStep === stepNum;
-                return (
-                  <tr
-                    key={stepNum}
-                    className={`transition-all ${
-                      isCurrent
-                        ? 'bg-emerald-50/40 font-bold border-l-2 border-emerald-500'
-                        : stepNum < shiftStep
-                        ? 'bg-slate-50/20 text-slate-400'
-                        : ''
-                    }`}
-                  >
-                    <td className="p-3">Shift #{stepNum}</td>
-                    <td className="p-3">
-                      {stats.alVal.toString(16).toUpperCase().padStart(2, '0')}H ({stats.alVal.toString(2).padStart(8, '0')}B)
-                    </td>
-                    <td className={`p-3 text-center font-bold ${stats.carry === 1 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {stats.carry}
-                    </td>
-                    <td className="p-3 text-center text-emerald-700 font-bold">{stats.ones}</td>
-                    <td className="p-3 text-center text-rose-700 font-bold">{stats.zeros}</td>
-                    <td className="p-3 text-right text-slate-500 font-bold">
-                      {(8 - stepNum).toString().padStart(2, '0')}H
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Dynamic educational note */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-[11px] text-blue-900 leading-relaxed font-sans">
-        <strong className="text-blue-950 font-bold block mb-0.5">💡 Crucial SHR (Logical) vs SAR (Arithmetic) Note:</strong>
-        The <code className="font-mono bg-blue-100 px-1 py-0.5 rounded text-[10px] font-bold">SHR</code> instruction is used here because we are performing a <strong>logical shift right</strong>, which shifts zero-bits into the most significant bit (MSB). If we used <code className="font-mono bg-blue-100 px-1 py-0.5 rounded text-[10px] font-bold">SAR</code> (Shift Arithmetic Right), the sign bit (MSB) would be duplicated during shifts, corrupting the ones and zeros count for negative numbers.
-      </div>
-    </div>
-  );
-}
-
-function MathLoopTheoryVisualizer() {
-  const [num, setNum] = useState<number>(5);
-  const [activeTab, setActiveTab] = useState<'sq_cube' | 'factorial'>('sq_cube');
-  const [step, setStep] = useState<number>(0);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-
-  // States of simulated execution
-  const [ax, setAx] = useState<number>(0);
-  const [bx, setBx] = useState<number>(0);
-  const [cx, setCx] = useState<number>(0);
-  const [dx, setDx] = useState<number>(0);
-  const [memSquare, setMemSquare] = useState<number>(0);
-  const [memCube, setMemCube] = useState<number>(0);
-  const [memFact, setMemFact] = useState<number>(0);
-  const [traceLog, setTraceLog] = useState<string[]>([]);
-
-  // Square and Cube Operations steps:
-  const sqCubeInstructions = [
-    { label: 'MOV AL, NUM', code: 'MOV AL, NUM', desc: 'Load AL with the input value N.', run: (n: number) => { setAx(n); setTraceLog(prev => [...prev, `AX (AL) loaded with input N (${n})`]); } },
-    { label: 'XOR AH, AH', code: 'XOR AH, AH', desc: 'Clear the upper byte of AX register so AX contains exactly N.', run: (n: number) => { setAx(prev => prev & 0x00FF); setTraceLog(prev => [...prev, `AH cleared. AX now contains exactly ${n} (00${n.toString(16).toUpperCase().padStart(4, '0')}H)`]); } },
-    { label: 'MUL AL', code: 'MUL AL', desc: 'Multiply AL by AL (AL * AL). The 16-bit result is placed in AX.', run: (n: number) => { const res = n * n; setAx(res); setTraceLog(prev => [...prev, `MUL AL: AX = AL (${n}) * AL (${n}) = ${res} (${res.toString(16).toUpperCase()}H)`]); } },
-    { label: 'MOV [SQUARE], AX', code: 'MOV [SQUARE], AX', desc: 'Store the square result from AX into memory variable SQUARE.', run: (n: number) => { const sq = n * n; setMemSquare(sq); setTraceLog(prev => [...prev, `MOV [SQUARE], AX: Memory variable SQUARE now holds ${sq} (${sq.toString(16).toUpperCase()}H)`]); } },
-    { label: 'MOV BX, AX', code: 'MOV BX, AX', desc: 'Copy the square result from AX into BX register.', run: (n: number) => { const sq = n * n; setBx(sq); setTraceLog(prev => [...prev, `MOV BX, AX: BX register loaded with square result ${sq} (${sq.toString(16).toUpperCase()}H)`]); } },
-    { label: 'MOV AL, NUM', code: 'MOV AL, NUM', desc: 'Load AL with input value N again to prepare for cube calculation.', run: (n: number) => { setAx(prev => (prev & 0xFF00) | n); setTraceLog(prev => [...prev, `MOV AL, NUM: AL loaded with N (${n})`]); } },
-    { label: 'MUL BX', code: 'MUL BX', desc: 'Multiply AX (which has AL=N) by BX (Square). The result is stored in DX:AX.', run: (n: number) => { const sq = n * n; const cb = sq * n; setAx(cb & 0xFFFF); setDx(Math.floor(cb / 0x10000) & 0xFFFF); setTraceLog(prev => [...prev, `MUL BX: DX:AX = AL (${n}) * BX (${sq}) = ${cb} (${cb.toString(16).toUpperCase()}H)`]); } },
-    { label: 'MOV [CUBE], AX', code: 'MOV [CUBE], AX', desc: 'Store the lower 16 bits of cube result from AX into memory variable CUBE.', run: (n: number) => { const sq = n * n; const cb = sq * n; setMemCube(cb & 0xFFFF); setTraceLog(prev => [...prev, `MOV [CUBE], AX: Memory variable CUBE now holds ${cb & 0xFFFF} (${(cb & 0xFFFF).toString(16).toUpperCase()}H)`]); } },
-  ];
-
-  const generateFactStates = (n: number) => {
-    const states: Array<{
-      lineIdx: number;
-      ax: number;
-      cx: number;
-      dx: number;
-      memFact: number;
-      actionDesc: string;
-      codeLine: string;
-    }> = [];
-
-    states.push({
-      lineIdx: 0,
-      ax: 0,
-      cx: 0,
-      dx: 0,
-      memFact: 0,
-      actionDesc: 'Starting factorial simulation...',
-      codeLine: 'MOV CX, NUM',
-    });
-
-    states.push({
-      lineIdx: 0,
-      ax: 0,
-      cx: n,
-      dx: 0,
-      memFact: 0,
-      actionDesc: `Loaded CX with input N (${n}). CX is the loop counter and multiplier.`,
-      codeLine: 'MOV CX, NUM',
-    });
-
-    states.push({
-      lineIdx: 1,
-      ax: 1,
-      cx: n,
-      dx: 0,
-      memFact: 0,
-      actionDesc: 'Initialized accumulator register AX with 0001H.',
-      codeLine: 'MOV AX, 0001H',
-    });
-
-    let currentAx = 1;
-    let currentCx = n;
-    let currentDx = 0;
-
-    while (currentCx > 0) {
-      const prevAx = currentAx;
-      const product = currentAx * currentCx;
-      currentAx = product & 0xFFFF;
-      currentDx = Math.floor(product / 0x10000) & 0xFFFF;
-      
-      states.push({
-        lineIdx: 2,
-        ax: currentAx,
-        cx: currentCx,
-        dx: currentDx,
-        memFact: 0,
-        actionDesc: `Loop body: Multiply AX (${prevAx}) by CX (${currentCx}). Product: AX = ${currentAx} (${currentAx.toString(16).toUpperCase()}H).`,
-        codeLine: 'FACT_LOOP: MUL CX',
-      });
-
-      const prevCx = currentCx;
-      currentCx = currentCx - 1;
-      
-      states.push({
-        lineIdx: 3,
-        ax: currentAx,
-        cx: currentCx,
-        dx: currentDx,
-        memFact: 0,
-        actionDesc: `LOOP instruction decrements CX (${prevCx} -> ${currentCx}). ${currentCx > 0 ? `CX is non-zero, jumping back to FACT_LOOP.` : `CX is zero, loop terminates. Proceeding to next instruction.`}`,
-        codeLine: 'LOOP FACT_LOOP',
-      });
-    }
-
-    states.push({
-      lineIdx: 4,
-      ax: currentAx,
-      cx: currentCx,
-      dx: currentDx,
-      memFact: currentAx,
-      actionDesc: `Store final factorial value ${currentAx} (${currentAx.toString(16).toUpperCase()}H) into memory variable FACT.`,
-      codeLine: 'MOV [FACT], AX',
-    });
-
-    return states;
-  };
-
-  const factStates = generateFactStates(num);
-
-  useEffect(() => {
-    let timer: any;
-    if (isPlaying) {
-      timer = setInterval(() => {
-        handleStepForward();
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [isPlaying, step, activeTab, num]);
-
-  useEffect(() => {
-    handleReset();
-  }, [num, activeTab]);
-
-  const handleReset = () => {
-    setIsPlaying(false);
-    setStep(0);
-    setAx(0);
-    setBx(0);
-    setCx(0);
-    setDx(0);
-    setMemSquare(0);
-    setMemCube(0);
-    setMemFact(0);
-    setTraceLog(['Simulation initialized. Press Step Into or Run to visualize.']);
-  };
-
-  const handleStepForward = () => {
-    if (activeTab === 'sq_cube') {
-      if (step < sqCubeInstructions.length) {
-        sqCubeInstructions[step].run(num);
-        setStep(prev => prev + 1);
-      } else {
-        setIsPlaying(false);
-        setTraceLog(prev => [...prev, 'Simulation completed successfully!']);
-      }
-    } else {
-      if (step < factStates.length - 1) {
-        const nextStateIdx = step + 1;
-        const s = factStates[nextStateIdx];
-        setAx(s.ax);
-        setCx(s.cx);
-        setDx(s.dx);
-        setMemFact(s.memFact);
-        setTraceLog(prev => [...prev, s.actionDesc]);
-        setStep(nextStateIdx);
-      } else {
-        setIsPlaying(false);
-        setTraceLog(prev => [...prev, 'Simulation completed successfully!']);
-      }
-    }
-  };
-
-  const handleRunToEnd = () => {
-    setIsPlaying(false);
-    if (activeTab === 'sq_cube') {
-      let currentStep = step;
-      while (currentStep < sqCubeInstructions.length) {
-        sqCubeInstructions[currentStep].run(num);
-        currentStep++;
-      }
-      setStep(sqCubeInstructions.length);
-      setTraceLog(prev => [...prev, 'Simulation completed successfully!']);
-    } else {
-      const finalStateIdx = factStates.length - 1;
-      const s = factStates[finalStateIdx];
-      setAx(s.ax);
-      setCx(s.cx);
-      setDx(s.dx);
-      setMemFact(s.memFact);
-      
-      const logs = ['Simulation initialized. Press Step Into or Run to visualize.'];
-      for (let i = 1; i <= finalStateIdx; i++) {
-        logs.push(factStates[i].actionDesc);
-      }
-      logs.push('Simulation completed successfully!');
-      setTraceLog(logs);
-      setStep(finalStateIdx);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Top Controller */}
-      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-4 font-sans shadow-3xs">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
-            <span className="font-mono text-xs font-bold text-indigo-950">Set input value NUM (N):</span>
-            <div className="flex items-center gap-1 ml-1.5">
-              <button
-                onClick={() => setNum(prev => Math.max(1, prev - 1))}
-                disabled={num <= 1}
-                className="w-6 h-6 flex items-center justify-center bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 disabled:opacity-50 text-indigo-800 font-extrabold cursor-pointer"
-              >
-                -
-              </button>
-              <span className="w-6 text-center font-bold font-sans text-slate-800 text-sm">{num}</span>
-              <button
-                onClick={() => setNum(prev => Math.min(8, prev + 1))}
-                disabled={num >= 8}
-                className="w-6 h-6 flex items-center justify-center bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 disabled:opacity-50 text-indigo-800 font-extrabold cursor-pointer"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          <div className="flex bg-slate-200/60 p-1 rounded-xl border border-slate-200 gap-1">
-            <button
-              onClick={() => setActiveTab('sq_cube')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                activeTab === 'sq_cube'
-                  ? 'bg-white text-indigo-600 shadow-3xs'
-                  : 'text-slate-600 hover:text-slate-800'
-              }`}
-            >
-              Square & Cube
-            </button>
-            <button
-              onClick={() => setActiveTab('factorial')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                activeTab === 'factorial'
-                  ? 'bg-white text-indigo-600 shadow-3xs'
-                  : 'text-slate-600 hover:text-slate-800'
-              }`}
-            >
-              Factorial (CX Loop)
-            </button>
-          </div>
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleReset}
-            className="px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Reset</span>
-          </button>
-          <button
-            onClick={handleStepForward}
-            disabled={activeTab === 'sq_cube' ? step >= sqCubeInstructions.length : step >= factStates.length - 1}
-            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-150 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-50"
-          >
-            <span>Step Into (F7)</span>
-          </button>
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1 cursor-pointer transition-colors ${
-              isPlaying
-                ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-            }`}
-          >
-            <span>{isPlaying ? 'Pause' : 'Auto Run'}</span>
-          </button>
-          <button
-            onClick={handleRunToEnd}
-            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-xs font-bold cursor-pointer transition-colors"
-          >
-            Run All
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left Hand: Code Viewer */}
-        <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between text-left">
-          <div>
-            <div className="text-[10px] font-mono font-black text-indigo-400 border-b border-slate-800 pb-2 flex items-center gap-1.5">
-              <Code2 className="w-4 h-4 text-indigo-400" />
-              8086 ASSEMBLY EXECUTION
-            </div>
-            
-            <div className="mt-3.5 space-y-1 font-mono text-[11px] leading-relaxed">
-              {activeTab === 'sq_cube' ? (
-                sqCubeInstructions.map((inst, idx) => {
-                  const isCurrent = idx === step;
-                  return (
-                    <div
-                      key={idx}
-                      className={`p-1.5 rounded-md flex items-center gap-2 border transition-all ${
-                        isCurrent
-                          ? 'bg-indigo-500/15 border-indigo-500 text-indigo-200 font-bold scale-[1.01]'
-                          : 'border-transparent text-slate-400 hover:text-slate-300'
-                      }`}
+                {/* Assembly Example Block */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-mono uppercase font-bold text-slate-400 tracking-wider">
+                      8086 Assembly Syntax Example
+                    </span>
+                    <button
+                      onClick={() => handleCopyCode(selectedDirective.example)}
+                      className="text-[10px] font-mono text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
                     >
-                      <span className="w-5 text-right text-slate-500 text-[10px] font-mono select-none">{idx + 1}</span>
-                      <span className="flex-1 whitespace-pre">{inst.code}</span>
-                      {isCurrent && <span className="text-[9px] font-sans bg-indigo-500/25 px-1 rounded animate-pulse">PC</span>}
-                    </div>
-                  );
-                })
-              ) : (
-                // Factorial Code list
-                [
-                  { code: 'MOV CX, NUM' },
-                  { code: 'MOV AX, 0001H' },
-                  { code: 'FACT_LOOP: MUL CX' },
-                  { code: 'LOOP FACT_LOOP' },
-                  { code: 'MOV [FACT], AX' },
-                ].map((inst, idx) => {
-                  let isCurrent = false;
-                  if (step > 0) {
-                    const currentLineIdx = factStates[step].lineIdx;
-                    isCurrent = idx === currentLineIdx;
-                  } else {
-                    isCurrent = idx === 0;
-                  }
-                  return (
-                    <div
-                      key={idx}
-                      className={`p-1.5 rounded-md flex items-center gap-2 border transition-all ${
-                        isCurrent
-                          ? 'bg-indigo-500/15 border-indigo-500 text-indigo-200 font-bold scale-[1.01]'
-                          : 'border-transparent text-slate-400 hover:text-slate-300'
-                      }`}
-                    >
-                      <span className="w-5 text-right text-slate-500 text-[10px] select-none">{idx + 1}</span>
-                      <span className="flex-1 whitespace-pre">{inst.code}</span>
-                      {isCurrent && <span className="text-[9px] font-sans bg-indigo-500/25 px-1 rounded animate-pulse">PC</span>}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80 mt-4">
-            <span className="text-[8.5px] font-mono font-black text-slate-500 uppercase tracking-widest block mb-1">Instruction Explanation:</span>
-            <p className="text-[11.5px] text-slate-300 leading-normal font-sans">
-              {activeTab === 'sq_cube'
-                ? step < sqCubeInstructions.length
-                  ? sqCubeInstructions[step].desc
-                  : 'All instructions executed. Press Reset to restart.'
-                : step < factStates.length
-                  ? factStates[step].actionDesc
-                  : 'All instructions executed. Press Reset to restart.'}
-            </p>
-          </div>
-        </div>
-
-        {/* Right Hand: CPU Registers & Memory Variables */}
-        <div className="lg:col-span-7 space-y-4">
-          {/* CPU Registers */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-3xs text-left space-y-3">
-            <span className="text-[10px] font-mono font-black text-indigo-600 uppercase tracking-widest block border-b border-slate-150 pb-2">
-              CPU Registers & Flags
-            </span>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-slate-50 border border-slate-150 rounded-xl p-3 text-center space-y-1">
-                <span className="text-[9.5px] font-mono font-bold text-slate-400 block">AX (Accumulator)</span>
-                <div className="font-mono text-[14px] font-black text-indigo-600">
-                  {ax.toString(16).toUpperCase().padStart(4, '0')}H
+                      {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      {copiedCode ? 'Copied!' : 'Copy Code'}
+                    </button>
+                  </div>
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-3.5 font-mono text-xs text-emerald-300 overflow-x-auto shadow-inner">
+                    <pre>{selectedDirective.example}</pre>
+                  </div>
                 </div>
-                <span className="text-[9px] font-sans text-slate-500 block">dec: {ax}</span>
-              </div>
 
-              <div className="bg-slate-50 border border-slate-150 rounded-xl p-3 text-center space-y-1">
-                <span className="text-[9.5px] font-mono font-bold text-slate-400 block">BX (Base)</span>
-                <div className="font-mono text-[14px] font-black text-indigo-600">
-                  {bx.toString(16).toUpperCase().padStart(4, '0')}H
+                {/* Important distinction note */}
+                <div className="bg-indigo-950/40 border border-indigo-800/50 rounded-2xl p-3 flex items-start gap-2 text-indigo-200 text-xs">
+                  <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                  <p className="leading-snug text-[11px]">
+                    <strong>Note:</strong> Assembler directives are processed by the assembler software (MASM/TASM) at compile-time and do NOT generate executable machine opcodes in the CPU.
+                  </p>
                 </div>
-                <span className="text-[9px] font-sans text-slate-500 block">dec: {bx}</span>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-150 rounded-xl p-3 text-center space-y-1">
-                <span className="text-[9.5px] font-mono font-bold text-slate-400 block">CX (Counter/Loop)</span>
-                <div className="font-mono text-[14px] font-black text-indigo-600">
-                  {cx.toString(16).toUpperCase().padStart(4, '0')}H
-                </div>
-                <span className="text-[9px] font-sans text-slate-500 block">dec: {cx}</span>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-150 rounded-xl p-3 text-center space-y-1">
-                <span className="text-[9.5px] font-mono font-bold text-slate-400 block">DX (Data/Mul)</span>
-                <div className="font-mono text-[14px] font-black text-indigo-600">
-                  {dx.toString(16).toUpperCase().padStart(4, '0')}H
-                </div>
-                <span className="text-[9px] font-sans text-slate-500 block">dec: {dx}</span>
               </div>
             </div>
-          </div>
+          </motion.div>
+        )}
 
-          {/* Memory Variables */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-3xs text-left space-y-3">
-            <span className="text-[10px] font-mono font-black text-indigo-600 uppercase tracking-widest block border-b border-slate-150 pb-2">
-              Memory Segment Variables (DS)
-            </span>
+        {/* TAB 2: TYPES OF ASSEMBLY PROGRAMMING STYLES */}
+        {activeTab === 'styles' && (
+          <motion.div
+            key="styles-tab"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="space-y-6"
+          >
+            {/* Style Selector Tabs */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="bg-amber-50/50 border border-amber-200/60 rounded-xl p-3 text-center space-y-1">
-                <span className="text-[9px] font-mono font-bold text-amber-700 block uppercase">SQUARE DW ?</span>
-                <div className="font-mono text-[13px] font-black text-amber-900 bg-white/80 py-1 rounded border border-amber-100">
-                  {memSquare > 0 ? `${memSquare.toString(16).toUpperCase().padStart(4, '0')}H` : '????H'}
-                </div>
-                <span className="text-[9.5px] font-sans text-slate-500 block">Value: {memSquare || 'Uninitialized'}</span>
-              </div>
-
-              <div className="bg-amber-50/50 border border-amber-200/60 rounded-xl p-3 text-center space-y-1">
-                <span className="text-[9px] font-mono font-bold text-amber-700 block uppercase">CUBE DW ?</span>
-                <div className="font-mono text-[13px] font-black text-amber-900 bg-white/80 py-1 rounded border border-amber-100">
-                  {memCube > 0 ? `${memCube.toString(16).toUpperCase().padStart(4, '0')}H` : '????H'}
-                </div>
-                <span className="text-[9.5px] font-sans text-slate-500 block">Value: {memCube || 'Uninitialized'}</span>
-              </div>
-
-              <div className="bg-amber-50/50 border border-amber-200/60 rounded-xl p-3 text-center space-y-1">
-                <span className="text-[9px] font-mono font-bold text-amber-700 block uppercase">FACT DW ?</span>
-                <div className="font-mono text-[13px] font-black text-amber-900 bg-white/80 py-1 rounded border border-amber-100">
-                  {memFact > 0 ? `${memFact.toString(16).toUpperCase().padStart(4, '0')}H` : '????H'}
-                </div>
-                <span className="text-[9.5px] font-sans text-slate-500 block">Value: {memFact || 'Uninitialized'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Real-time Trace Log */}
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-3xs text-left flex flex-col gap-2">
-            <span className="text-[10px] font-mono font-black text-slate-500 uppercase tracking-widest block border-b border-slate-200 pb-1.5">
-              Live Instruction Log & Counter Trace
-            </span>
-            <div className="max-h-[140px] overflow-y-auto font-mono text-[11px] leading-relaxed text-slate-600 space-y-1.5 scrollbar-thin pr-1">
-              {traceLog.map((log, idx) => (
-                <div key={idx} className="flex gap-2 items-start border-b border-slate-100 pb-1 last:border-0">
-                  <span className="text-slate-400 select-none">▶</span>
-                  <span className="text-slate-700">{log}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function MultiPrecisionTheoryVisualizer() {
-  const [byteSize, setByteSize] = useState<number>(4);
-  const [num1, setNum1] = useState<string[]>(['FB', 'FA', 'F9', 'F8']); // Little-endian order: Index 0=LSB, Index 3=MSB
-  const [num2, setNum2] = useState<string[]>(['08', '07', '06', '05']);
-  const [op, setOp] = useState<'ADD' | 'SUB'>('ADD');
-  const [step, setStep] = useState<number>(0);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-
-  // States of simulated execution
-  const [al, setAl] = useState<number>(0);
-  const [si, setSi] = useState<number>(0);
-  const [di, setDi] = useState<number>(0);
-  const [bx, setBx] = useState<number>(0);
-  const [cx, setCx] = useState<number>(4);
-  const [cf, setCf] = useState<number>(0);
-  const [memoryResult, setMemoryResult] = useState<number[]>([0, 0, 0, 0]);
-  const [finalFlag, setFinalFlag] = useState<number>(0);
-  const [traceLog, setTraceLog] = useState<string[]>(['Simulation initialized. Select operation or preset, then Step Into.']);
-
-  const presets = [
-    { name: 'Carry Propagate (32-bit ADD)', num1: ['FB', 'FA', 'F9', 'F8'], num2: ['08', '07', '06', '05'], op: 'ADD' as const, byteSize: 4 },
-    { name: 'Standard (32-bit ADD)', num1: ['78', '56', '34', '12'], num2: ['F0', 'DE', 'BC', '9A'], op: 'ADD' as const, byteSize: 4 },
-    { name: 'Borrow Propagate (32-bit SUB)', num1: ['00', '00', '00', '00'], num2: ['01', '00', '00', '00'], op: 'SUB' as const, byteSize: 4 },
-    { name: 'Carry Propagate (64-bit ADD)', num1: ['FB', 'FA', 'F9', 'F8', 'F7', 'F6', 'F5', 'F4'], num2: ['08', '07', '06', '05', '04', '03', '02', '01'], op: 'ADD' as const, byteSize: 8 },
-    { name: 'Borrow Propagate (16-bit SUB)', num1: ['00', '00'], num2: ['01', '00'], op: 'SUB' as const, byteSize: 2 },
-  ];
-
-  const generateStates = () => {
-    const states: Array<{
-      lineIdx: number;
-      al: number;
-      si: number;
-      di: number;
-      bx: number;
-      cx: number;
-      cf: number;
-      memoryResult: number[];
-      finalFlag: number;
-      actionDesc: string;
-      codeLine: string;
-    }> = [];
-
-    // State 0: Initial CLC
-    states.push({
-      lineIdx: 0,
-      al: 0,
-      si: 0,
-      di: 0,
-      bx: 0,
-      cx: byteSize,
-      cf: 0,
-      memoryResult: Array(byteSize).fill(0),
-      finalFlag: 0,
-      actionDesc: `CLC instruction: Clear the Carry/Borrow Flag (CF = 0) to ensure a clean starting state.`,
-      codeLine: 'CLC'
-    });
-
-    // State 1: MOV CX, byteSize
-    states.push({
-      lineIdx: 1,
-      al: 0,
-      si: 0,
-      di: 0,
-      bx: 0,
-      cx: byteSize,
-      cf: 0,
-      memoryResult: Array(byteSize).fill(0),
-      finalFlag: 0,
-      actionDesc: `MOV CX, ${byteSize}: Set loop counter CX register to ${byteSize} (since we are processing ${byteSize} bytes).`,
-      codeLine: `MOV CX, ${byteSize}`
-    });
-
-    let currentAl = 0;
-    let currentSi = 0;
-    let currentDi = 0;
-    let currentBx = 0;
-    let currentCx = byteSize;
-    let currentCf = 0;
-    const currentMemory = Array(byteSize).fill(0);
-    let currentFinal = 0;
-
-    for (let i = 0; i < byteSize; i++) {
-      const val1 = parseInt(num1[i] || '0', 16) & 0xFF;
-      const val2 = parseInt(num2[i] || '0', 16) & 0xFF;
-
-      // MOV AL, [SI]
-      currentAl = val1;
-      currentSi = i;
-      states.push({
-        lineIdx: 2,
-        al: currentAl,
-        si: currentSi,
-        di: currentDi,
-        bx: currentBx,
-        cx: currentCx,
-        cf: currentCf,
-        memoryResult: [...currentMemory],
-        finalFlag: currentFinal,
-        actionDesc: `[Byte ${i}] MOV AL, [SI]: Load AL register with byte from Num1 at offset SI (Byte ${i}) -> ${val1.toString(16).toUpperCase().padStart(2, '0')}H.`,
-        codeLine: op === 'ADD' ? 'ADD_LOOP: MOV AL, [SI]' : 'SUB_LOOP: MOV AL, [SI]'
-      });
-
-      // ADC AL, [DI] or SBB AL, [DI]
-      const prevAl = currentAl;
-      const prevCf = currentCf;
-      if (op === 'ADD') {
-        const sum = val1 + val2 + prevCf;
-        currentAl = sum & 0xFF;
-        currentCf = sum > 255 ? 1 : 0;
-        states.push({
-          lineIdx: 3,
-          al: currentAl,
-          si: currentSi,
-          di: i,
-          bx: currentBx,
-          cx: currentCx,
-          cf: currentCf,
-          memoryResult: [...currentMemory],
-          finalFlag: currentFinal,
-          actionDesc: `[Byte ${i}] ADC AL, [DI]: Add AL (${prevAl.toString(16).toUpperCase().padStart(2, '0')}H) + [DI] (${val2.toString(16).toUpperCase().padStart(2, '0')}H) + Carry-In (${prevCf}). AL = ${currentAl.toString(16).toUpperCase().padStart(2, '0')}H. Carry-Out (CF) = ${currentCf}.`,
-          codeLine: 'ADC AL, [DI]'
-        });
-        currentDi = i;
-      } else {
-        const diff = val1 - val2 - prevCf;
-        currentAl = (diff + 256) & 0xFF;
-        currentCf = diff < 0 ? 1 : 0;
-        states.push({
-          lineIdx: 3,
-          al: currentAl,
-          si: currentSi,
-          di: i,
-          bx: currentBx,
-          cx: currentCx,
-          cf: currentCf,
-          memoryResult: [...currentMemory],
-          finalFlag: currentFinal,
-          actionDesc: `[Byte ${i}] SBB AL, [DI]: Subtract [DI] (${val2.toString(16).toUpperCase().padStart(2, '0')}H) and Borrow-In (${prevCf}) from AL (${prevAl.toString(16).toUpperCase().padStart(2, '0')}H). AL = ${currentAl.toString(16).toUpperCase().padStart(2, '0')}H. Borrow-Out (CF) = ${currentCf}.`,
-          codeLine: 'SBB AL, [DI]'
-        });
-        currentDi = i;
-      }
-
-      // MOV [BX], AL
-      currentMemory[i] = currentAl;
-      currentBx = i;
-      states.push({
-        lineIdx: 4,
-        al: currentAl,
-        si: currentSi,
-        di: currentDi,
-        bx: currentBx,
-        cx: currentCx,
-        cf: currentCf,
-        memoryResult: [...currentMemory],
-        finalFlag: currentFinal,
-        actionDesc: `[Byte ${i}] MOV [BX], AL: Store current accumulated byte ${currentAl.toString(16).toUpperCase().padStart(2, '0')}H into result memory pointer BX (offset ${i}).`,
-        codeLine: 'MOV [BX], AL'
-      });
-
-      // INC SI
-      currentSi = i + 1;
-      states.push({
-        lineIdx: 5,
-        al: currentAl,
-        si: currentSi,
-        di: currentDi,
-        bx: currentBx,
-        cx: currentCx,
-        cf: currentCf,
-        memoryResult: [...currentMemory],
-        finalFlag: currentFinal,
-        actionDesc: `[Byte ${i}] INC SI: Increment source pointer SI pointing to Num1. Now SI offset is ${currentSi}.`,
-        codeLine: 'INC SI'
-      });
-
-      // INC DI
-      currentDi = i + 1;
-      states.push({
-        lineIdx: 6,
-        al: currentAl,
-        si: currentSi,
-        di: currentDi,
-        bx: currentBx,
-        cx: currentCx,
-        cf: currentCf,
-        memoryResult: [...currentMemory],
-        finalFlag: currentFinal,
-        actionDesc: `[Byte ${i}] INC DI: Increment source pointer DI pointing to Num2. Now DI offset is ${currentDi}.`,
-        codeLine: 'INC DI'
-      });
-
-      // INC BX
-      currentBx = i + 1;
-      states.push({
-        lineIdx: 7,
-        al: currentAl,
-        si: currentSi,
-        di: currentDi,
-        bx: currentBx,
-        cx: currentCx,
-        cf: currentCf,
-        memoryResult: [...currentMemory],
-        finalFlag: currentFinal,
-        actionDesc: `[Byte ${i}] INC BX: Increment destination pointer BX. Now BX offset is ${currentBx}.`,
-        codeLine: 'INC BX'
-      });
-
-      // LOOP
-      const prevCx = currentCx;
-      currentCx = currentCx - 1;
-      states.push({
-        lineIdx: 8,
-        al: currentAl,
-        si: currentSi,
-        di: currentDi,
-        bx: currentBx,
-        cx: currentCx,
-        cf: currentCf,
-        memoryResult: [...currentMemory],
-        finalFlag: currentFinal,
-        actionDesc: `[Byte ${i}] LOOP: Decrement loop counter CX (${prevCx} -> ${currentCx}). ${currentCx > 0 ? 'CX is non-zero, jumping back to the loop start.' : 'CX is zero, loop completes.'}`,
-        codeLine: op === 'ADD' ? 'LOOP ADD_LOOP' : 'LOOP SUB_LOOP'
-      });
-    }
-
-    // Capture Carry Flag
-    currentAl = currentCf;
-    states.push({
-      lineIdx: 9,
-      al: currentAl,
-      si: byteSize,
-      di: byteSize,
-      bx: byteSize,
-      cx: 0,
-      cf: currentCf,
-      memoryResult: [...currentMemory],
-      finalFlag: currentFinal,
-      actionDesc: `Capture Flag: Initialize AL=0 then execute ADC/SBB AL, 0 to capture final Carry/Borrow flag (${currentCf}) into AL.`,
-      codeLine: op === 'ADD' ? 'ADC AL, 0' : 'SBB AL, 0'
-    });
-
-    // Store final carry
-    currentFinal = currentAl;
-    states.push({
-      lineIdx: 10,
-      al: currentAl,
-      si: byteSize,
-      di: byteSize,
-      bx: byteSize,
-      cx: 0,
-      cf: currentCf,
-      memoryResult: [...currentMemory],
-      finalFlag: currentFinal,
-      actionDesc: `Store Captured Flag: Store the final captured flag (${currentFinal}) into memory variable ${op === 'ADD' ? 'FINAL_CARRY' : 'FINAL_BORROW'}.`,
-      codeLine: op === 'ADD' ? 'MOV FINAL_CARRY, AL' : 'MOV FINAL_BORROW, AL'
-    });
-
-    return states;
-  };
-
-  const statesList = generateStates();
-
-  useEffect(() => {
-    let timer: any;
-    if (isPlaying) {
-      timer = setInterval(() => {
-        handleStepForward();
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [isPlaying, step, op, num1, num2, byteSize]);
-
-  useEffect(() => {
-    handleReset();
-  }, [num1, num2, op, byteSize]);
-
-  const handleReset = () => {
-    setIsPlaying(false);
-    setStep(0);
-    setAl(0);
-    setSi(0);
-    setDi(0);
-    setBx(0);
-    setCx(byteSize);
-    setCf(0);
-    setMemoryResult(Array(byteSize).fill(0));
-    setFinalFlag(0);
-    setTraceLog(['Simulation initialized. Press Step Into or Run to visualize.']);
-  };
-
-  const handleStepForward = () => {
-    if (step < statesList.length - 1) {
-      const nextStepIdx = step + 1;
-      const s = statesList[nextStepIdx];
-      setAl(s.al);
-      setSi(s.si);
-      setDi(s.di);
-      setBx(s.bx);
-      setCx(s.cx);
-      setCf(s.cf);
-      setMemoryResult(s.memoryResult);
-      setFinalFlag(s.finalFlag);
-      setTraceLog(prev => [...prev, s.actionDesc]);
-      setStep(nextStepIdx);
-    } else {
-      setIsPlaying(false);
-      setTraceLog(prev => [...prev, 'Simulation completed successfully!']);
-    }
-  };
-
-  const handleRunToEnd = () => {
-    setIsPlaying(false);
-    const finalStateIdx = statesList.length - 1;
-    const s = statesList[finalStateIdx];
-    setAl(s.al);
-    setSi(s.si);
-    setDi(s.di);
-    setBx(s.bx);
-    setCx(s.cx);
-    setCf(s.cf);
-    setMemoryResult(s.memoryResult);
-    setFinalFlag(s.finalFlag);
-
-    const logs = ['Simulation initialized. Press Step Into or Run to visualize.'];
-    for (let i = 1; i <= finalStateIdx; i++) {
-      logs.push(statesList[i].actionDesc);
-    }
-    logs.push('Simulation completed successfully!');
-    setTraceLog(logs);
-    setStep(finalStateIdx);
-  };
-
-  const applyPreset = (preset: typeof presets[0]) => {
-    setByteSize(preset.byteSize);
-    setNum1(preset.num1);
-    setNum2(preset.num2);
-    setOp(preset.op);
-  };
-
-  const handleByteSizeChange = (newSize: number) => {
-    setByteSize(newSize);
-    setNum1(prev => {
-      const next = Array(newSize).fill('00');
-      for (let i = 0; i < Math.min(prev.length, newSize); i++) {
-        next[i] = prev[i];
-      }
-      return next;
-    });
-    setNum2(prev => {
-      const next = Array(newSize).fill('00');
-      for (let i = 0; i < Math.min(prev.length, newSize); i++) {
-        next[i] = prev[i];
-      }
-      return next;
-    });
-  };
-
-  const handleByteChange = (val: string, index: number, isNum1: boolean) => {
-    const sanitized = val.replace(/[^0-9A-Fa-f]/g, '').toUpperCase().slice(0, 2);
-    if (isNum1) {
-      const updated = [...num1];
-      updated[index] = sanitized || '00';
-      setNum1(updated);
-    } else {
-      const updated = [...num2];
-      updated[index] = sanitized || '00';
-      setNum2(updated);
-    }
-  };
-
-  const handleFullHexChange = (val: string, isNum1: boolean) => {
-    const hexLength = byteSize * 2;
-    let sanitized = val.replace(/[^0-9A-Fa-f]/g, '').toUpperCase().slice(0, hexLength);
-    const padded = sanitized.padStart(hexLength, '0');
-    const bytes: string[] = [];
-    for (let i = 0; i < byteSize; i++) {
-      const startIdx = hexLength - (i + 1) * 2;
-      bytes.push(padded.slice(startIdx, startIdx + 2));
-    }
-    if (isNum1) {
-      setNum1(bytes);
-    } else {
-      setNum2(bytes);
-    }
-  };
-
-  const getDecimalStr = (bytes: string[]) => {
-    try {
-      const hex = bytes.slice().reverse().join('');
-      if (!hex) return '0';
-      return BigInt('0x' + hex).toLocaleString();
-    } catch (e) {
-      return '0';
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Precision / Size Selector Control */}
-      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-3xs text-left space-y-3 font-sans">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wide">
-              <Sliders className="w-4 h-4 text-indigo-600" />
-              Configure Multi-Precision Operand Size
-            </h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Choose the precision size in bytes (8-bit increments up to 64-bit). The simulator adjusts register CX, loop iteration counts, and memory layouts dynamically!
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-1.5 bg-slate-200/60 p-1 rounded-xl border border-slate-200 shrink-0 self-start sm:self-center">
-            {[1, 2, 3, 4, 6, 8].map((size) => (
-              <button
-                key={size}
-                onClick={() => handleByteSizeChange(size)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                  byteSize === size
-                    ? 'bg-indigo-600 text-white shadow-3xs'
-                    : 'text-slate-600 hover:text-slate-800 hover:bg-white/50'
-                }`}
-              >
-                {size}B ({size * 8}-bit)
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Preset Pickers */}
-      <div className="flex flex-wrap gap-2">
-        {presets.map((p, idx) => (
-          <button
-            key={idx}
-            onClick={() => applyPreset(p)}
-            className="px-2.5 py-1 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 font-sans font-bold text-[10.5px] rounded-lg transition-all cursor-pointer"
-          >
-            {p.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Interactive Value Selectors */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-3xs space-y-3.5 text-left">
-        <span className="text-[10px] font-bold font-mono text-indigo-600 uppercase tracking-widest block border-b border-slate-100 pb-1.5">
-          Choose {byteSize * 8}-Bit Hex values for Num1 & Num2
-        </span>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Num1 Input Group */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-700 block">
-              Num1 ({byteSize * 8}-bit Hexadecimal value)
-            </label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-slate-400 font-bold select-none">0x</span>
-                <input
-                  type="text"
-                  maxLength={byteSize * 2}
-                  placeholder={'F'.repeat(byteSize * 2)}
-                  value={num1.slice().reverse().join('')}
-                  onChange={(e) => handleFullHexChange(e.target.value, true)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 hover:border-indigo-300 focus:border-indigo-500 focus:bg-white rounded-xl font-mono text-xs font-black text-slate-800 tracking-wide outline-hidden transition-all uppercase"
-                />
-              </div>
-              <button
-                onClick={() => {
-                  let hex = '';
-                  for (let i = 0; i < byteSize * 2; i++) {
-                    hex += Math.floor(Math.random() * 16).toString(16);
-                  }
-                  handleFullHexChange(hex, true);
-                }}
-                className="px-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-[10px] text-indigo-700 font-mono font-bold rounded-xl cursor-pointer transition-colors"
-                title={`Generate Random ${byteSize * 8}-bit Hex`}
-              >
-                RANDOM
-              </button>
-            </div>
-            <div className="text-[10px] text-slate-400 font-mono flex flex-col sm:flex-row sm:justify-between px-1 gap-1">
-              <span>Decimal representation: {getDecimalStr(num1)}</span>
-              <span className="text-indigo-600 font-bold">Standard Display Order (MSB ➔ LSB)</span>
-            </div>
-          </div>
-
-          {/* Num2 Input Group */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-700 block">
-              Num2 ({byteSize * 8}-bit Hexadecimal value)
-            </label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-slate-400 font-bold select-none">0x</span>
-                <input
-                  type="text"
-                  maxLength={byteSize * 2}
-                  placeholder={'0'.repeat(byteSize * 2 - 1) + '1'}
-                  value={num2.slice().reverse().join('')}
-                  onChange={(e) => handleFullHexChange(e.target.value, false)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 hover:border-indigo-300 focus:border-indigo-500 focus:bg-white rounded-xl font-mono text-xs font-black text-slate-800 tracking-wide outline-hidden transition-all uppercase"
-                />
-              </div>
-              <button
-                onClick={() => {
-                  let hex = '';
-                  for (let i = 0; i < byteSize * 2; i++) {
-                    hex += Math.floor(Math.random() * 16).toString(16);
-                  }
-                  handleFullHexChange(hex, false);
-                }}
-                className="px-2.5 bg-violet-50 hover:bg-violet-100 border border-violet-100 text-[10px] text-violet-700 font-mono font-bold rounded-xl cursor-pointer transition-colors"
-                title={`Generate Random ${byteSize * 8}-bit Hex`}
-              >
-                RANDOM
-              </button>
-            </div>
-            <div className="text-[10px] text-slate-400 font-mono flex flex-col sm:flex-row sm:justify-between px-1 gap-1">
-              <span>Decimal representation: {getDecimalStr(num2)}</span>
-              <span className="text-violet-600 font-bold">Standard Display Order (MSB ➔ LSB)</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Operations bar */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
-          <button
-            onClick={() => {
-              const temp = [...num1];
-              setNum1([...num2]);
-              setNum2(temp);
-            }}
-            className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-[10px] font-sans font-bold text-slate-600 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            Swap Num1 ⇄ Num2
-          </button>
-          <button
-            onClick={() => {
-              setNum1(Array(byteSize).fill('00'));
-              setNum2(Array(byteSize).fill('00'));
-            }}
-            className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-[10px] font-sans font-bold text-slate-600 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            Clear (Set Zeros)
-          </button>
-          <button
-            onClick={() => {
-              setNum1(Array(byteSize).fill('FF'));
-              setNum2(Array(byteSize).fill('FF'));
-            }}
-            className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-[10px] font-sans font-bold text-slate-600 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            Set Maximum (0x{'F'.repeat(byteSize * 2)})
-          </button>
-        </div>
-      </div>
-
-      {/* Controller Block */}
-      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-4 font-sans shadow-3xs">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          {/* Operation select */}
-          <div className="flex bg-slate-200/60 p-1 rounded-xl border border-slate-200 gap-1">
-            <button
-              onClick={() => setOp('ADD')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                op === 'ADD'
-                  ? 'bg-white text-indigo-600 shadow-3xs'
-                  : 'text-slate-600 hover:text-slate-800'
-              }`}
-            >
-              ADD (ADC)
-            </button>
-            <button
-              onClick={() => setOp('SUB')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                op === 'SUB'
-                  ? 'bg-white text-indigo-600 shadow-3xs'
-                  : 'text-slate-600 hover:text-slate-800'
-              }`}
-            >
-              SUB (SBB)
-            </button>
-          </div>
-
-          <div className="text-[11px] font-mono text-slate-500">
-            Click preset above or select a custom size configuration.
-          </div>
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleReset}
-            className="px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Reset</span>
-          </button>
-          <button
-            onClick={handleStepForward}
-            disabled={step >= statesList.length - 1}
-            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-150 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-50"
-          >
-            <span>Step Into (F7)</span>
-          </button>
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1 cursor-pointer transition-colors ${
-              isPlaying
-                ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-            }`}
-          >
-            <span>{isPlaying ? 'Pause' : 'Auto Run'}</span>
-          </button>
-          <button
-            onClick={handleRunToEnd}
-            className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-xs font-bold cursor-pointer transition-colors"
-          >
-            Run All
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left Pane: Code Viewer */}
-        <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between text-left">
-          <div>
-            <div className="text-[10px] font-mono font-black text-indigo-400 border-b border-slate-800 pb-2 flex items-center gap-1.5">
-              <Code2 className="w-4 h-4 text-indigo-400" />
-              8086 MULTI-PRECISION ALP LOOP
-            </div>
-
-            <div className="mt-3.5 space-y-1 font-mono text-[11px] leading-relaxed font-semibold">
-              {(op === 'ADD'
-                ? [
-                    { code: 'CLC', desc: 'Clear Carry Flag' },
-                    { code: `MOV CX, ${byteSize}`, desc: `Initialize loop counter to ${byteSize}` },
-                    { code: 'ADD_LOOP: MOV AL, [SI]', desc: 'Load AL with Num1 byte' },
-                    { code: 'ADC AL, [DI]', desc: 'Add with Carry' },
-                    { code: 'MOV [BX], AL', desc: 'Store byte in result' },
-                    { code: 'INC SI', desc: 'Move to next byte of Num1' },
-                    { code: 'INC DI', desc: 'Move to next byte of Num2' },
-                    { code: 'INC BX', desc: 'Move to next byte of Result' },
-                    { code: 'LOOP ADD_LOOP', desc: 'Decrement CX and loop if CX != 0' },
-                    { code: 'ADC AL, 0', desc: 'Capture final Carry Flag' },
-                    { code: 'MOV FINAL_CARRY, AL', desc: 'Store final carry in memory' },
-                  ]
-                : [
-                    { code: 'CLC', desc: 'Clear Borrow Flag (CLC clears CF)' },
-                    { code: `MOV CX, ${byteSize}`, desc: `Initialize loop counter to ${byteSize}` },
-                    { code: 'SUB_LOOP: MOV AL, [SI]', desc: 'Load AL with Num1 byte' },
-                    { code: 'SBB AL, [DI]', desc: 'Subtract with Borrow' },
-                    { code: 'MOV [BX], AL', desc: 'Store byte in result' },
-                    { code: 'INC SI', desc: 'Move to next byte of Num1' },
-                    { code: 'INC DI', desc: 'Move to next byte of Num2' },
-                    { code: 'INC BX', desc: 'Move to next byte of Result' },
-                    { code: 'LOOP SUB_LOOP', desc: 'Decrement CX and loop if CX != 0' },
-                    { code: 'SBB AL, 0', desc: 'Capture final Borrow Flag' },
-                    { code: 'MOV FINAL_BORROW, AL', desc: 'Store final borrow in memory' },
-                  ]
-              ).map((inst, idx) => {
-                const currentLineIdx = statesList[step].lineIdx;
-                const isCurrent = idx === currentLineIdx;
+              {(['standard', 'simplified', 'com'] as const).map((styleKey) => {
+                const style = programmingStylesData[styleKey];
+                const isSelected = styleKey === selectedStyleId;
                 return (
-                  <div
-                    key={idx}
-                    className={`p-1 rounded-md flex items-center gap-2 border transition-all ${
-                      isCurrent
-                        ? 'bg-indigo-500/15 border-indigo-500 text-indigo-200 font-bold scale-[1.01]'
-                        : 'border-transparent text-slate-400 hover:text-slate-300'
+                  <button
+                    key={styleKey}
+                    onClick={() => setSelectedStyleId(styleKey)}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white border-indigo-700 shadow-md ring-2 ring-indigo-400'
+                        : 'bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    <span className="w-5 text-right text-slate-500 text-[10px] font-mono select-none">{idx + 1}</span>
-                    <span className="flex-1 whitespace-pre">{inst.code}</span>
-                    {isCurrent && <span className="text-[9px] font-sans bg-indigo-500/25 px-1 rounded animate-pulse">PC</span>}
-                  </div>
+                    <div>
+                      <span className={`text-[9px] font-mono font-extrabold uppercase px-2 py-0.5 rounded-md inline-block mb-2 ${
+                        isSelected ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-200 text-slate-700'
+                      }`}>
+                        {style.badge}
+                      </span>
+                      <h3 className="text-sm font-extrabold tracking-tight font-sans">
+                        {style.title}
+                      </h3>
+                    </div>
+                    <p className={`text-xs mt-2 font-mono leading-snug ${isSelected ? 'text-indigo-100' : 'text-slate-500'}`}>
+                      {style.subtitle}
+                    </p>
+                  </button>
                 );
               })}
             </div>
-          </div>
 
-          <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80 mt-4">
-            <span className="text-[8.5px] font-mono font-black text-slate-500 uppercase tracking-widest block mb-1">Instruction Explanation:</span>
-            <p className="text-[11.5px] text-slate-300 leading-normal font-sans">
-              {step < statesList.length
-                ? statesList[step].actionDesc
-                : 'All instructions executed. Press Reset to restart.'}
-            </p>
-          </div>
-        </div>
+            {/* Selected Style Deep-Dive Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Left Code Editor View */}
+              <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-5 text-slate-100 shadow-xl space-y-3">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <FileCode className="w-4 h-4 text-indigo-400" />
+                    <span className="text-xs font-mono font-bold text-indigo-300">{selectedStyle.formatName}</span>
+                  </div>
+                  <button
+                    onClick={() => handleCopyCode(selectedStyle.code)}
+                    className="text-xs font-mono text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700"
+                  >
+                    {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedCode ? 'Copied Code' : 'Copy Program'}
+                  </button>
+                </div>
 
-        {/* Right Pane: Processor State & Memory Segment */}
-        <div className="lg:col-span-7 space-y-4">
-          {/* CPU Registers */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-3xs text-left space-y-3 font-sans">
-            <span className="text-[10px] font-mono font-black text-indigo-600 uppercase tracking-widest block border-b border-slate-150 pb-2">
-              CPU Registers & Flags
-            </span>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              <div className="bg-slate-50 border border-slate-150 rounded-xl p-2.5 text-center space-y-1">
-                <span className="text-[9px] font-mono font-bold text-slate-400 block">AL</span>
-                <div className="font-mono text-[13px] font-black text-indigo-600">
-                  {al.toString(16).toUpperCase().padStart(2, '0')}H
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 font-mono text-xs text-emerald-300 overflow-x-auto shadow-inner max-h-[420px]">
+                  <pre className="whitespace-pre">{selectedStyle.code}</pre>
                 </div>
               </div>
 
-              <div className="bg-slate-50 border border-slate-150 rounded-xl p-2.5 text-center space-y-1">
-                <span className="text-[9px] font-mono font-bold text-slate-400 block">SI (Source 1)</span>
-                <div className="font-mono text-[13px] font-black text-indigo-600">
-                  000{si}H
+              {/* Right Architectural Characteristics */}
+              <div className="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-3xl p-5 sm:p-6 space-y-5">
+                <div>
+                  <span className="text-[10px] font-mono font-extrabold uppercase text-indigo-600 tracking-wider block">
+                    Style Characteristics
+                  </span>
+                  <h3 className="text-base font-extrabold text-slate-900 tracking-tight mt-0.5">
+                    {selectedStyle.title}
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                    {selectedStyle.desc}
+                  </p>
                 </div>
-              </div>
 
-              <div className="bg-slate-50 border border-slate-150 rounded-xl p-2.5 text-center space-y-1">
-                <span className="text-[9px] font-mono font-bold text-slate-400 block">DI (Source 2)</span>
-                <div className="font-mono text-[13px] font-black text-indigo-600">
-                  000{di}H
+                {/* Key Directives Used */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">
+                    Key Directives Required
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedStyle.keyDirectives.map((kd) => (
+                      <span key={kd} className="text-xs font-mono font-bold bg-white border border-slate-200 text-indigo-700 px-2.5 py-1 rounded-lg shadow-2xs">
+                        {kd}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="bg-slate-50 border border-slate-150 rounded-xl p-2.5 text-center space-y-1">
-                <span className="text-[9px] font-mono font-bold text-slate-400 block">BX (Dest Offset)</span>
-                <div className="font-mono text-[13px] font-black text-indigo-600">
-                  000{bx}H
-                </div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-150 rounded-xl p-2.5 text-center space-y-1">
-                <span className="text-[9px] font-mono font-bold text-slate-400 block">CX (Counter)</span>
-                <div className="font-mono text-[13px] font-black text-indigo-600">
-                  000{cx}H
-                </div>
-              </div>
-
-              <div className={`border rounded-xl p-2.5 text-center space-y-1 transition-all ${
-                cf === 1 ? 'bg-rose-50 border-rose-300 text-rose-900 font-bold scale-[1.02]' : 'bg-slate-50 border-slate-150 text-slate-700'
-              }`}>
-                <span className="text-[9px] font-mono font-bold text-slate-400 block">CF (Carry)</span>
-                <div className="font-mono text-[13px] font-black">
-                  {cf}
+                {/* Features List */}
+                <div className="space-y-2 pt-2 border-t border-slate-200">
+                  <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">
+                    Key Features & Mechanics
+                  </span>
+                  <ul className="space-y-2">
+                    {selectedStyle.features.map((ft, fi) => (
+                      <li key={fi} className="flex items-start gap-2 text-xs text-slate-700">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <span>{ft}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Interactive Memory Segment View */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-3xs text-left space-y-3 font-sans">
-            <span className="text-[10px] font-mono font-black text-indigo-600 uppercase tracking-widest block border-b border-slate-150 pb-2">
-              Memory Segment Layout (DS)
-            </span>
-            <div className="space-y-2.5">
-              {/* NUM1 */}
+            {/* Comparison Matrix Table */}
+            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-3">
+              <h4 className="text-xs font-extrabold font-mono text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <LayoutGrid className="w-4 h-4 text-indigo-600" />
+                Feature Comparison Matrix across 8086 Program Styles
+              </h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-mono text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-[10px] uppercase text-slate-400 font-bold bg-white">
+                      <th className="p-2.5">Feature</th>
+                      <th className="p-2.5 text-indigo-700">1. Standard Segment Style</th>
+                      <th className="p-2.5 text-emerald-700">2. Simplified Dot-Model Style</th>
+                      <th className="p-2.5 text-amber-700">3. Tiny .COM Style</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-150 text-slate-700">
+                    <tr>
+                      <td className="p-2.5 font-bold text-slate-900">Segment Boundaries</td>
+                      <td className="p-2.5">Explicit <code className="text-indigo-600">SEGMENT / ENDS</code></td>
+                      <td className="p-2.5"><code className="text-emerald-600">.DATA</code> and <code className="text-emerald-600">.CODE</code> shortcuts</td>
+                      <td className="p-2.5"><code className="text-amber-600">.MODEL TINY</code> single segment</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2.5 font-bold text-slate-900">DS Loading Method</td>
+                      <td className="p-2.5"><code className="text-indigo-600">MOV AX, DATA_SEG</code></td>
+                      <td className="p-2.5"><code className="text-emerald-600">MOV AX, @DATA</code></td>
+                      <td className="p-2.5"><strong className="text-emerald-600">Automatic by OS</strong> (CS=DS=SS=ES)</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2.5 font-bold text-slate-900">Executable Format</td>
+                      <td className="p-2.5">Multi-segment .EXE file</td>
+                      <td className="p-2.5">Multi-segment .EXE file</td>
+                      <td className="p-2.5">Lightweight single-segment .COM file</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2.5 font-bold text-slate-900">Max Memory Reach</td>
+                      <td className="p-2.5">Up to 1 MB physical RAM</td>
+                      <td className="p-2.5">Up to 1 MB physical RAM</td>
+                      <td className="p-2.5">Maximum 64 KB total program size</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* TAB 3: DATA SEGMENT RAM ALLOCATION SANDBOX */}
+        {activeTab === 'sandbox' && (
+          <motion.div
+            key="sandbox-tab"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="space-y-6"
+          >
+            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-4">
               <div>
-                <span className="text-[9.5px] font-mono font-bold text-slate-400 block uppercase mb-1">NUM1 DB ({byteSize} Bytes, Little Endian)</span>
-                <div className={`grid gap-1.5 ${byteSize <= 4 ? 'grid-cols-4' : 'grid-cols-4 sm:grid-cols-8'}`}>
-                  {Array.from({ length: byteSize }, (_, i) => byteSize - 1 - i).map((idx) => {
-                    const val = num1[idx];
-                    const isPointed = si === idx && step > 1;
-                    return (
-                      <div key={idx} className={`relative flex flex-col items-center p-2 rounded-xl border transition-all ${
-                        isPointed ? 'bg-indigo-50 border-indigo-400 font-bold' : 'bg-slate-50 border-slate-150'
-                      }`}>
-                        <span className="text-[8px] font-mono text-slate-400">Byte {idx}</span>
-                        <input
-                          type="text"
-                          value={val || '00'}
-                          onChange={(e) => handleByteChange(e.target.value, idx, true)}
-                          className="w-full text-center font-mono text-xs font-black text-slate-900 bg-transparent border-0 outline-hidden uppercase p-0"
-                        />
-                        {isPointed && <span className="absolute -top-1.5 right-1.5 text-[8px] text-indigo-600 bg-indigo-100 px-1 rounded font-black font-mono">SI</span>}
-                      </div>
-                    );
-                  })}
+                <h3 className="text-sm font-extrabold text-slate-900 tracking-tight font-sans uppercase flex items-center gap-2">
+                  <Database className="w-4 h-4 text-indigo-600" />
+                  Interactive Data Segment Memory Allocation Sandbox
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Simulate how variable declaration directives (DB, DW, DUP) allocate RAM byte offsets in Little-Endian format
+                </p>
+              </div>
+
+              {/* Interactive Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border border-slate-200">
+                <div>
+                  <label className="text-[10px] font-mono font-bold text-slate-400 uppercase block mb-1">
+                    MY_BYTE (DB Directive - 1 Byte):
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-slate-400">0x</span>
+                    <input
+                      type="text"
+                      maxLength={2}
+                      value={var1Val}
+                      onChange={(e) => setVar1Val(e.target.value.toUpperCase())}
+                      className="font-mono text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-indigo-700 w-20 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-mono font-bold text-slate-400 uppercase block mb-1">
+                    MY_WORD (DW Directive - 2 Bytes):
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-slate-400">0x</span>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={var2Val}
+                      onChange={(e) => setVar2Val(e.target.value.toUpperCase())}
+                      className="font-mono text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-indigo-700 w-24 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-mono font-bold text-slate-400 uppercase block mb-1">
+                    MY_ARRAY (DB {dupCount} DUP(0) - Bytes):
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={1}
+                      max={5}
+                      value={dupCount}
+                      onChange={(e) => setDupCount(parseInt(e.target.value))}
+                      className="accent-indigo-600 cursor-pointer"
+                    />
+                    <span className="font-mono text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+                      {dupCount} Bytes
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* NUM2 */}
-              <div>
-                <span className="text-[9.5px] font-mono font-bold text-slate-400 block uppercase mb-1">NUM2 DB ({byteSize} Bytes, Little Endian)</span>
-                <div className={`grid gap-1.5 ${byteSize <= 4 ? 'grid-cols-4' : 'grid-cols-4 sm:grid-cols-8'}`}>
-                  {Array.from({ length: byteSize }, (_, i) => byteSize - 1 - i).map((idx) => {
-                    const val = num2[idx];
-                    const isPointed = di === idx && step > 1;
-                    return (
-                      <div key={idx} className={`relative flex flex-col items-center p-2 rounded-xl border transition-all ${
-                        isPointed ? 'bg-violet-50 border-violet-400 font-bold' : 'bg-slate-50 border-slate-150'
-                      }`}>
-                        <span className="text-[8px] font-mono text-slate-400">Byte {idx}</span>
-                        <input
-                          type="text"
-                          value={val || '00'}
-                          onChange={(e) => handleByteChange(e.target.value, idx, false)}
-                          className="w-full text-center font-mono text-xs font-black text-slate-900 bg-transparent border-0 outline-hidden uppercase p-0"
-                        />
-                        {isPointed && <span className="absolute -top-1.5 right-1.5 text-[8px] text-violet-600 bg-violet-100 px-1 rounded font-black font-mono">DI</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              {/* Physical RAM Offsets Mapping Visualization */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-mono font-bold uppercase text-slate-400 block tracking-wider">
+                  Computed Data Segment RAM Offsets (DS:0000H onwards):
+                </span>
 
-              {/* RESULT */}
-              <div>
-                <span className="text-[9.5px] font-mono font-bold text-slate-400 block uppercase mb-1">RESULT DB ({byteSize} Bytes)</span>
-                <div className={`grid gap-1.5 ${byteSize <= 4 ? 'grid-cols-4' : 'grid-cols-4 sm:grid-cols-8'}`}>
-                  {Array.from({ length: byteSize }, (_, i) => byteSize - 1 - i).map((idx) => {
-                    const val = memoryResult[idx];
-                    const isPointed = bx === idx && step > 1;
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2 font-mono text-xs">
+                  {/* Byte 0: MY_BYTE */}
+                  <div className="bg-indigo-50 border border-indigo-300 rounded-2xl p-3 text-center shadow-xs">
+                    <span className="text-[8px] font-bold text-indigo-500 block uppercase">Offset 0000H</span>
+                    <span className="text-sm font-black text-indigo-900 block my-0.5">
+                      {(var1Val || '00').padStart(2, '0')}H
+                    </span>
+                    <span className="text-[8px] font-bold text-indigo-600 block uppercase truncate">MY_BYTE (DB)</span>
+                  </div>
+
+                  {/* Byte 1 & 2: MY_WORD (Little-Endian) */}
+                  {(() => {
+                    const paddedHex = (var2Val || '0000').padStart(4, '0');
+                    const lowByte = paddedHex.slice(2, 4);
+                    const highByte = paddedHex.slice(0, 2);
                     return (
-                      <div key={idx} className={`relative flex flex-col items-center p-2 rounded-xl border transition-all ${
-                        isPointed ? 'bg-emerald-50 border-emerald-400 font-bold' : 'bg-slate-50 border-slate-150'
-                      }`}>
-                        <span className="text-[8px] font-mono text-slate-400">Byte {idx}</span>
-                        <span className="font-mono text-xs font-black text-emerald-800">
-                          {(val || 0).toString(16).toUpperCase().padStart(2, '0')}H
+                      <>
+                        <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-3 text-center shadow-xs">
+                          <span className="text-[8px] font-bold text-emerald-600 block uppercase">Offset 0001H</span>
+                          <span className="text-sm font-black text-emerald-900 block my-0.5">
+                            {lowByte}H
+                          </span>
+                          <span className="text-[8px] font-bold text-emerald-700 block uppercase truncate">MY_WORD (Low Byte)</span>
+                        </div>
+                        <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-3 text-center shadow-xs">
+                          <span className="text-[8px] font-bold text-emerald-600 block uppercase">Offset 0002H</span>
+                          <span className="text-sm font-black text-emerald-900 block my-0.5">
+                            {highByte}H
+                          </span>
+                          <span className="text-[8px] font-bold text-emerald-700 block uppercase truncate">MY_WORD (High Byte)</span>
+                        </div>
+                      </>
+                    );
+                  })()}
+
+                  {/* Array DUP Bytes */}
+                  {Array.from({ length: dupCount }).map((_, idx) => {
+                    const offsetHex = (3 + idx).toString(16).toUpperCase().padStart(4, '0') + 'H';
+                    return (
+                      <div key={idx} className="bg-amber-50 border border-amber-300 rounded-2xl p-3 text-center shadow-xs">
+                        <span className="text-[8px] font-bold text-amber-600 block uppercase">Offset {offsetHex}</span>
+                        <span className="text-sm font-black text-amber-900 block my-0.5">
+                          00H
                         </span>
-                        {isPointed && <span className="absolute -top-1.5 right-1.5 text-[8px] text-emerald-600 bg-emerald-100 px-1 rounded font-black font-mono">BX</span>}
+                        <span className="text-[8px] font-bold text-amber-700 block uppercase truncate">ARR[{idx}] (DUP)</span>
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* FINAL_CARRY / FINAL_BORROW */}
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-2 text-center">
-                  <span className="text-[8.5px] font-mono font-bold text-amber-800 block uppercase">FINAL_CARRY / FINAL_BORROW DB</span>
-                  <div className="font-mono text-xs font-black text-amber-900">
-                    {finalFlag}H
-                  </div>
-                </div>
-                <div className="bg-indigo-50/50 border border-indigo-200 rounded-xl p-2 text-center font-sans">
-                  <span className="text-[8.5px] font-mono font-bold text-indigo-800 block uppercase">Total Multi-precision Hex</span>
-                  <div className="font-mono text-xs font-black text-indigo-900">
-                    {memoryResult.slice().reverse().map(v => (v || 0).toString(16).toUpperCase().padStart(2, '0')).join('')}H
-                  </div>
+              {/* Memory Explanation */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 text-xs text-slate-600 leading-relaxed font-sans flex items-start gap-3">
+                <Cpu className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-slate-900 font-bold block mb-0.5">Little-Endian Memory Storage Principle:</strong>
+                  Notice that when declaring <code className="text-indigo-600 font-mono font-bold">MY_WORD DW {(var2Val || '0000').padStart(4, '0')}H</code>, the 8086 processor stores the lower byte (<code className="text-emerald-700 font-mono font-bold">{(var2Val || '0000').padStart(4, '0').slice(2, 4)}H</code>) at the lower memory offset (0001H), and the higher byte (<code className="text-emerald-700 font-mono font-bold">{(var2Val || '0000').padStart(4, '0').slice(0, 2)}H</code>) at the next offset (0002H).
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Trace Log */}
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-3xs text-left flex flex-col gap-2 font-mono">
-            <span className="text-[10px] font-mono font-black text-slate-500 uppercase tracking-widest block border-b border-slate-200 pb-1.5">
-              Live Instruction Log & Trace
-            </span>
-            <div className="max-h-[140px] overflow-y-auto font-mono text-[11px] leading-relaxed text-slate-600 space-y-1.5 scrollbar-thin pr-1">
-              {traceLog.map((log, idx) => (
-                <div key={idx} className="flex gap-2 items-start border-b border-slate-100 pb-1 last:border-0">
-                  <span className="text-slate-400 select-none">▶</span>
-                  <span className="text-slate-700">{log}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );
 }
-

@@ -108,15 +108,15 @@ export default function TimingDiagramSimulator() {
     if (state === 'high') {
       strokeColor = currentActive ? '#10b981' : '#94a3b8'; 
       pathD = `M 0 ${yPrev} L 0 ${yCurr} L 100 ${yCurr}`;
-      fillColor = currentActive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(148, 163, 184, 0.03)';
+      fillColor = 'transparent';
     } else if (state === 'low') {
       strokeColor = currentActive ? '#ef4444' : '#cbd5e1'; 
       pathD = `M 0 ${yPrev} L 0 ${yCurr} L 100 ${yCurr}`;
-      fillColor = currentActive ? 'rgba(239, 68, 68, 0.04)' : 'transparent';
+      fillColor = 'transparent';
     } else if (state === 'pulse') {
       strokeColor = currentActive ? '#3b82f6' : '#94a3b8'; 
       pathD = `M 0 ${yPrev} L 0 32 L 0 8 L 50 8 L 50 32 L 100 32`;
-      fillColor = currentActive ? 'rgba(59, 130, 246, 0.06)' : 'transparent';
+      fillColor = 'transparent';
     } else if (state === 'float') {
       strokeColor = currentActive ? '#64748b' : '#94a3b8'; 
       pathD = `M 0 ${yPrev} L 0 20 L 100 20`;
@@ -127,10 +127,10 @@ export default function TimingDiagramSimulator() {
         : (currentActive ? '#f59e0b' : '#fbbf24'); 
     }
 
-    const containerClass = `relative h-10 w-full border rounded-lg transition-all overflow-hidden ${
+    const containerClass = `relative h-10 w-full transition-all overflow-hidden ${
       currentActive 
-        ? 'ring-2 ring-indigo-500 bg-white shadow-xs border-indigo-200' 
-        : 'bg-slate-50/50 border-slate-100 hover:border-slate-200'
+        ? 'bg-indigo-500/5' 
+        : 'hover:bg-slate-50/30'
     }`;
 
     return (
@@ -139,10 +139,7 @@ export default function TimingDiagramSimulator() {
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="none">
             <polygon 
               points="0,20 8,6 92,6 100,20 92,34 8,34" 
-              fill={state === 'address' 
-                ? (currentActive ? 'rgba(99, 102, 241, 0.12)' : 'rgba(129, 140, 248, 0.05)')
-                : (currentActive ? 'rgba(245, 158, 11, 0.12)' : 'rgba(251, 191, 36, 0.05)')
-              }
+              fill="none"
             />
             <path 
               d="M 0 20 L 8 6 L 92 6 L 100 20 M 0 20 L 8 34 L 92 34 L 100 20 M 0 20 L 8 34 M 92 6 L 100 20" 
@@ -288,9 +285,9 @@ export default function TimingDiagramSimulator() {
 
             {/* Grid Layout of Waveform States */}
             <div className="overflow-x-auto pb-2 scrollbar-thin">
-              <div className="grid grid-cols-12 gap-3 mb-4 min-w-[550px] lg:min-w-0">
+              <div className="grid grid-cols-12 gap-0 mb-4 min-w-[550px] lg:min-w-0">
                 {/* Labels Col */}
-                <div className="col-span-3 flex flex-col justify-between py-1 space-y-2 text-right pr-3 border-r border-slate-200 font-mono text-[11px] font-bold text-slate-600">
+                <div className="col-span-3 flex flex-col justify-between py-1 space-y-2 text-right pr-4 border-r border-slate-200 font-mono text-[11px] font-bold text-slate-600">
                   <div className="h-10 flex items-center justify-end">CLK (Clock)</div>
                   <div className="h-10 flex items-center justify-end">ALE (Address Latch)</div>
                   <div className="h-10 flex items-center justify-end">AD0-AD15 (Bus)</div>
@@ -311,7 +308,14 @@ export default function TimingDiagramSimulator() {
                 </div>
 
                 {/* T1 Column */}
-                <button onClick={() => { setIsPlaying(false); setCurrentTState(0); }} className="col-span-2 flex flex-col justify-between py-1 space-y-2 cursor-pointer">
+                <button 
+                  onClick={() => { setIsPlaying(false); setCurrentTState(0); }} 
+                  className={`col-span-2 flex flex-col justify-between py-1 pb-2 space-y-2 cursor-pointer transition-all duration-300 rounded-2xl ${
+                    currentTState === 0 
+                      ? 'bg-transparent text-indigo-600' 
+                      : 'text-slate-400'
+                  }`}
+                >
                   <span className={`text-[10px] font-mono text-center block font-bold ${currentTState === 0 ? 'text-indigo-600' : 'text-slate-400'}`}>T1</span>
                   {getSignalVisual('CLK', 0, currentTState === 0)}
                   {getSignalVisual('ALE', 0, currentTState === 0)}
@@ -321,7 +325,14 @@ export default function TimingDiagramSimulator() {
                 </button>
 
                 {/* T2 Column */}
-                <button onClick={() => { setIsPlaying(false); setCurrentTState(1); }} className="col-span-2 flex flex-col justify-between py-1 space-y-2 cursor-pointer">
+                <button 
+                  onClick={() => { setIsPlaying(false); setCurrentTState(1); }} 
+                  className={`col-span-2 flex flex-col justify-between py-1 pb-2 space-y-2 cursor-pointer transition-all duration-300 rounded-2xl ${
+                    currentTState === 1 
+                      ? 'bg-transparent text-indigo-600' 
+                      : 'text-slate-400'
+                  }`}
+                >
                   <span className={`text-[10px] font-mono text-center block font-bold ${currentTState === 1 ? 'text-indigo-600' : 'text-slate-400'}`}>T2</span>
                   {getSignalVisual('CLK', 1, currentTState === 1)}
                   {getSignalVisual('ALE', 1, currentTState === 1)}
@@ -331,7 +342,14 @@ export default function TimingDiagramSimulator() {
                 </button>
 
                 {/* T3 Column */}
-                <button onClick={() => { setIsPlaying(false); setCurrentTState(2); }} className="col-span-2 flex flex-col justify-between py-1 space-y-2 cursor-pointer">
+                <button 
+                  onClick={() => { setIsPlaying(false); setCurrentTState(2); }} 
+                  className={`col-span-2 flex flex-col justify-between py-1 pb-2 space-y-2 cursor-pointer transition-all duration-300 rounded-2xl ${
+                    currentTState === 2 
+                      ? 'bg-transparent text-indigo-600' 
+                      : 'text-slate-400'
+                  }`}
+                >
                   <span className={`text-[10px] font-mono text-center block font-bold ${currentTState === 2 ? 'text-indigo-600' : 'text-slate-400'}`}>T3</span>
                   {getSignalVisual('CLK', 2, currentTState === 2)}
                   {getSignalVisual('ALE', 2, currentTState === 2)}
@@ -341,7 +359,14 @@ export default function TimingDiagramSimulator() {
                 </button>
 
                 {/* T4 Column */}
-                <button onClick={() => { setIsPlaying(false); setCurrentTState(3); }} className="col-span-3 flex flex-col justify-between py-1 space-y-2 cursor-pointer">
+                <button 
+                  onClick={() => { setIsPlaying(false); setCurrentTState(3); }} 
+                  className={`col-span-3 flex flex-col justify-between py-1 pb-2 space-y-2 cursor-pointer transition-all duration-300 rounded-2xl ${
+                    currentTState === 3 
+                      ? 'bg-transparent text-indigo-600' 
+                      : 'text-slate-400'
+                  }`}
+                >
                   <span className={`text-[10px] font-mono text-center block font-bold ${currentTState === 3 ? 'text-indigo-600' : 'text-slate-400'}`}>T4</span>
                   {getSignalVisual('CLK', 3, currentTState === 3)}
                   {getSignalVisual('ALE', 3, currentTState === 3)}

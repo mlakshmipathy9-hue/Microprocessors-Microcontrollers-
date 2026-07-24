@@ -398,16 +398,6 @@ export default function App() {
                     >
                       {remoteTimerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 text-emerald-400" />}
                     </button>
-                    <button
-                      onClick={() => {
-                        setRemoteTimer(0);
-                        setRemoteTimerRunning(false);
-                      }}
-                      className="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-slate-400"
-                      title="Reset Timer"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
               </div>
@@ -730,13 +720,8 @@ export default function App() {
                   <BookOpen className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
                 <div className="truncate">
-                  <h1 className="text-xs md:text-sm lg:text-base font-bold tracking-tight text-slate-900 uppercase leading-tight truncate">
-                    {currentSlide.id === 'm11-s2' && showInteractiveOnSlide
-                      ? (() => {
-                          const exp = labExperiments.find(e => e.id === activeLabId);
-                          return exp ? `EXP ${exp.number}: ${exp.title}` : currentSlide.title;
-                        })()
-                      : currentSlide.title}
+                  <h1 id="header-slide-title" className="text-xs md:text-sm lg:text-base font-bold tracking-tight text-slate-900 uppercase leading-tight truncate">
+                    {currentSlide.title}
                   </h1>
                 </div>
               </div>
