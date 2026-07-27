@@ -75,52 +75,134 @@ export const courseData: Module[] = [
         interactiveType: 'quiz',
         quizQuestions: [
           {
-            question: 'What is the word length of the Intel 8086 microprocessor?',
+            question: '1. What is a microprocessor?',
+            options: [
+              'A software program used to translate assembly language',
+              'A multipurpose, clock-driven, register-based IC that reads binary instructions from memory',
+              'An analog sensor that measures temperature and voltage',
+              'A dedicated memory bank used exclusively for storing boot code'
+            ],
+            correctAnswer: 1,
+            explanation: 'A microprocessor is a multipurpose, programmable, clock-driven, register-based electronic device that reads binary instructions from memory, processes data, and outputs results.'
+          },
+          {
+            question: '2. What is the word length (data path size) of the Intel 8086 microprocessor?',
             options: ['4-bit', '8-bit', '16-bit', '32-bit'],
             correctAnswer: 2,
-            explanation: 'The Intel 8086 is a 16-bit microprocessor because its internal registers, Arithmetic Logic Unit (ALU), and internal data paths are all 16 bits wide.'
+            explanation: 'The Intel 8086 is a 16-bit microprocessor because its internal registers, ALU, and internal/external data paths are all 16 bits wide.'
           },
           {
-            question: 'In a microprocessor-based system, where are memory and peripheral devices located?',
-            options: ['Integrated inside the CPU chip', 'Connected externally to the CPU via system buses', 'Inside the instruction prefetch queue', 'Directly in the ALU'],
+            question: '3. What is the primary difference between a Microprocessor (MPU) and a Microcontroller (MCU)?',
+            options: [
+              'MPUs run on battery power while MCUs require AC mains power',
+              'MCUs integrate CPU, RAM, ROM, and I/O peripherals on a single chip, whereas MPUs use external memory and peripherals',
+              'MPUs do not use system buses to communicate with external components',
+              'MCUs do not contain a Central Processing Unit (CPU)'
+            ],
             correctAnswer: 1,
-            explanation: 'In a classic microprocessor system (MPU), memory and input/output peripherals are separate ICs located externally on the circuit board, connected via address, data, and control buses.'
+            explanation: 'A Microcontroller (MCU) integrates the CPU, RAM, ROM, timers, and I/O ports onto a single silicon chip, whereas a Microprocessor (MPU) contains only the CPU and requires external chips for memory and I/O.'
           },
           {
-            question: 'Which of the following represents a major advantage of a Microcontroller (MCU) over a Microprocessor (MPU) for dedicated applications?',
-            options: ['Higher computational speed for running desktop operating systems', 'Single-chip integration of CPU, RAM, ROM, and I/O timers, reducing size and cost', 'Larger external physical memory addressing space', 'Support for multiple operating systems'],
+            question: '4. What is the address bus width of the Intel 8086, and how much physical memory can it address?',
+            options: [
+              '16-bit address bus, addressing up to 64 KB',
+              '20-bit address bus, addressing up to 1 MB',
+              '24-bit address bus, addressing up to 16 MB',
+              '32-bit address bus, addressing up to 4 GB'
+            ],
             correctAnswer: 1,
-            explanation: 'Microcontrollers (MCUs) integrate CPU, RAM, ROM, and peripheral controllers on a single silicon chip, making them highly compact, low-power, and economical for embedded and dedicated applications.'
+            explanation: 'The 8086 has a 20-bit address bus (A0-A19), allowing it to address 2^20 = 1,048,576 bytes (1 MB) of physical memory.'
           },
           {
-            question: 'To which generation of microprocessors does the Intel 8086 belong?',
-            options: ['First Generation', 'Second Generation', 'Third Generation', 'Fourth Generation'],
+            question: '5. What is the width of the external data bus in the Intel 8086 microprocessor?',
+            options: ['8 bits', '16 bits', '20 bits', '32 bits'],
+            correctAnswer: 1,
+            explanation: 'The 8086 features a 16-bit data bus (D0-D15), enabling it to read or write a full 16-bit word in a single memory cycle.'
+          },
+          {
+            question: '6. To which generation of microprocessors does the Intel 8086 belong?',
+            options: ['1st Generation (4-bit)', '2nd Generation (8-bit)', '3rd Generation (16-bit)', '4th Generation (32-bit)'],
             correctAnswer: 2,
-            explanation: 'The 16-bit microprocessors (like Intel 8086, 8088, and Zilog Z8000) constitute the Third Generation of microprocessors, introduced in the late 1970s.'
+            explanation: 'The 16-bit processors (such as the Intel 8086, 8088, and Z8000) belong to the 3rd Generation of microprocessors introduced in the late 1970s.'
           },
           {
-            question: 'What is the primary physical difference between the Intel 8086 and the Intel 8088 microprocessor?',
-            options: ['The 8088 has a smaller instruction set than the 8086', 'The 8088 has an 8-bit external data bus, while the 8086 has a 16-bit external data bus', 'The 8088 does not support memory segmentation', 'The 8088 has a larger physical memory capacity'],
+            question: '7. What is the primary physical difference between the Intel 8086 and Intel 8088 microprocessors?',
+            options: [
+              'The 8088 has a 32-bit ALU while the 8086 has a 16-bit ALU',
+              'The 8088 has an 8-bit external data bus, whereas the 8086 has a 16-bit external data bus',
+              'The 8086 does not support memory segmentation',
+              'The 8088 cannot run assembly language programs'
+            ],
             correctAnswer: 1,
-            explanation: 'Internally, the 8086 and 8088 are identical. However, externally, the 8088 has only an 8-bit data bus (compared to 8086\'s 16-bit bus). This allowed IBM to build the original PC using cheaper, standard 8-bit support chips.'
+            explanation: 'Internally, the 8086 and 8088 are identical 16-bit CPUs. Externally, the 8088 uses an 8-bit data bus to interface with cheaper, standard 8-bit support circuits.'
           },
           {
-            question: 'Which of the following microprocessors was the first true 32-bit x86 processor to introduce virtual memory paging?',
-            options: ['Intel 80186', 'Intel 80286', 'Intel 80386', 'Intel Pentium'],
+            question: '8. Which was the first commercially available 4-bit microprocessor, introduced by Intel in 1971?',
+            options: ['Intel 4004', 'Intel 8008', 'Intel 8080', 'Intel 8085'],
+            correctAnswer: 0,
+            explanation: 'The Intel 4004, launched in 1971, was the world’s first single-chip commercial 4-bit microprocessor, designed originally for electronic calculators.'
+          },
+          {
+            question: '9. Which 2nd Generation 8-bit microprocessor introduced by Intel in 1976 was widely used in educational training kits?',
+            options: ['Intel 4004', 'Intel 8085', 'Intel 80386', 'Intel Pentium'],
+            correctAnswer: 1,
+            explanation: 'The Intel 8085 was an 8-bit 2nd Generation microprocessor featuring single +5V power supply operation and multiplexed address/data lines, widely used in educational training kits.'
+          },
+          {
+            question: '10. Which Intel processor was the first true 32-bit x86 processor to introduce virtual memory paging?',
+            options: ['Intel 8086', 'Intel 80286', 'Intel 80386', 'Intel Pentium'],
             correctAnswer: 2,
-            explanation: 'The Intel 80386 was a major milestone, introducing a 32-bit register set, 32-bit address bus, and a memory management unit with virtual memory paging.'
+            explanation: 'The Intel 80386 (1985) introduced a 32-bit data path, 32-bit address bus (4 GB memory space), and virtual memory paging.'
           },
           {
-            question: 'Which Intel x86 processor integrated a DMA controller, timers, and interrupt controllers directly on-chip, but did not see wide adoption in PCs?',
-            options: ['Intel 8085', 'Intel 80186', 'Intel 80486', 'Intel Pentium II'],
+            question: '11. What major hardware component was integrated directly onto the CPU die in the Intel 80486?',
+            options: [
+              'Wi-Fi controller',
+              'Floating-Point Unit (FPU / Math Coprocessor) and 8 KB L1 Cache',
+              'Dual core GPU graphics accelerator',
+              'Ethernet MAC chip'
+            ],
             correctAnswer: 1,
-            explanation: 'The 80186 integrated several motherboard support chips (DMA, Timers, Interrupt Controller) onto the CPU die. It was widely used in embedded systems rather than mainstream IBM-compatible PCs.'
+            explanation: 'The Intel 80486 (1989) integrated a hardware math coprocessor (FPU) and an on-chip 8 KB L1 cache directly into the processor die.'
           },
           {
-            question: 'What does the term "superscalar" mean in the context of the Intel Pentium microprocessor?',
-            options: ['It can address more than 1 MB of memory', 'It contains multiple parallel execution pipelines to run multiple instructions per clock', 'It operates with an external clock generator', 'It uses only 8-bit registers'],
+            question: '12. What does "superscalar execution" mean in the Intel Pentium processor?',
+            options: [
+              'The CPU uses an external 128-bit address bus',
+              'The CPU has dual independent execution pipelines (U and V) that can execute two instructions per clock cycle',
+              'The CPU runs strictly without an internal clock signal',
+              'The CPU converts all instructions into analog signals'
+            ],
             correctAnswer: 1,
-            explanation: 'A superscalar processor contains multiple, independent execution pipelines (like the Pentium\'s U and V pipelines) that allow it to execute more than one instruction simultaneously during a single clock cycle.'
+            explanation: 'Superscalar architecture (introduced in Pentium, 1993) uses parallel execution pipelines (U and V) to run up to two instructions simultaneously per clock cycle.'
+          },
+          {
+            question: '13. How are memory (RAM/ROM) and peripheral devices connected to a Microprocessor (MPU)?',
+            options: [
+              'Embedded inside the CPU instruction queue',
+              'Connected externally to the CPU via address, data, and control system buses',
+              'Directly soldered to the ALU logic gates',
+              'Linked via wireless optical sensors'
+            ],
+            correctAnswer: 1,
+            explanation: 'In an MPU-based system, RAM, ROM, and I/O devices are external ICs connected to the CPU through system buses (Address Bus, Data Bus, and Control Bus).'
+          },
+          {
+            question: '14. Which two major functional units operate in parallel to form the pipelined architecture of the 8086?',
+            options: [
+              'Bus Interface Unit (BIU) and Execution Unit (EU)',
+              'Floating Point Unit (FPU) and Memory Management Unit (MMU)',
+              'Direct Memory Access (DMA) and Interrupt Controller',
+              'Serial Input Unit and Serial Output Unit'
+            ],
+            correctAnswer: 0,
+            explanation: 'The 8086 architecture is divided into the Bus Interface Unit (BIU), which fetches instructions and interfaces with memory, and the Execution Unit (EU), which decodes and executes instructions.'
+          },
+          {
+            question: '15. How many total unique physical memory locations can be accessed by a 20-bit address bus?',
+            options: ['65,536 locations (64 KB)', '1,048,576 locations (1 MB)', '4,294,967,296 locations (4 GB)', '16,777,216 locations (16 MB)'],
+            correctAnswer: 1,
+            explanation: 'A 20-bit address bus can generate 2^20 unique binary address combinations, corresponding to 1,048,576 bytes or 1 Megabyte (1 MB).'
           }
         ]
       }
@@ -172,11 +254,15 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 2: 8086 Internal Architecture & Execution Unit',
         moduleId: 'm2',
         points: [
-          '8086 Register Organization Overview: The 8086 CPU contains fourteen 16-bit internal registers categorized into General Purpose, Segment, Pointer & Index, and Special/Flag registers.',
-          'General Purpose Registers (AX, BX, CX, DX): 16-bit registers in EU used for arithmetic, logic, and data operations. Each can be accessed as two independent 8-bit high/low byte registers (AH/AL, BH/BL, CH/CL, DH/DL).',
-          'Segment Registers (CS, DS, SS, ES): 16-bit registers in BIU holding base addresses for Code, Data, Stack, and Extra memory segments (1 MB physical space).',
-          'Pointers & Index Registers (IP, SP, BP, SI, DI): 16-bit registers holding memory offset addresses. IP points to next instruction; SP/BP manage stack frame; SI/DI handle source/destination indexing.',
-          '16-Bit Flag Register (Status & Control Flags): Contains 9 active bits out of 16 bits. 6 Status Flags (CF, PF, AF, ZF, SF, OF) automatically updated by ALU operations, and 3 Control Flags (DF, IF, TF) set or cleared by software instructions (CLI, STI, CLD, STD).'
+          '8086 Register Organization Overview: The 8086 contains fourteen 16-bit internal registers categorized into 4 main register types: General Purpose Data Registers, Segment Registers, Pointer & Index Registers, and Special / Flag Register.',
+          '1. General Purpose Data Registers (AX, BX, CX, DX): 16-bit EU registers used for arithmetic, logic, and data manipulation. Each can be split into two 8-bit high/low registers (AH/AL, BH/BL, CH/CL, DH/DL). AX = Accumulator, BX = Base, CX = Count, DX = Data.',
+          '2. Segment Registers (CS, DS, SS, ES): 16-bit BIU registers holding 16-bit base addresses for Code Segment (CS), Data Segment (DS), Stack Segment (SS), and Extra Segment (ES) in the 1 MB physical memory space.',
+          '3. Pointer & Index Registers (IP, SP, BP, SI, DI): 16-bit registers holding memory offsets. IP = Instruction Pointer (next instruction offset), SP = Stack Pointer (top of stack offset), BP = Base Pointer (stack parameter offset), SI = Source Index, DI = Destination Index.',
+          '4. Special / Flag Register (16-Bit Status & Control Flags): 16-bit register containing 9 active flags (6 Status & 3 Control Flags).',
+          '• Auxiliary Carry Flag (AF): Carry from Bit 3 to Bit 4 (half-carry / nibble carry). Used for BCD arithmetic adjustments (DAA/DAS). Contrast with CF, which is full MSB carry out.',
+          '• Overflow Flag (OF): Set during signed 2\'s complement arithmetic if result exceeds signed capacity (-128 to +127 for 8-bit). Triggered when Carry-In to MSB ≠ Carry-Out from MSB. Contrast with CF (unsigned carry).',
+          '• Sign Flag (SF): Directly copies MSB (Bit 7 or Bit 15). SF=1 indicates negative result; SF=0 indicates positive or zero. SF shows result sign, while OF shows signed math corruption.',
+          '• Parity Flag (PF): Set to 1 if the LOWER 8 bits (AL byte) contain an EVEN number of 1 bits. PF=0 for odd parity. Inspects low byte only even in 16-bit operations.'
         ],
         interactiveType: 'flags'
       },
@@ -280,26 +366,14 @@ export const courseData: Module[] = [
       },
       {
         id: 'm3-s3',
-        title: '3. Need & Types of Memory Segmentation',
+        title: '3. Need, Types & Physical Address Calculation',
         moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
         moduleId: 'm3',
         points: [
-          'Addressing the 20-bit Bus: The 8086 has a 20-bit address bus (1 MB physical space) but only 16-bit registers (capable of addressing only 64 KB). Segmentation bridges this gap.',
-          'Program Relocated on-the-fly: Code and variables can be loaded anywhere in RAM. The compiler uses offsets; the program runs seamlessly just by loading the active segment base.',
-          'Segment Overlap: Segments can overlap fully or partially because base addresses can begin at any 16-byte (Paragraph) boundary. This conserves physical memory and simplifies subroutine data transfers.',
-          'Isolated I/O Space: Separate 64 KB Port Address space using dedicated instructions (IN, OUT) and low M/IO pin signaling, completely separated from main memory.'
-        ]
-      },
-      {
-        id: 'm3-s4',
-        title: '4. Physical Address Calculation',
-        moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
-        moduleId: 'm3',
-        points: [
-          'BIU Generation: The Bus Interface Unit automatically calculates the 20-bit physical address by combining a 16-bit Segment Base and a 16-bit Offset.',
-          'Shift-and-Add Formula: Physical Address = (Segment Register * 10H) + Offset Register.',
-          'Step-by-Step Example: If CS = 1000H and IP = 2000H, the BIU shifts CS to 10000H and adds IP: 10000H + 2000H = 12000H (Physical Address).',
-          'Practice and Interactive Mapping: Use the simulator on the right to practice calculations and explore overlap styles visually.'
+          '• Why Segmentation is Needed: A 16-bit register addresses max 64 KB (2¹⁶ = 65,536 bytes), but the 8086 has a 20-bit address bus enabling access to 1 MB RAM (2²⁰ = 1,048,576 bytes). Segmentation bridges this hardware gap by logically dividing 1 MB memory into max 64 KB logical blocks.',
+          '• Purpose of Each Segment Register:\n  1. Code Segment (CS): Holds executable machine instructions. Paired with IP (CS:IP) for instruction fetching.\n  2. Data Segment (DS): Holds static variables, constants, and global data. Paired with BX/SI/DI (DS:BX) for data access.\n  3. Stack Segment (SS): Holds function call frames, return addresses, local variables, & PUSH/POP data. Paired with SP/BP (SS:SP).\n  4. Extra Segment (ES): Holds additional data, targeted as string operation destination buffer. Paired with DI (ES:DI).',
+          '• Segment Placement & Types: Segment bases begin at 16-byte Paragraph Boundaries (ending in 0H). Segments can be Disjoint (separated), Overlapping (sharing RAM to conserve memory), or Fully Overlapped (CS=DS=SS=ES). Dynamic relocation allows loading programs anywhere in RAM on-the-fly!',
+          '• 20-Bit Physical Address Calculation: Formula: Physical Address = (Segment Register × 10H) + Offset Register. The BIU left-shifts segment base by 4 bits (adds 0H) then adds offset. Worked Example: Given CS = 3456H and IP = 0ABCH: Base = 34560H. Physical Address = 34560H + 0ABCH = 3501CH.'
         ],
         interactiveType: 'memory-calc'
       },
@@ -982,97 +1056,15 @@ export const courseData: Module[] = [
       },
       {
         id: 'm10-s3',
-        title: '3. Data Transfer Instructions 🔄',
+        title: '3. 8086 Instruction Set Execution Laboratory 🔬',
         moduleTitle: 'Module 10: 8086 Instruction Set',
         moduleId: 'm10',
         points: [
-          'MOV: Moves (actually copies) byte or word from source to destination (e.g., MOV AX, BX). Note: Memory-to-Memory moves are illegal!',
-          'PUSH & POP: Manipulates the stack segment. PUSH decrements SP by 2 and writes a 16-bit word. POP reads a 16-bit word and increments SP by 2.',
-          'XCHG: Exchanges/swaps contents of two registers or register and memory (e.g., XCHG AX, BX). Segment registers are illegal here.',
-          'LEA (Load Effective Address): Calculates the 16-bit logical offset of a memory variable and loads it into a target register (e.g., LEA BX, [SI+4]).',
-          'Use the Interactive Simulator on the right to load and test Data Transfer instructions like MOV, PUSH, POP, and LEA.'
-        ],
-        interactiveType: 'instruction-decoder'
-      },
-
-      {
-        id: 'm10-s4',
-        title: '4. Arithmetic Instructions ➕',
-        moduleTitle: 'Module 10: 8086 Instruction Set',
-        moduleId: 'm10',
-        points: [
-          'ADD & ADC: Adds source and destination. ADC (Add with Carry) also includes the current value of the Carry Flag, which is crucial for 32-bit or higher multi-word math.',
-          'SUB & SBB: Subtracts source from destination. SBB (Subtract with Borrow) also subtracts the Carry/Borrow flag.',
-          'INC & DEC: Increments or decrements a register/memory by 1 (e.g., INC CX). Note: INC/DEC do NOT affect the Carry Flag (CF)!',
-          'MUL & DIV: Performs unsigned multiplication and division. AX (and DX) are used implicitly. Division by zero triggers an instant Type 0 CPU Exception.',
-          'CMP: Subtracts source from destination but does NOT save the result; it only updates status flags (ZF, CF, SF) to compare values.'
-        ],
-        interactiveType: 'instruction-decoder'
-      },
-      {
-        id: 'm10-s5',
-        title: '5. Logical Instructions ⚙️',
-        moduleTitle: 'Module 10: 8086 Instruction Set',
-        moduleId: 'm10',
-        points: [
-          'AND & OR: Performs bitwise AND / OR operations. Useful for masking out bits (AND clears bits, OR sets bits). Affects CF, OF, ZF, PF, and SF.',
-          'XOR: Performs bitwise Exclusive-OR (e.g., XOR AX, AX). A classic, fast way to clear a register to 0000H with smaller machine code size than MOV AX, 0.',
-          "NOT: Inverts all bits of an operand (one's complement). Note: NOT does NOT affect any status flags!",
-          'TEST: Performs a logical AND on operands but does NOT store the result; only updates flags (ZF, SF, PF). Perfect for checking if a specific bit is set (e.g., TEST AL, 01H).'
-        ],
-        interactiveType: 'instruction-decoder'
-      },
-      {
-        id: 'm10-s6',
-        title: '6. Shift & Rotate Instructions 🔁',
-        moduleTitle: 'Module 10: 8086 Instruction Set',
-        moduleId: 'm10',
-        points: [
-          'SHL / SHR: Logical shift left and right. Moves bits left/right, inserting 0 into empty positions. The last bit shifted out enters the Carry Flag (CF).',
-          'SAR: Arithmetic shift right. Shifts bits right while preserving the sign bit (most significant bit). Critical for signed division by powers of 2.',
-          'ROL / ROR: Rotate left and right. Bits shifted out of one end wrap around and enter the other end, and are also copied into the Carry Flag (CF).',
-          'RCL / RCR: Rotate through Carry left and right. Bits are rotated through the Carry Flag, making the Carry Flag act as a 17th bit of the register.'
-        ],
-        interactiveType: 'instruction-decoder'
-      },
-      {
-        id: 'm10-s7',
-        title: '7. Branch & Control Transfer Instructions 🔀',
-        moduleTitle: 'Module 10: 8086 Instruction Set',
-        moduleId: 'm10',
-        points: [
-          'Unconditional Branch: JMP directs the Instruction Pointer (IP) immediately to a new memory offset address.',
-          'Conditional Jumps: Jumps are executed only if a specific status flag condition is met (e.g., JZ/JE jumps if ZF=1; JC/JB jumps if CF=1). They use an 8-bit relative displacement (-128 to +127 bytes).',
-          'LOOP: Automatically decrements CX by 1. If CX is not 0, it jumps to the specified target label. Avoids manually writing DEC CX followed by JNZ.',
-          'CALL & RET: Used for subroutines (procedures). CALL pushes the current IP (and CS for far calls) onto the stack and jumps; RET pops the saved IP back, returning to the caller.'
-        ],
-        interactiveType: 'instruction-decoder'
-      },
-      {
-        id: 'm10-s8',
-        title: '8. String Instructions 📦',
-        moduleTitle: 'Module 10: 8086 Instruction Set',
-        moduleId: 'm10',
-        points: [
-          'MOVS / MOVSB / MOVSW: Copies a byte or word from source string [DS:SI] to destination string [ES:DI]. SI and DI are automatically adjusted.',
-          'Direction Flag (DF): Cleared with CLD (auto-increment SI/DI by 1 or 2) or set with STD (auto-decrement SI/DI). Must always be initialized before string operations!',
-          'LODS & STOS: LODS loads AL/AX with string elements at [SI]; STOS stores AL/AX to string memory at [DI].',
-          'CMPS & SCAS: CMPS compares strings byte/word by byte/word; SCAS scans a string looking for a match with AL/AX.',
-          'REP / REPE / REPNE Prefix: Repeats the string instruction CX times, automatically decrementing CX and updating SI/DI on each iteration.'
-        ],
-        interactiveType: 'instruction-decoder'
-      },
-      {
-        id: 'm10-s9',
-        title: '9. Processor Control Instructions 🎛️',
-        moduleTitle: 'Module 10: 8086 Instruction Set',
-        moduleId: 'm10',
-        points: [
-          'Flag Clear & Set: CLI/STI clears/sets the Interrupt Enable Flag (IF) to disable/enable maskable interrupts. CLC/STC clears/sets Carry Flag (CF). CLD/STD clears/sets Direction Flag (DF).',
-          'HLT: Halts CPU execution. The CPU enters an idle state until a hardware interrupt or reset occurs.',
-          'NOP (No Operation): Takes 1 byte of space and 3 clock cycles of time, performing no operation. Frequently used for creating software time delays or patching machine code.',
-          'ESC (Escape): Provides an instruction prefix allowing external co-processors (like the 8087 Numeric Data Processor) to read data/instructions from the 8086 bus.',
-          'LOCK Prefix: Asserts the hardware LOCK pin to prevent other bus masters from taking control of the system bus during multi-processor shared resource operations.'
+          'Data Transfer (MOV, PUSH, POP, XCHG, LEA, XLAT): Moves or copies data between registers and memory. PUSH/POP manage the stack segment. LEA calculates logical offsets.',
+          'Arithmetic (ADD, ADC, SUB, SBB, INC, DEC, MUL, DIV, CMP): Performs binary math operations. ADC/SBB include Carry flags for multi-word math. INC/DEC do not affect CF. CMP updates flags without storing results.',
+          'Logical & Bitwise (AND, OR, XOR, NOT, TEST): Performs bitwise logic and masking operations. XOR AX, AX is a fast register clear. TEST performs bit checks without altering operands.',
+          'Shift & Rotate (SHL, SHR, SAR, ROL, ROR, RCL, RCR): Shifts or rotates bit patterns. SAR preserves the sign bit for signed math. RCL/RCR rotate through the Carry Flag.',
+          'Control & String Operations (JMP, JZ, LOOP, CALL, RET, MOVS, CLD): Manages control flow and block memory transfers using SI/DI register pointers and Direction Flag (DF).'
         ],
         interactiveType: 'instruction-decoder'
       },
@@ -1348,28 +1340,58 @@ export const courseData: Module[] = [
     slides: [
       {
         id: 'm13-s1',
-        title: '1. Semiconductor Memories Interfacing (RAM & ROM) 💾',
+        title: '1. Memory Hierarchy & System Storage Pyramid 🏗️',
         moduleTitle: 'Module 13: Semiconductor Memory Interfacing (RAM & ROM)',
         moduleId: 'm13',
+        interactiveType: 'memory-interfacing',
         points: [
-          'Memory Interfacing Fundamentals: Primary memory interfacing involves connecting RAM (SRAM/DRAM for temporary data and stack) and ROM (EPROM/EEPROM/Flash for boot firmware) to the 8086 address, data, and control buses.',
-          '8086 Memory Address Space: The 8086 possesses a 20-bit address bus (A0-A19), allowing it to address up to 1 MB (1,048,576 bytes) of physical memory spanning from 00000H to FFFFFH.',
-          'Even and Odd Memory Banks: To achieve 16-bit wide data transfers, 1 MB memory is organized into two 512 KB banks: Even Bank (connected to D0-D7, selected by A0=0) and Odd Bank (connected to D8-D15, selected by BHE#=0).',
-          'Address Decoding Circuits: Higher-order address lines (e.g. A17-A19 or A14-A19) are decoded using 3-to-8 line decoders (such as IC 74LS138) to generate active-low Chip Select (CS# or CE#) signals for memory ICs.',
-          'Control Signal Matching: MPU control signals RD# (Read) and WR# (Write) are combined with memory enable lines (OE# - Output Enable, WE# - Write Enable) to gate data cleanly onto the system data bus.'
+          'Memory Hierarchy Structure: System memory is organized hierarchically based on speed, capacity, and cost per bit: CPU Internal Registers → Cache Memory (L1/L2 SRAM) → Main Memory (RAM/ROM) → Secondary Storage (Flash/Disk).',
+          'Speed vs Capacity vs Cost Trade-off: Moving down the hierarchy, access latency increases (from <1ns for internal CPU registers to ~10-50ns for RAM and ms for disks), storage capacity expands exponentially, and cost per bit drops.',
+          'Volatile vs Non-Volatile Memory: Volatile memory (RAM) loses stored contents instantly when system power is switched off. Non-Volatile memory (ROM, PROM, EPROM, Flash) retains firmware, boot code, and interrupt vectors permanently.',
+          'Locality of Reference: Temporal locality (recently accessed data is likely accessed again soon) and Spatial locality (nearby memory addresses are accessed sequentially) optimize hierarchical memory performance.',
+          'Role in 8086 Microprocessor Systems: Internal 8086 registers (AX, BX, CS, IP, SP) provide zero-wait-state data manipulation, while external 1 MB physical memory (RAM + ROM) holds system software and data structures.'
         ]
       },
       {
         id: 'm13-s2',
-        title: '2. Memory Map Design & Address Decoding 📐',
+        title: '2. Types of Semiconductor Memories: RAM, ROM & Flash ⚡',
         moduleTitle: 'Module 13: Semiconductor Memory Interfacing (RAM & ROM)',
         moduleId: 'm13',
+        interactiveType: 'memory-interfacing',
+        points: [
+          'Static RAM (SRAM): Built using 6-transistor flip-flop cells. SRAM is extremely fast (~10ns), requires no refresh cycles, but has lower storage density and higher power consumption. Used for cache and high-speed system RAM.',
+          'Dynamic RAM (DRAM): Uses 1 transistor + 1 storage capacitor per bit. Highly dense and low-cost, but leaky capacitors require periodic refresh cycles (~every 2ms-64ms) handled by a DRAM controller. Used for main system memory.',
+          'Read-Only Memory (ROM & PROM): Mask ROM is permanently programmed during chip fabrication. Programmable ROM (PROM) is field-programmed once by blowing tiny internal fusible links using high voltage pulses.',
+          'Erasable PROMs (EPROM & EEPROM): EPROM (e.g. 2764) is erased by exposing its silicon wafer to ultraviolet (UV) light through a quartz window. EEPROM allows byte-level electrical erasing and in-circuit reprogramming.',
+          'Flash Memory: High-density non-volatile memory erased and rewritten in sector blocks. Combines the electrical erase flexibility of EEPROM with the high integration density of DRAM. Standard for modern BIOS/firmware.'
+        ]
+      },
+      {
+        id: 'm13-s3',
+        title: '3. 8086 Semiconductor Memory Interfacing & Bus Connections 💾',
+        moduleTitle: 'Module 13: Semiconductor Memory Interfacing (RAM & ROM)',
+        moduleId: 'm13',
+        interactiveType: 'memory-interfacing',
+        points: [
+          'Memory Interfacing Fundamentals: Primary memory interfacing involves connecting RAM (SRAM/DRAM for data, stack, variables) and ROM (EPROM/Flash for BIOS firmware) to 8086 address, data, and control buses.',
+          '8086 Memory Address Space: The 8086 features a 20-bit address bus (A0-A19), allowing it to address up to 1 MB (1,048,576 bytes) of physical memory spanning from 00000H to FFFFFH.',
+          'Address Decoding Circuits: Higher-order address lines (e.g. A17-A19 or A14-A19) are decoded using 3-to-8 decoders (such as IC 74LS138) to generate active-low Chip Select (CS# / CE#) signals for memory chips.',
+          'Control Signal Matching: Microprocessor control signals MEMR# / RD# (Read) and MEMW# / WR# (Write) connect to memory chip enable pins (OE# Output Enable, WE# Write Enable) to control bus direction.',
+          'Bus Demultiplexing & Buffering: Demultiplexing AD0-AD15 using 74LS373 octal latches (controlled by ALE) and buffering data with 74LS245 transceivers ensures clean, stable electrical drive for memory arrays.'
+        ]
+      },
+      {
+        id: 'm13-s4',
+        title: '4. Memory Map Design & Address Decoding 📐',
+        moduleTitle: 'Module 13: Semiconductor Memory Interfacing (RAM & ROM)',
+        moduleId: 'm13',
+        interactiveType: 'memory-interfacing',
         points: [
           'Memory Mapping Concept: A memory map defines the exact start and end physical addresses assigned to each RAM and ROM chip within the 1 MB address space.',
-          'Calculating Memory Address Range: For a 64 KB memory chip (2^16 bytes), 16 address lines (A0-A15) are connected directly to the chip address pins, while the remaining 4 high address lines (A16-A19) connect to the address decoder.',
-          'ROM Address Mapping in 8086: Because the 8086 automatically starts instruction execution from physical address FFFF0H upon RESET, the system EPROM/ROM must be mapped to the top of memory space (ending at FFFFFH).',
-          'RAM Address Mapping in 8086: RAM is usually mapped at lower memory addresses starting at 00000H because the Interrupt Vector Table (IVT) occupies addresses 00000H to 003FFH.',
-          'Absolute vs Partial Decoding: Absolute decoding uses all unused address lines to ensure each memory byte has a unique address; Partial decoding ignores some high address lines to save hardware, resulting in mirror addresses.'
+          'Even and Odd Memory Banks: To achieve 16-bit wide data transfers, 1 MB memory is organized into two 512 KB banks: Even Bank (connected to D0-D7, selected by A0=0) and Odd Bank (connected to D8-D15, selected by BHE#=0).',
+          'Calculating Memory Address Range: For a 64 KB memory chip (2^16 bytes), 16 address lines (A0-A15) connect directly to chip address pins, while the remaining 4 high address lines (A16-A19) connect to the decoder.',
+          'ROM Address Mapping in 8086: Because 8086 automatically starts execution from FFFF0H upon RESET, system boot EPROM/ROM must be mapped to the top of memory space (ending at FFFFFH).',
+          'RAM Address Mapping in 8086: System RAM is mapped at lower memory addresses starting at 00000H because the Interrupt Vector Table (IVT) occupies addresses 00000H to 003FFH.'
         ]
       },
       {
@@ -1379,6 +1401,17 @@ export const courseData: Module[] = [
         moduleId: 'm13',
         interactiveType: 'quiz',
         quizQuestions: [
+          {
+            question: 'Which type of RAM requires periodic refresh cycles because its memory cells store charge on leaky capacitors?',
+            options: [
+              'Static RAM (SRAM)',
+              'Dynamic RAM (DRAM)',
+              'EPROM',
+              'Flash Memory'
+            ],
+            correctAnswer: 1,
+            explanation: 'Dynamic RAM (DRAM) uses 1 transistor and 1 capacitor per bit. Capacitors slowly lose charge over time, so DRAM requires periodic refresh cycles (every few milliseconds) to retain stored data.'
+          },
           {
             question: 'Why is the 1 MB physical memory of the 8086 microprocessor divided into two 512 KB banks (Even Bank and Odd Bank)?',
             options: [
@@ -1402,10 +1435,15 @@ export const courseData: Module[] = [
             explanation: 'Upon hardware RESET, the 8086 automatically sets CS = FFFFH and IP = 0000H, yielding physical address FFFF0H. Boot code/ROM must reside at FFFF0H to execute startup code.'
           },
           {
-            question: 'Which integrated circuit (IC) is commonly used as a 3-to-8 line address decoder for generating Chip Select (CS#) signals in memory interfacing?',
-            options: ['74LS138', '74LS245', '74LS373', '8255 PPI'],
-            correctAnswer: 0,
-            explanation: 'The 74LS138 is a 3-to-8 decoder with active-low outputs, ideal for decoding 3 address lines (e.g. A17-A19) into 8 distinct chip select (CS#) outputs.'
+            question: 'How is an EPROM (Erasable Programmable Read-Only Memory) chip erased for reprogramming?',
+            options: [
+              'By applying a 12V electrical pulse to the RESET pin',
+              'By exposing the chip silicon wafer to intense Ultraviolet (UV) light through a quartz window',
+              'By executing a software CLC instruction in assembly',
+              'By grounding the Chip Select (CS#) line for 5 seconds'
+            ],
+            correctAnswer: 1,
+            explanation: 'EPROMs feature a transparent quartz window over the silicon die. Exposing the die to high-intensity UV light discharges the floating gates, erasing all stored bytes back to FFH.'
           }
         ]
       }
@@ -1420,6 +1458,7 @@ export const courseData: Module[] = [
         title: '1. Intel 8255 PPI Architecture & Pin Configuration 🔌',
         moduleTitle: 'Module 14: Intel 8255 Programmable Peripheral Interface',
         moduleId: 'm14',
+        interactiveType: 'ppi-8255',
         points: [
           'Overview of 8255 PPI: The Intel 8255 is a general-purpose programmable I/O device designed to interface parallel I/O devices (switches, LEDs, displays) to microprocessors.',
           'Internal Port Structure: Features 24 I/O pins organized into three 8-bit ports: Port A (PA0-PA7), Port B (PB0-PB7), and Port C (PC0-PC7).',
@@ -1433,6 +1472,7 @@ export const courseData: Module[] = [
         title: '2. 8255 Operating Modes & Control Word Format ⚙️',
         moduleTitle: 'Module 14: Intel 8255 Programmable Peripheral Interface',
         moduleId: 'm14',
+        interactiveType: 'ppi-8255',
         points: [
           'Mode 0 (Basic I/O): All ports (A, B, C) operate as simple input or output ports without handshaking. Data is written or read directly.',
           'Mode 1 (Strobed I/O): Ports A and B use Port C lines as handshake signals (STB#, IBF, ACK#, OBF#, INTR) to synchronize data transfer with peripheral devices.',
@@ -1479,6 +1519,7 @@ export const courseData: Module[] = [
         title: '1. Interfacing Switches, LEDs & Seven Segment Displays 💡',
         moduleTitle: 'Module 15: Peripheral Interfacing (LEDs, Displays & Stepper Motor)',
         moduleId: 'm15',
+        interactiveType: 'peripheral-interfacing',
         points: [
           'Switch Interfacing & Debouncing: Mechanical push switches generate contact bounce noise when pressed; hardware (SR flip-flops, RC filters) or software delays (~20 ms) resolve bounce.',
           'LED Interfacing: LEDs require current-limiting resistors (220Ω - 330Ω). In Active-Low logic, MPU outputs 0 to light LED; in Active-High logic, MPU outputs 1.',
@@ -1492,6 +1533,7 @@ export const courseData: Module[] = [
         title: '2. Stepper Motor Architecture & Interfacing 🔄',
         moduleTitle: 'Module 15: Peripheral Interfacing (LEDs, Displays & Stepper Motor)',
         moduleId: 'm15',
+        interactiveType: 'peripheral-interfacing',
         points: [
           'Stepper Motor Principle: Electromechanical device that converts electrical digital pulses into discrete mechanical angular movements (steps).',
           'Step Angle Calculation: Step Angle (β) = 360° / (Number of Stator Phases × Rotor Teeth). Common step angles include 1.8° (200 steps/rev) and 7.5° (48 steps/rev).',
@@ -1548,6 +1590,7 @@ export const courseData: Module[] = [
         title: '1. Analog-to-Digital Converter (ADC 0808/0809) Interfacing 📊',
         moduleTitle: 'Module 16: Analog Interfacing (A/D & D/A Converters)',
         moduleId: 'm16',
+        interactiveType: 'analog-interfacing',
         points: [
           'Need for A/D Conversion: Real-world sensors (temperature, pressure, light) produce continuous analog signals; ADCs convert these into digital binary values for 8086 processing.',
           'ADC 0808 Features: 8-bit successive-approximation ADC with an internal 8-channel analog multiplexer, requiring no external zero/full-scale adjustment.',
@@ -1561,6 +1604,7 @@ export const courseData: Module[] = [
         title: '2. Digital-to-Analog Converter (DAC 0800) & Waveform Generation 📈',
         moduleTitle: 'Module 16: Analog Interfacing (A/D & D/A Converters)',
         moduleId: 'm16',
+        interactiveType: 'analog-interfacing',
         points: [
           'Need for D/A Conversion: Microprocessors produce digital outputs; DACs convert binary values into continuous analog voltages/currents to drive actuators, speakers, and motors.',
           'DAC 0800 Architecture: High-speed 8-bit multiplying DAC utilizing an R-2R resistor ladder network to output proportional analog current (Iout).',
@@ -1617,6 +1661,7 @@ export const courseData: Module[] = [
         title: '1. Software & Hardware Interrupt Applications in 8086 ⚡',
         moduleTitle: 'Module 17: Interrupt Systems & Intel 8259 Programmable Interrupt Controller',
         moduleId: 'm17',
+        interactiveType: 'interrupt-8259',
         points: [
           'Interrupt Concept: An interrupt suspends normal program execution, forcing MPU to jump to a specific Interrupt Service Routine (ISR), and returns via IRET instruction.',
           'Hardware Interrupt Pins: NMI (Non-Maskable Interrupt, edge-triggered, Type 2, highest hardware priority) and INTR (Maskable Interrupt, level-triggered, controlled by Interrupt Flag IF).',
@@ -1630,6 +1675,7 @@ export const courseData: Module[] = [
         title: '2. Need for 8259 PIC & Internal Architecture 🧠',
         moduleTitle: 'Module 17: Interrupt Systems & Intel 8259 Programmable Interrupt Controller',
         moduleId: 'm17',
+        interactiveType: 'interrupt-8259',
         points: [
           'Need for 8259 PIC: 8086 has only ONE hardware INTR pin. The 8259 PIC expands this single pin to manage up to 8 vectored hardware interrupt requests (IR0-IR7) with programmable priorities.',
           'Cascading Capability: Master and Slave 8259 controllers can be cascaded via CAS0-CAS2 lines to manage up to 64 hardware interrupt requests.',
@@ -1644,6 +1690,7 @@ export const courseData: Module[] = [
         title: '3. 8259 Command Words (ICWs & OCWs) 📜',
         moduleTitle: 'Module 17: Interrupt Systems & Intel 8259 Programmable Interrupt Controller',
         moduleId: 'm17',
+        interactiveType: 'interrupt-8259',
         points: [
           'Initialization Command Words (ICW1 - ICW4): Sent sequentially after hardware reset to configure fundamental 8259 operating parameters.',
           'ICW1: Defines single/cascade mode, edge/level trigger mode, and indicates if ICW4 is needed.',
@@ -1696,6 +1743,7 @@ export const courseData: Module[] = [
         title: '1. Serial Communication Fundamentals & 8251 Architecture 📡',
         moduleTitle: 'Module 18: Serial Communication & Intel 8251 USART',
         moduleId: 'm18',
+        interactiveType: 'usart-8251',
         points: [
           'Parallel vs Serial Data Transfer: Parallel transfers entire 8/16-bit words simultaneously over short distances; Serial transmits bits sequentially over a single pair of wires over long distances.',
           'Synchronous vs Asynchronous Serial Transmission: Asynchronous uses Start/Stop framing bits without a shared clock; Synchronous uses transmitter/receiver clock synchronization with sync characters.',
@@ -1709,6 +1757,7 @@ export const courseData: Module[] = [
         title: '2. 8251 USART Programming & Control Register ⚙️',
         moduleTitle: 'Module 18: Serial Communication & Intel 8251 USART',
         moduleId: 'm18',
+        interactiveType: 'usart-8251',
         points: [
           '8251 Control Logic & C/D# Pin: C/D# = 0 accesses Data Buffer; C/D# = 1 accesses Control/Status Register.',
           'Mode Instruction Format: Sent first after RESET to select Asynchronous/Synchronous mode, baud rate factor (x1, x16, x64), character length (5-8 bits), parity enable/type, and stop bit count (1, 1.5, 2).',
@@ -1760,6 +1809,7 @@ export const courseData: Module[] = [
         title: '1. Direct Memory Access (DMA) & 8237A Architecture 🚀',
         moduleTitle: 'Module 19: Direct Memory Access & Intel 8237A DMA Controller',
         moduleId: 'm19',
+        interactiveType: 'dma-8237',
         points: [
           'DMA Concept: Direct Memory Access transfers high-speed data directly between I/O peripherals and RAM without CPU intervention, bypassing MPU register fetch-execute cycles.',
           'Bus Master Concept: During DMA, the DMA Controller takes control of the address, data, and control buses from the 8086 microprocessor.',
@@ -1773,6 +1823,7 @@ export const courseData: Module[] = [
         title: '2. 8237A DMA Modes & Bus Transfer Types 🔄',
         moduleTitle: 'Module 19: Direct Memory Access & Intel 8237A DMA Controller',
         moduleId: 'm19',
+        interactiveType: 'dma-8237',
         points: [
           'DMA Operating Modes: Single Transfer Mode (releases bus after 1 byte), Block Transfer Mode (transfers entire block until count reaches zero), Demand Transfer Mode (transfers continuously as long as DRQ remains active), Cascade Mode.',
           'DMA Transfer Types: Memory-to-I/O Read, I/O-to-Memory Write, and Memory-to-Memory Transfer (using Channel 0 and Channel 1).',
@@ -1816,6 +1867,140 @@ export const courseData: Module[] = [
             correctAnswer: 1,
             explanation: 'In Block Transfer mode, once DRQ triggers the DMAC, data is transferred continuously until the Word Count register decrements to zero (Terminal Count).'
           }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'm20',
+    title: 'Module 20: Lab Resources & Experiments Manual 🧪',
+    slides: [
+      {
+        id: 'm20-s1',
+        title: 'Exp 1A: Multi-precision Addition & Subtraction (32-bit / 64-bit) ➕➖',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        interactiveType: 'directive-sandbox',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 Assembly Language Program (ALP) to perform multi-precision (32-bit / 64-bit) addition and subtraction of multi-byte hexadecimal numbers using ADC and SBB instructions.',
+          '💡 THEORY & CONCEPT: Unsigned 32-bit and 64-bit operands exceed the 16-bit register capacity of the 8086 CPU. Multi-byte values are stored in contiguous memory locations in Little-Endian format (least significant byte at lowest address). Addition and subtraction are executed sequentially in 16-bit word or 8-bit byte iterations using ADC (Add with Carry) and SBB (Subtract with Borrow) to automatically propagate carry or borrow status across byte/word boundaries.'
+        ]
+      },
+      {
+        id: 'm20-s2',
+        title: 'Exp 1B: Multiplication & Division of Signed & Unsigned Hex Numbers ✖️➗',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to perform multiplication and division of signed and unsigned hexadecimal numbers using MUL, IMUL, DIV, and IDIV instructions.'
+        ]
+      },
+      {
+        id: 'm20-s3',
+        title: 'Exp 1C: Square, Cube & Factorial of a Hexadecimal Number 🔢',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to calculate the square, cube, and factorial of a given hexadecimal byte value.'
+        ]
+      },
+      {
+        id: 'm20-s4',
+        title: 'Exp 2A: Positive or Negative Data Check ➕/➖',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to check whether a given byte or word data is positive or negative by testing the Most Significant Bit (MSB/Sign Bit).'
+        ]
+      },
+      {
+        id: 'm20-s5',
+        title: 'Exp 2B: Odd or Even Data Check 🔢',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to determine whether a given data byte is odd or even by testing the Least Significant Bit (LSB/Parity Bit).'
+        ]
+      },
+      {
+        id: 'm20-s6',
+        title: 'Exp 2C: Count Logical Ones and Zeros in a Data Byte 0️⃣1️⃣',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to count the total number of logical 1s and logical 0s in a given data byte.'
+        ]
+      },
+      {
+        id: 'm20-s7',
+        title: 'Exp 3A: Addition & Subtraction of N Numbers Array 📊',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to calculate the cumulative sum and progressive difference of an array containing N hexadecimal numbers.'
+        ]
+      },
+      {
+        id: 'm20-s8',
+        title: 'Exp 3B: Find Largest & Smallest Number in an Array 🔝🔻',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to find the largest (maximum) and smallest (minimum) numbers from an array of N hexadecimal elements.'
+        ]
+      },
+      {
+        id: 'm20-s9',
+        title: 'Exp 3C: Sort Array in Ascending & Descending Order 🔄',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to sort an array of N numbers in ascending and descending order using the Bubble Sort algorithm.'
+        ]
+      },
+      {
+        id: 'm20-s10',
+        title: 'Exp 4A: String Length Calculation 🔤',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to calculate the total length of a given character string using string manipulation instructions.'
+        ]
+      },
+      {
+        id: 'm20-s11',
+        title: 'Exp 4B: Display String on Console 🖥️',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to display a character string on the console screen using MS-DOS Interrupt 21H Function 09H.'
+        ]
+      },
+      {
+        id: 'm20-s12',
+        title: 'Exp 4C: String Comparison ⚖️',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to compare two character strings for equality using the CMPSB string instruction.'
+        ]
+      },
+      {
+        id: 'm20-s13',
+        title: 'Exp 4D: Reverse String & Palindrome Check 🔄',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to reverse a character string and verify whether the string is a palindrome.'
+        ]
+      },
+      {
+        id: 'm20-s14',
+        title: 'Exp 5: Block Data Transfer (Memory Copy & Management) 📦',
+        moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
+        moduleId: 'm20',
+        points: [
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to perform block data transfer of N bytes from a source memory offset to a destination memory offset.'
         ]
       }
     ]

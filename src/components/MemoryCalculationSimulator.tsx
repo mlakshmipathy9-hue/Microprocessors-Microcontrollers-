@@ -233,8 +233,17 @@ const mapRegions: MapRegion[] = [
   }
 ];
 
-export default function MemoryCalculationSimulator() {
-  const [activeTab, setActiveTab] = useState<'calculator' | 'segmented-structure' | 'physical-map'>('calculator');
+interface MemoryCalculationSimulatorProps {
+  key?: string | number;
+  defaultTab?: 'calculator' | 'segmented-structure' | 'physical-map';
+}
+
+export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }: MemoryCalculationSimulatorProps) {
+  const [activeTab, setActiveTab] = useState<'calculator' | 'segmented-structure' | 'physical-map'>(defaultTab);
+
+  useEffect(() => {
+    setActiveTab(defaultTab);
+  }, [defaultTab]);
   const [segReg, setSegReg] = useState('CS');
   const [offsetReg, setOffsetReg] = useState('IP');
   const [segValHex, setSegValHex] = useState('1000');
@@ -435,6 +444,28 @@ export default function MemoryCalculationSimulator() {
                     <div className="bg-white p-2.5 rounded-lg border border-indigo-200 font-mono">
                       <span className="text-indigo-800 font-bold block">2. Four Active Segments</span>
                       <span className="text-slate-700 text-[13px]">Code (CS), Data (DS), Stack (SS), and Extra (ES).</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/90 p-3 rounded-lg border border-indigo-200/60 text-[13px] leading-relaxed text-slate-700 space-y-1.5">
+                    <strong className="text-indigo-900 block font-bold text-[13px]">Purpose of Each Segment Register:</strong>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[12px] font-sans">
+                      <div className="bg-indigo-50/70 p-2 rounded border border-indigo-200">
+                        <span className="font-extrabold text-indigo-900">CS (Code Segment):</span>
+                        <p className="text-slate-700 text-[11.5px] leading-tight">Holds executable program machine instructions. Paired with IP (CS:IP).</p>
+                      </div>
+                      <div className="bg-emerald-50/70 p-2 rounded border border-emerald-200">
+                        <span className="font-extrabold text-emerald-900">DS (Data Segment):</span>
+                        <p className="text-slate-700 text-[11.5px] leading-tight">Holds static variables, constants, &amp; global data. Paired with BX/SI/DI (DS:BX).</p>
+                      </div>
+                      <div className="bg-rose-50/70 p-2 rounded border border-rose-200">
+                        <span className="font-extrabold text-rose-900">SS (Stack Segment):</span>
+                        <p className="text-slate-700 text-[11.5px] leading-tight">Holds call frames, return addresses, &amp; local variables. Paired with SP/BP (SS:SP).</p>
+                      </div>
+                      <div className="bg-amber-50/70 p-2 rounded border border-amber-200">
+                        <span className="font-extrabold text-amber-900">ES (Extra Segment):</span>
+                        <p className="text-slate-700 text-[11.5px] leading-tight">Holds auxiliary data &amp; string destination buffer. Paired with DI (ES:DI).</p>
+                      </div>
                     </div>
                   </div>
 

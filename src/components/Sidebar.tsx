@@ -26,11 +26,16 @@ export default function Sidebar({
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeUnit, setActiveUnit] = useState<'unit1' | 'unit2' | 'unit3' | 'labs'>(() => {
+    if (currentModuleId === 'm20') return 'labs';
     if (['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].some(id => currentModuleId === id)) return 'unit3';
     return ['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id) ? 'unit2' : 'unit1';
   });
 
   useEffect(() => {
+    if (currentModuleId === 'm20') {
+      setActiveUnit('labs');
+      return;
+    }
     const isUnit3 = ['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].some(id => currentModuleId === id);
     const isUnit2 = ['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id);
     const activeModule = modules.find(m => m.id === currentModuleId);
@@ -135,7 +140,9 @@ export default function Sidebar({
                   8086 Microprocessor
                 </h1>
                 <span className="text-[9px] text-indigo-600 font-mono tracking-wider font-semibold uppercase">
-                  {['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].some(id => currentModuleId === id)
+                  {currentModuleId === 'm20' || activeUnit === 'labs'
+                    ? 'UNIT-4: LAB RESOURCES & MANUALS'
+                    : ['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].some(id => currentModuleId === id)
                     ? 'UNIT-3: 8086 INTERFACING'
                     : ['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id)
                     ? 'UNIT-2: 8086 PROGRAMMING'
@@ -167,7 +174,9 @@ export default function Sidebar({
               <span>{completedCount} of {totalSlides} slides studied</span>
               <span className="flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600">
                 <GraduationCap className="w-3 h-3 text-indigo-600" />
-                {['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].some(id => currentModuleId === id)
+                {currentModuleId === 'm20' || activeUnit === 'labs'
+                  ? 'UNIT-4: Lab Resources & Manuals'
+                  : ['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].some(id => currentModuleId === id)
                   ? 'UNIT-3: 8086 Interfacing'
                   : ['m8', 'm9', 'm10', 'm11', 'm12'].some(id => currentModuleId === id)
                   ? 'UNIT-2: 8086 Programming'
@@ -308,7 +317,7 @@ export default function Sidebar({
                       <option value="unit1">Unit I: System Architecture</option>
                       <option value="unit2">Unit II: 8086 Programming</option>
                       <option value="unit3">Unit III: 8086 Interfacing</option>
-                      <option value="labs">Lab Resources</option>
+                      <option value="labs">Unit IV: Lab Resources & Experiments Manual</option>
                     </select>
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                       <GraduationCap className="h-4 w-4 text-indigo-600" />
@@ -323,11 +332,28 @@ export default function Sidebar({
                   <div className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-widest px-1 flex justify-between items-center">
                     <span>Learning Modules</span>
                     <span className="text-[9px] font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 font-sans">
-                      {activeUnit === 'labs' ? 'Lab Resources' : activeUnit === 'unit3' ? 'Unit III: Interfacing' : activeUnit === 'unit2' ? 'Unit II: Programming' : 'Unit I: Architecture'}
+                      {activeUnit === 'labs' ? 'Unit IV: Lab Resources' : activeUnit === 'unit3' ? 'Unit III: Interfacing' : activeUnit === 'unit2' ? 'Unit II: Programming' : 'Unit I: Architecture'}
                     </span>
                   </div>
 
                   {activeUnit === 'labs' ? (() => {
+                    const expSlideMap: Record<string, { moduleId: string; slideId: string }> = {
+                      exp1: { moduleId: 'm20', slideId: 'm20-s1' },
+                      exp2: { moduleId: 'm20', slideId: 'm20-s2' },
+                      exp_math: { moduleId: 'm20', slideId: 'm20-s3' },
+                      exp_bit1: { moduleId: 'm20', slideId: 'm20-s4' },
+                      exp_bit2: { moduleId: 'm20', slideId: 'm20-s5' },
+                      exp_bit3: { moduleId: 'm20', slideId: 'm20-s6' },
+                      exp_arr1: { moduleId: 'm20', slideId: 'm20-s7' },
+                      exp3: { moduleId: 'm20', slideId: 'm20-s8' },
+                      exp4: { moduleId: 'm20', slideId: 'm20-s9' },
+                      exp_str1: { moduleId: 'm20', slideId: 'm20-s10' },
+                      exp_str2: { moduleId: 'm20', slideId: 'm20-s11' },
+                      exp_str3: { moduleId: 'm20', slideId: 'm20-s12' },
+                      exp_str4: { moduleId: 'm20', slideId: 'm20-s13' },
+                      exp5: { moduleId: 'm20', slideId: 'm20-s14' },
+                    };
+
                     const groupedLabs = [
                       {
                         title: "Lab Resources 1: Arithmetic Instructions",
@@ -362,11 +388,12 @@ export default function Sidebar({
                               </h5>
                               <div className="space-y-2">
                                 {group.experiments.map(exp => {
-                                  const isCurrent = currentSlideId === 'm11-s2' && currentLabId === exp.id;
+                                  const isCurrent = (currentModuleId === 'm20' || currentModuleId === 'm11') && currentLabId === exp.id;
+                                  const target = expSlideMap[exp.id] || { moduleId: 'm20', slideId: 'm20-s1' };
                                   return (
                                     <button
                                       key={exp.id}
-                                      onClick={() => onSelectSlide('m11', 'm11-s2', exp.id)}
+                                      onClick={() => onSelectSlide(target.moduleId, target.slideId, exp.id)}
                                       className={`w-full text-left p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-2 ${
                                         isCurrent
                                           ? 'border-indigo-300 bg-indigo-50/70 text-indigo-950 font-semibold shadow-xs'
@@ -412,6 +439,7 @@ export default function Sidebar({
                     <div className="space-y-2">
                       {modules
                         .filter((m) => {
+                          if (m.id === 'm20') return false;
                           const isM3 = ['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].includes(m.id);
                           const isM2 = ['m8', 'm9', 'm10', 'm11', 'm12'].includes(m.id);
                           if (activeUnit === 'unit3') return isM3;
@@ -464,13 +492,16 @@ export default function Sidebar({
                                       <button
                                         key={slide.id}
                                         onClick={() => onSelectSlide(m.id, slide.id)}
-                                        className={`w-full text-left py-1.5 px-2.5 rounded-lg text-[11px] font-medium transition-all flex items-center justify-between group border-l-2 ${
+                                        className={`w-full text-left py-2 px-2.5 rounded-xl text-[11px] transition-all flex items-center justify-between group border ${
                                           isCurrentSlide
-                                            ? 'bg-indigo-600 text-white font-semibold shadow-xs border-indigo-400 pl-2'
-                                            : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50 border-transparent'
+                                            ? 'bg-indigo-600 text-white font-bold shadow-md border-indigo-500 ring-2 ring-indigo-300/50 pl-2.5'
+                                            : 'text-slate-600 hover:text-indigo-700 hover:bg-indigo-50/60 border-transparent hover:border-indigo-100/80'
                                         }`}
                                       >
-                                        <span className="truncate pr-1 group-hover:translate-x-0.5 transition-transform duration-150">{slide.title}</span>
+                                        <span className="truncate pr-1 group-hover:translate-x-0.5 transition-transform duration-150 flex items-center gap-1.5">
+                                          {isCurrentSlide && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />}
+                                          {slide.title}
+                                        </span>
                                         {isSlideCompleted && !isCurrentSlide && (
                                           <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
                                         )}

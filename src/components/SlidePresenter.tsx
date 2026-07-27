@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Slide, QuizQuestion } from '../types';
-import { ChevronLeft, ChevronRight, CheckCircle, HelpCircle, GraduationCap, RefreshCw, Layers, PanelLeftClose, PanelLeftOpen, Sparkles, BookOpen, X, ZoomIn } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle, HelpCircle, GraduationCap, RefreshCw, Layers, PanelLeftClose, PanelLeftOpen, Sparkles, BookOpen, X, ZoomIn, Target, Cpu } from 'lucide-react';
 
 // Import simulators
 import EvolutionTimeline from './EvolutionTimeline';
@@ -25,6 +25,15 @@ import DirectiveSandboxSimulator from './DirectiveSandboxSimulator';
 import AssemblerPlaygroundSimulator from './AssemblerPlaygroundSimulator';
 import AssemblerPassSimulator from './AssemblerPassSimulator';
 import AssemblerOutputsSimulator from './AssemblerOutputsSimulator';
+
+// Unit III Simulators
+import MemoryInterfacingSimulator from './MemoryInterfacingSimulator';
+import PPI8255Simulator from './PPI8255Simulator';
+import PeripheralInterfacingSimulator from './PeripheralInterfacingSimulator';
+import AnalogInterfacingSimulator from './AnalogInterfacingSimulator';
+import Interrupt8259Simulator from './Interrupt8259Simulator';
+import USART8251Simulator from './USART8251Simulator';
+import DMA8237Simulator from './DMA8237Simulator';
 
 interface SlidePresenterProps {
   slide: Slide;
@@ -228,7 +237,7 @@ export default function SlidePresenter({
       case 'flags':
         return <FlagRegisterSimulator />;
       case 'memory-calc':
-        return <MemoryCalculationSimulator />;
+        return <MemoryCalculationSimulator key={slide.id} defaultTab="calculator" />;
       case 'intro-interrupts':
         return <IntroInterruptsSimulator />;
       case 'interrupts':
@@ -257,6 +266,20 @@ export default function SlidePresenter({
         return <AssemblerPassSimulator />;
       case 'assembler-outputs':
         return <AssemblerOutputsSimulator />;
+      case 'memory-interfacing':
+        return <MemoryInterfacingSimulator />;
+      case 'ppi-8255':
+        return <PPI8255Simulator />;
+      case 'peripheral-interfacing':
+        return <PeripheralInterfacingSimulator />;
+      case 'analog-interfacing':
+        return <AnalogInterfacingSimulator />;
+      case 'interrupt-8259':
+        return <Interrupt8259Simulator />;
+      case 'usart-8251':
+        return <USART8251Simulator />;
+      case 'dma-8237':
+        return <DMA8237Simulator />;
       default:
         return null;
     }
@@ -269,164 +292,261 @@ export default function SlidePresenter({
         {/* Core Slide body */}
         <div className="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-6 min-h-0 items-stretch overflow-y-auto xl:overflow-hidden pr-1 scrollbar-thin">
             {/* Text points (Standard Presentation Layout in a Bento Box) */}
-            {!slide.interactiveType && (
-              <div className="w-full max-w-full bg-white border border-slate-200/80 rounded-3xl p-6 md:p-8 shadow-xs hover:shadow-md hover:border-indigo-150 transition-all duration-300 flex flex-col justify-between xl:col-span-12 overflow-hidden">
-                <div className="space-y-6">
-                  <div className="space-y-2.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold font-mono tracking-wider bg-indigo-50 border border-indigo-100 text-indigo-700 uppercase">
-                        <Sparkles className="w-3 h-3 text-indigo-500 animate-pulse" />
-                        {slide.moduleTitle || 'Academic Courseware'}
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-slate-50 border border-slate-200 text-slate-500 shadow-2xs">
-                        Slide ID: {slide.id}
+            {(!slide.interactiveType || slide.moduleId === 'm20') && (
+              slide.moduleId === 'm20' ? (
+                /* Unit 4 Comprehensive Experiment Layout - AIM ONLY */
+                <div className="w-full max-w-full bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between xl:col-span-12 overflow-hidden space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-bold font-mono tracking-wider bg-indigo-50 border border-indigo-200 text-indigo-700 uppercase">
+                          <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
+                          Unit IV: Lab Resources & Experiments Manual
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-mono font-bold bg-slate-100 border border-slate-200 text-slate-600 shadow-2xs">
+                          {slide.id}
+                        </span>
+                      </div>
+                      <span className="px-3 py-1 bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-full text-xs font-bold font-mono">
+                        Experiment Aim
                       </span>
                     </div>
+
                     <motion.h2
                       key={slide.title}
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="font-display text-2xl md:text-3.5xl font-extrabold text-slate-900 tracking-tight leading-tight"
+                      className="font-display text-2xl md:text-3xl lg:text-3.5xl font-extrabold text-slate-900 tracking-tight leading-tight"
                     >
                       {slide.title}
                     </motion.h2>
-                    <div className="h-1 w-20 bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full mt-3 shadow-sm"></div>
+
+                    <div className="h-1.5 w-24 bg-gradient-to-r from-indigo-600 via-sky-500 to-indigo-400 rounded-full shadow-xs"></div>
                   </div>
 
-                  {/* Standard points with large, high-contrast, projector-friendly text (>= 12px) */}
-                  {slide.points && (
-                    slide.id === 'm2-s1' ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 pt-2">
-                        {/* Left Column: BIU */}
-                        <div className="flex flex-col justify-between space-y-6">
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
-                              <h3 className="font-display text-lg md:text-xl font-bold text-slate-900 tracking-tight uppercase">
-                                Bus Interface Unit (BIU)
-                              </h3>
-                            </div>
-                            
-                            <div className="space-y-3.5 pl-4">
-                              {[
-                                'Fetches instructions from memory',
-                                'Generates physical addresses',
-                                'Reads and writes memory',
-                                'Stores fetched instruction bytes in the 6-byte prefetch queue',
-                                'Handles bus operations'
-                              ].map((pt, idx) => (
-                                <motion.div
-                                  key={idx}
-                                  initial={{ opacity: 0, x: -10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ duration: 0.3, delay: idx * 0.05 }}
-                                  className="flex gap-3 items-start group hover:translate-x-1 transition-transform duration-200 cursor-default"
-                                >
-                                  <div className="flex items-center justify-center w-5 h-5 shrink-0 mt-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 group-hover:scale-125 group-hover:bg-indigo-600 transition-all duration-200"></span>
-                                  </div>
-                                  <p className="text-slate-700 text-[15px] font-medium leading-relaxed">
-                                    {pt}
-                                  </p>
-                                </motion.div>
-                              ))}
-                            </div>
+                  {/* Experiment Aim & Theory Cards */}
+                  <div className="w-full space-y-4">
+                    {slide.points && slide.points.map((pt, pIdx) => {
+                      const isTheory = pt.includes('THEORY') || pt.includes('CONCEPT') || pt.includes('💡');
+                      return (
+                        <div 
+                          key={pIdx} 
+                          className={`border rounded-2xl p-6 md:p-8 shadow-xs space-y-2 transition-all ${
+                            isTheory 
+                              ? 'bg-amber-50/70 border-amber-200/90 text-amber-950' 
+                              : 'bg-gradient-to-r from-indigo-50/90 via-sky-50/60 to-slate-50 border-indigo-200/90'
+                          }`}
+                        >
+                          <div className={`flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider ${
+                            isTheory ? 'text-amber-800' : 'text-indigo-700'
+                          }`}>
+                            {isTheory ? (
+                              <BookOpen className="w-4 h-4 text-amber-600" />
+                            ) : (
+                              <Target className="w-4 h-4 text-indigo-600" />
+                            )}
+                            {isTheory ? 'Theoretical Concept & Logic' : 'Experiment Objective'}
                           </div>
+                          <p className="text-base sm:text-lg font-semibold text-slate-900 leading-relaxed">
+                            {pt}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
 
-                          {/* Analogy Block */}
-                          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/20 transition-all duration-300">
-                            <p className="text-xs font-mono font-bold text-indigo-600 uppercase tracking-wider mb-1">
-                              Analogy
-                            </p>
-                            <p className="text-slate-600 text-[14.5px] italic leading-relaxed">
-                              "Think of the BIU as a delivery person who brings instructions and data from memory."
-                            </p>
+                  {/* Embedded Interactive Interface for Unit 4 Experiments if present */}
+                  {slide.interactiveType && (
+                    <div className="pt-6 border-t border-slate-200/90 space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-indigo-50/80 via-sky-50/40 to-slate-50 p-4 rounded-2xl border border-indigo-150">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 rounded-xl bg-indigo-600 text-white shadow-xs">
+                            <Cpu className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-indigo-700 block">
+                              Interactive Lab Simulator
+                            </span>
+                            <h3 className="font-display font-bold text-base sm:text-lg text-slate-900">
+                              Multi-Precision Addition & Assembly Directive Interface
+                            </h3>
                           </div>
                         </div>
-
-                        {/* Right Column: EU */}
-                        <div className="flex flex-col justify-between space-y-6">
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
-                              <h3 className="font-display text-lg md:text-xl font-bold text-slate-900 tracking-tight uppercase">
-                                Execution Unit (EU)
-                              </h3>
-                            </div>
-
-                            <div className="space-y-3.5 pl-4">
-                              {[
-                                'Takes instruction bytes from the prefetch queue',
-                                'Decodes instructions',
-                                'Executes instructions',
-                                'Performs arithmetic and logic operations',
-                                'Updates registers and flags'
-                              ].map((pt, idx) => (
-                                <motion.div
-                                  key={idx}
-                                  initial={{ opacity: 0, x: 10 }}
-                                  animate={{ opacity: 1, x: 0 }}
-                                  transition={{ duration: 0.3, delay: idx * 0.05 }}
-                                  className="flex gap-3 items-start group hover:translate-x-1 transition-transform duration-200 cursor-default"
-                                >
-                                  <div className="flex items-center justify-center w-5 h-5 shrink-0 mt-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 group-hover:scale-125 group-hover:bg-indigo-600 transition-all duration-200"></span>
-                                  </div>
-                                  <p className="text-slate-700 text-[15px] font-medium leading-relaxed">
-                                    {pt}
-                                  </p>
-                                </motion.div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Analogy Block */}
-                          <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/20 transition-all duration-300">
-                            <p className="text-xs font-mono font-bold text-indigo-600 uppercase tracking-wider mb-1">
-                              Analogy
-                            </p>
-                            <p className="text-slate-600 text-[14.5px] italic leading-relaxed">
-                              "Think of the EU as the worker who understands and performs the instructions."
-                            </p>
-                          </div>
-                        </div>
+                        <span className="px-3 py-1 bg-white border border-indigo-200 text-indigo-800 rounded-full text-xs font-mono font-bold shadow-2xs">
+                          Live Interactive Execution
+                        </span>
                       </div>
-                    ) : (
-                      <div className={`grid grid-cols-1 ${['m8-s1', 'm8-s4', 'm8-s5', 'm9-s1', 'm10-s1', 'm10-s2', 'm11-s1', 'm12-s1'].includes(slide.id) || ['m13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19'].includes(slide.moduleId) ? 'grid-cols-1' : 'md:grid-cols-2'} gap-4.5 pr-1`}>
-                        {slide.points.map((pt, idx) => {
-                          const isRevealed = !incrementalRevealEnabled || idx < revealedPointsCount;
-                          if (!isRevealed) return null;
-                          return (
-                            <motion.div
-                              key={idx}
-                              initial={{ opacity: 0, y: 12 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.35, delay: idx * 0.04 }}
-                              className="flex gap-3.5 p-4 rounded-2xl bg-slate-50/40 border border-slate-100 hover:bg-white hover:border-indigo-200 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300 group items-start cursor-default"
-                            >
-                              <div className="flex items-center justify-center w-5 h-5 shrink-0 mt-1.5">
-                                <span className="w-2 h-2 rounded-full bg-indigo-500 group-hover:scale-125 group-hover:bg-indigo-600 transition-all duration-200"></span>
-                              </div>
-                              <p className="text-slate-800 text-base md:text-[16px] font-medium leading-relaxed text-justify flex-1 pt-0.5">
-                                {pt}
-                              </p>
-                            </motion.div>
-                          );
-                        })}
+
+                      <div className="rounded-2xl border border-slate-200/90 overflow-hidden bg-slate-50 shadow-xs p-1">
+                        {renderInteractive(slide.interactiveType)}
                       </div>
-                    )
+                    </div>
                   )}
+
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-mono">
+                    <span>8086 Microprocessor Micro-Lab Manual</span>
+                    <span>Department of Computer Engineering</span>
+                  </div>
                 </div>
+              ) : (
+                <div className="w-full max-w-full bg-white border border-slate-200/80 rounded-3xl p-6 md:p-8 shadow-xs hover:shadow-md hover:border-indigo-150 transition-all duration-300 flex flex-col justify-between xl:col-span-12 overflow-hidden">
+                  <div className="space-y-6">
+                    <div className="space-y-2.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold font-mono tracking-wider bg-indigo-50 border border-indigo-100 text-indigo-700 uppercase">
+                          <Sparkles className="w-3 h-3 text-indigo-500 animate-pulse" />
+                          {slide.moduleTitle || 'Academic Courseware'}
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-slate-50 border border-slate-200 text-slate-500 shadow-2xs">
+                          Slide ID: {slide.id}
+                        </span>
+                      </div>
+                      <motion.h2
+                        key={slide.title}
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="font-display text-2xl md:text-3.5xl font-extrabold text-slate-900 tracking-tight leading-tight"
+                      >
+                        {slide.title}
+                      </motion.h2>
+                      <div className="h-1 w-20 bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full mt-3 shadow-sm"></div>
+                    </div>
+
+                    {/* Standard points with large, high-contrast, projector-friendly text (>= 12px) */}
+                    {slide.points && (
+                      slide.id === 'm2-s1' ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 pt-2">
+                          {/* Left Column: BIU */}
+                          <div className="flex flex-col justify-between space-y-6">
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                                <h3 className="font-display text-lg md:text-xl font-bold text-slate-900 tracking-tight uppercase">
+                                  Bus Interface Unit (BIU)
+                                </h3>
+                              </div>
+                              
+                              <div className="space-y-3.5 pl-4">
+                                {[
+                                  'Fetches instructions from memory',
+                                  'Generates physical addresses',
+                                  'Reads and writes memory',
+                                  'Stores fetched instruction bytes in the 6-byte prefetch queue',
+                                  'Handles bus operations'
+                                ].map((pt, idx) => (
+                                  <motion.div
+                                    key={idx}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                                    className="flex gap-3 items-start group hover:translate-x-1 transition-transform duration-200 cursor-default"
+                                  >
+                                    <div className="flex items-center justify-center w-5 h-5 shrink-0 mt-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 group-hover:scale-125 group-hover:bg-indigo-600 transition-all duration-200"></span>
+                                    </div>
+                                    <p className="text-slate-700 text-[15px] font-medium leading-relaxed">
+                                      {pt}
+                                    </p>
+                                  </motion.div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Analogy Block */}
+                            <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/20 transition-all duration-300">
+                              <p className="text-xs font-mono font-bold text-indigo-600 uppercase tracking-wider mb-1">
+                                Analogy
+                              </p>
+                              <p className="text-slate-600 text-[14.5px] italic leading-relaxed">
+                                "Think of the BIU as a delivery person who brings instructions and data from memory."
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Right Column: EU */}
+                          <div className="flex flex-col justify-between space-y-6">
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                                <h3 className="font-display text-lg md:text-xl font-bold text-slate-900 tracking-tight uppercase">
+                                  Execution Unit (EU)
+                                </h3>
+                              </div>
+
+                              <div className="space-y-3.5 pl-4">
+                                {[
+                                  'Takes instruction bytes from the prefetch queue',
+                                  'Decodes instructions',
+                                  'Executes instructions',
+                                  'Performs arithmetic and logic operations',
+                                  'Updates registers and flags'
+                                ].map((pt, idx) => (
+                                  <motion.div
+                                    key={idx}
+                                    initial={{ opacity: 0, x: 10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                                    className="flex gap-3 items-start group hover:translate-x-1 transition-transform duration-200 cursor-default"
+                                  >
+                                    <div className="flex items-center justify-center w-5 h-5 shrink-0 mt-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 group-hover:scale-125 group-hover:bg-indigo-600 transition-all duration-200"></span>
+                                    </div>
+                                    <p className="text-slate-700 text-[15px] font-medium leading-relaxed">
+                                      {pt}
+                                    </p>
+                                  </motion.div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Analogy Block */}
+                            <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/20 transition-all duration-300">
+                              <p className="text-xs font-mono font-bold text-indigo-600 uppercase tracking-wider mb-1">
+                                Analogy
+                              </p>
+                              <p className="text-slate-600 text-[14.5px] italic leading-relaxed">
+                                "Think of the EU as the worker who understands and performs the instructions."
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={`grid grid-cols-1 ${['m3-s1', 'm3-s2', 'm3-s3', 'm8-s1', 'm8-s4', 'm8-s5', 'm9-s1', 'm10-s1', 'm10-s2', 'm10-s3', 'm11-s1', 'm12-s1'].includes(slide.id) ? 'grid-cols-1' : 'md:grid-cols-2'} gap-4.5 pr-1`}>
+                          {slide.points.map((pt, idx) => {
+                            const isRevealed = !incrementalRevealEnabled || idx < revealedPointsCount;
+                            if (!isRevealed) return null;
+                            return (
+                              <motion.div
+                                key={idx}
+                                initial={{ opacity: 0, y: 12 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.35, delay: idx * 0.04 }}
+                                className="flex gap-3.5 p-4 rounded-2xl bg-slate-50/40 border border-slate-100 hover:bg-white hover:border-indigo-200 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300 group items-start cursor-default"
+                              >
+                                <div className="flex items-center justify-center w-5 h-5 shrink-0 mt-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-indigo-500 group-hover:scale-125 group-hover:bg-indigo-600 transition-all duration-200"></span>
+                                </div>
+                                <p className="text-slate-800 text-base md:text-[16px] font-medium leading-relaxed text-justify flex-1 pt-0.5">
+                                  {pt}
+                                </p>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      )
+                    )}
+                  </div>
 
 
-              </div>
+                </div>
+              )
             )}
 
             {/* Right side: Interactive component or Quiz in Bento card container */}
-            {slide.interactiveType && (
+            {slide.interactiveType && slide.moduleId !== 'm20' && (
               <div 
                 id="interactive-bento-card"
-                className="min-h-0 flex flex-col transition-all duration-300 text-slate-900 w-full max-w-full max-h-[82vh] xl:max-h-[85vh] overflow-y-auto relative xl:col-span-12"
+                className="min-h-0 flex flex-col transition-all duration-300 text-slate-900 w-full max-w-full max-h-[82vh] xl:max-h-[85vh] overflow-y-auto relative xl:col-span-12 space-y-3"
               >
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -589,6 +709,7 @@ export default function SlidePresenter({
                       </div>
                     ) : (
                       <div 
+                        id="interactive-bento-card"
                         ref={bentoCardRef}
                         className="relative select-none overflow-hidden rounded-3xl"
                         onPointerDown={handlePointerDown}
@@ -600,47 +721,6 @@ export default function SlidePresenter({
                       >
                         {/* Original Interactive Component */}
                         {renderInteractive(slide.interactiveType)}
-
-                        {/* Floating Control Button for persistent magnifier toggle */}
-                        <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const nextEnabled = !magnifierModeEnabled;
-                              setMagnifierModeEnabled(nextEnabled);
-                              if (!nextEnabled) {
-                                setMagnifier({ x: 0, y: 0, active: false });
-                              } else {
-                                // start magnifier in the center
-                                const card = bentoCardRef.current;
-                                if (card) {
-                                  setMagnifier({
-                                    x: card.clientWidth / 2,
-                                    y: card.clientHeight / 2,
-                                    active: true
-                                  });
-                                }
-                              }
-                            }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-md cursor-pointer ${
-                              magnifierModeEnabled 
-                                ? 'bg-indigo-600 border-indigo-700 text-white' 
-                                : 'bg-white/90 border-slate-200 text-slate-700 hover:bg-slate-100'
-                            }`}
-                            title="Toggle Magnifying Glass Lens"
-                          >
-                            <ZoomIn className={`w-3.5 h-3.5 ${magnifierModeEnabled ? 'animate-pulse' : ''}`} />
-                            <span>
-                              {magnifierModeEnabled ? 'Magnifier: ON' : 'Magnifier'}
-                            </span>
-                          </button>
-                        </div>
-
-                        {/* Small floating tip indicator */}
-                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-slate-900/80 text-white text-[10px] px-3 py-1.5 rounded-full backdrop-blur-xs flex items-center gap-1.5 shadow-md">
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping"></span>
-                          <span>💡 Hold down anywhere on this simulator to zoom</span>
-                        </div>
 
                         {/* Circular Lens Overlay */}
                         {magnifier.active && bentoCardRef.current && (
@@ -725,15 +805,48 @@ export default function SlidePresenter({
               </div>
             )}
 
-            {slide.points && slide.interactiveType && slide.interactiveType !== 'quiz' && (
-              <button
-                onClick={() => setIsExplanationOpen(true)}
-                className="flex items-center gap-2 text-indigo-700 hover:text-indigo-800 font-bold text-xs py-2.5 px-3.5 bg-indigo-50 border border-indigo-150 rounded-xl shadow-xs hover:bg-indigo-100/80 transition-all cursor-pointer shrink-0"
-                title="View Lesson Explanation text in large projector-friendly modal"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Theory</span>
-              </button>
+            {slide.interactiveType && slide.interactiveType !== 'quiz' && (
+              <div className="flex items-center gap-2 shrink-0">
+                {slide.points && (
+                  <button
+                    onClick={() => setIsExplanationOpen(true)}
+                    className="flex items-center gap-2 text-indigo-700 hover:text-indigo-800 font-bold text-xs py-2.5 px-3.5 bg-indigo-50 border border-indigo-150 rounded-xl shadow-xs hover:bg-indigo-100/80 transition-all cursor-pointer shrink-0"
+                    title="View Lesson Explanation text in large projector-friendly modal"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Theory</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const nextEnabled = !magnifierModeEnabled;
+                    setMagnifierModeEnabled(nextEnabled);
+                    if (!nextEnabled) {
+                      setMagnifier({ x: 0, y: 0, active: false });
+                    } else {
+                      const card = bentoCardRef.current;
+                      if (card) {
+                        setMagnifier({
+                          x: card.clientWidth / 2,
+                          y: card.clientHeight / 2,
+                          active: true
+                        });
+                      }
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border shadow-xs cursor-pointer shrink-0 ${
+                    magnifierModeEnabled 
+                      ? 'bg-indigo-600 border-indigo-700 text-white shadow-indigo-200' 
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                  title="Toggle Magnifying Glass Lens over the simulator"
+                >
+                  <ZoomIn className={`w-3.5 h-3.5 ${magnifierModeEnabled ? 'animate-pulse' : ''}`} />
+                  <span>{magnifierModeEnabled ? 'Magnifier: ON' : 'Magnifier'}</span>
+                </button>
+              </div>
             )}
           </div>
 
