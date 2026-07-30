@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Slide, QuizQuestion } from '../types';
-import { ChevronLeft, ChevronRight, CheckCircle, HelpCircle, GraduationCap, RefreshCw, Layers, PanelLeftClose, PanelLeftOpen, Sparkles, BookOpen, X, ZoomIn, Target, Cpu } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle, HelpCircle, GraduationCap, RefreshCw, Layers, PanelLeftClose, PanelLeftOpen, Sparkles, BookOpen, X, ZoomIn, Target, Cpu, Maximize2, Minimize2 } from 'lucide-react';
 
 // Import simulators
 import EvolutionTimeline from './EvolutionTimeline';
@@ -48,6 +48,8 @@ interface SlidePresenterProps {
   projectorMode?: boolean;
   showInteractive?: boolean;
   activeLabId?: string;
+  fullScreenMode?: boolean;
+  onToggleFullScreen?: (enable?: boolean) => void;
 }
 
 export default function SlidePresenter({
@@ -62,7 +64,9 @@ export default function SlidePresenter({
   incrementalRevealEnabled,
   projectorMode = false,
   showInteractive = false,
-  activeLabId
+  activeLabId,
+  fullScreenMode = false,
+  onToggleFullScreen
 }: SlidePresenterProps) {
   // Quiz states
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number | null>>({});
@@ -71,6 +75,59 @@ export default function SlidePresenter({
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
+
+  // Double tap & touch swipe gesture states/refs
+  const lastTapRef = useRef<number>(0);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    // Exit full screen mode on double click
+    if (fullScreenMode && onToggleFullScreen) {
+      onToggleFullScreen(false);
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const now = Date.now();
+    // Double tap detection (within 300ms)
+    if (now - lastTapRef.current < 300) {
+      if (fullScreenMode && onToggleFullScreen) {
+        onToggleFullScreen(false);
+      }
+    }
+    lastTapRef.current = now;
+
+    // Swipe gesture detection
+    if (touchStartRef.current && e.changedTouches.length > 0) {
+      const touchEnd = {
+        x: e.changedTouches[0].clientX,
+        y: e.changedTouches[0].clientY,
+      };
+      const deltaX = touchEnd.x - touchStartRef.current.x;
+      const deltaY = touchEnd.y - touchStartRef.current.y;
+
+      // Ensure horizontal swipe is dominant and above 50px threshold
+      if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+        if (deltaX < 0) {
+          // Swipe Left -> Go to Next slide
+          if (!isLast) onNext();
+        } else {
+          // Swipe Right -> Go to Previous slide
+          if (!isFirst) onPrev();
+        }
+      }
+    }
+    touchStartRef.current = null;
+  };
 
   // Reset quiz states when changing slides
   useEffect(() => {
@@ -237,7 +294,14 @@ export default function SlidePresenter({
       case 'flags':
         return <FlagRegisterSimulator />;
       case 'memory-calc':
-        return <MemoryCalculationSimulator key={slide.id} defaultTab="calculator" />;
+        return (
+          <MemoryCalculationSimulator 
+            key={slide.id} 
+            defaultTab={
+              slide.id === 'm3-s4' ? 'physical-map' : (slide.id === 'm3-s1' ? 'segmented-structure' : 'calculator')
+            } 
+          />
+        );
       case 'intro-interrupts':
         return <IntroInterruptsSimulator />;
       case 'interrupts':
@@ -259,7 +323,7 @@ export default function SlidePresenter({
       case 'instruction-builder':
         return <InstructionBuilderSimulator />;
       case 'directive-sandbox':
-        return <DirectiveSandboxSimulator initialLabId={activeLabId} />;
+        return <DirectiveSandboxSimulator initialLabId={slide.id === 'm20-s1' ? 'multiprecision' : activeLabId} hideExp1a={slide.moduleId === 'm11'} />;
       case 'assembler-playground':
         return <AssemblerPlaygroundSimulator />;
       case 'assembler-passes':
@@ -286,52 +350,72 @@ export default function SlidePresenter({
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-between h-full bg-transparent p-4 md:p-6 overflow-hidden relative">
+    <div 
+      onDoubleClick={handleDoubleClick}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      className={`flex-1 flex flex-col justify-between min-h-0 bg-transparent overflow-hidden relative select-none ${
+        fullScreenMode ? 'p-2 md:p-3 bg-white border-0' : 'p-3 md:p-5'
+      }`}
+    >
+      {/* Floating Full Screen Mode Minimal Quick Exit Icon */}
+      {fullScreenMode && (
+        <button
+          onClick={() => onToggleFullScreen?.(false)}
+          className="absolute top-3 right-3 z-50 p-2 bg-slate-900/60 hover:bg-slate-900/90 text-slate-200 hover:text-white rounded-full transition-all border border-slate-700/50 opacity-50 hover:opacity-100 shadow-sm cursor-pointer"
+          title="Exit Full Screen Mode (or Double Tap)"
+        >
+          <Minimize2 className="w-4 h-4" />
+        </button>
+      )}
+
       {/* Slide Content Arena */}
-      <div className="flex-1 flex flex-col justify-between min-h-0">
+      <div className="flex-1 flex flex-col justify-between min-h-0 overflow-y-auto pr-1 scrollbar-thin pb-2">
         {/* Core Slide body */}
-        <div className="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-6 min-h-0 items-stretch overflow-y-auto xl:overflow-hidden pr-1 scrollbar-thin">
+        <div className="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-5 min-h-0 items-stretch pr-1">
             {/* Text points (Standard Presentation Layout in a Bento Box) */}
             {(!slide.interactiveType || slide.moduleId === 'm20') && (
               slide.moduleId === 'm20' ? (
                 /* Unit 4 Comprehensive Experiment Layout - AIM ONLY */
-                <div className="w-full max-w-full bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between xl:col-span-12 overflow-hidden space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2.5">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-bold font-mono tracking-wider bg-indigo-50 border border-indigo-200 text-indigo-700 uppercase">
-                          <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
-                          Unit IV: Lab Resources & Experiments Manual
-                        </span>
-                        <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-mono font-bold bg-slate-100 border border-slate-200 text-slate-600 shadow-2xs">
-                          {slide.id}
+                <div className="w-full max-w-full bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between xl:col-span-12 space-y-6">
+                  {!fullScreenMode && (
+                    <div className="space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-bold font-mono tracking-wider bg-indigo-50 border border-indigo-200 text-indigo-700 uppercase">
+                            <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
+                            Unit IV: Lab Resources & Experiments Manual
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-mono font-bold bg-slate-100 border border-slate-200 text-slate-600 shadow-2xs">
+                            {slide.id}
+                          </span>
+                        </div>
+                        <span className="px-3 py-1 bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-full text-xs font-bold font-mono">
+                          Experiment Aim
                         </span>
                       </div>
-                      <span className="px-3 py-1 bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-full text-xs font-bold font-mono">
-                        Experiment Aim
-                      </span>
+
+                      <motion.h2
+                        key={slide.title}
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="font-display text-2xl md:text-3xl lg:text-3.5xl font-extrabold text-slate-900 tracking-tight leading-tight"
+                      >
+                        {slide.title}
+                      </motion.h2>
+
+                      <div className="h-1.5 w-24 bg-gradient-to-r from-indigo-600 via-sky-500 to-indigo-400 rounded-full shadow-xs"></div>
                     </div>
-
-                    <motion.h2
-                      key={slide.title}
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="font-display text-2xl md:text-3xl lg:text-3.5xl font-extrabold text-slate-900 tracking-tight leading-tight"
-                    >
-                      {slide.title}
-                    </motion.h2>
-
-                    <div className="h-1.5 w-24 bg-gradient-to-r from-indigo-600 via-sky-500 to-indigo-400 rounded-full shadow-xs"></div>
-                  </div>
+                  )}
 
                   {/* Experiment Aim & Theory Cards */}
-                  <div className="w-full space-y-4">
+                  <div className="w-full space-y-2.5">
                     {slide.points && slide.points.map((pt, pIdx) => {
                       const isTheory = pt.includes('THEORY') || pt.includes('CONCEPT') || pt.includes('💡');
                       return (
                         <div 
                           key={pIdx} 
-                          className={`border rounded-2xl p-6 md:p-8 shadow-xs space-y-2 transition-all ${
+                          className={`border rounded-2xl p-4 md:p-5 shadow-xs space-y-1.5 transition-all ${
                             isTheory 
                               ? 'bg-amber-50/70 border-amber-200/90 text-amber-950' 
                               : 'bg-gradient-to-r from-indigo-50/90 via-sky-50/60 to-slate-50 border-indigo-200/90'
@@ -389,44 +473,46 @@ export default function SlidePresenter({
                   </div>
                 </div>
               ) : (
-                <div className="w-full max-w-full bg-white border border-slate-200/80 rounded-3xl p-6 md:p-8 shadow-xs hover:shadow-md hover:border-indigo-150 transition-all duration-300 flex flex-col justify-between xl:col-span-12 overflow-hidden">
-                  <div className="space-y-6">
-                    <div className="space-y-2.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold font-mono tracking-wider bg-indigo-50 border border-indigo-100 text-indigo-700 uppercase">
-                          <Sparkles className="w-3 h-3 text-indigo-500 animate-pulse" />
-                          {slide.moduleTitle || 'Academic Courseware'}
-                        </span>
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-slate-50 border border-slate-200 text-slate-500 shadow-2xs">
-                          Slide ID: {slide.id}
-                        </span>
+                <div className="w-full max-w-full bg-white border border-slate-200/80 rounded-3xl p-3 md:p-4 lg:p-5 shadow-xs hover:shadow-md hover:border-indigo-150 transition-all duration-300 flex flex-col justify-between xl:col-span-12">
+                  <div className="space-y-2 md:space-y-2.5">
+                    {!fullScreenMode && (
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider bg-indigo-50 border border-indigo-100 text-indigo-700 uppercase">
+                            <Sparkles className="w-3 h-3 text-indigo-500 animate-pulse" />
+                            {slide.moduleTitle || 'Academic Courseware'}
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-50 border border-slate-200 text-slate-500 shadow-2xs">
+                            Slide ID: {slide.id}
+                          </span>
+                        </div>
+                        <motion.h2
+                          key={slide.title}
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="font-display text-lg md:text-2xl lg:text-2.5xl font-extrabold text-slate-900 tracking-tight leading-tight"
+                        >
+                          {slide.title}
+                        </motion.h2>
+                        <div className="h-1 w-16 bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full mt-1 shadow-sm"></div>
                       </div>
-                      <motion.h2
-                        key={slide.title}
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="font-display text-2xl md:text-3.5xl font-extrabold text-slate-900 tracking-tight leading-tight"
-                      >
-                        {slide.title}
-                      </motion.h2>
-                      <div className="h-1 w-20 bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full mt-3 shadow-sm"></div>
-                    </div>
+                    )}
 
-                    {/* Standard points with large, high-contrast, projector-friendly text (>= 12px) */}
+                    {/* Standard points with compact, crisp spacing */}
                     {slide.points && (
                       slide.id === 'm2-s1' ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 pt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 pt-1">
                           {/* Left Column: BIU */}
-                          <div className="flex flex-col justify-between space-y-6">
-                            <div className="space-y-4">
+                          <div className="flex flex-col justify-between space-y-2">
+                            <div className="space-y-1.5">
                               <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
-                                <h3 className="font-display text-lg md:text-xl font-bold text-slate-900 tracking-tight uppercase">
+                                <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
+                                <h3 className="font-display text-sm md:text-base font-bold text-slate-900 tracking-tight uppercase">
                                   Bus Interface Unit (BIU)
                                 </h3>
                               </div>
                               
-                              <div className="space-y-3.5 pl-4">
+                              <div className="space-y-1.5 pl-2.5">
                                 {[
                                   'Fetches instructions from memory',
                                   'Generates physical addresses',
@@ -439,12 +525,12 @@ export default function SlidePresenter({
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.3, delay: idx * 0.05 }}
-                                    className="flex gap-3 items-start group hover:translate-x-1 transition-transform duration-200 cursor-default"
+                                    className="flex gap-2 items-start group hover:translate-x-1 transition-transform duration-200 cursor-default"
                                   >
-                                    <div className="flex items-center justify-center w-5 h-5 shrink-0 mt-1">
+                                    <div className="flex items-center justify-center w-3.5 h-3.5 shrink-0 mt-0.5">
                                       <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 group-hover:scale-125 group-hover:bg-indigo-600 transition-all duration-200"></span>
                                     </div>
-                                    <p className="text-slate-700 text-[15px] font-medium leading-relaxed">
+                                    <p className="text-slate-700 text-[13.5px] font-medium leading-tight">
                                       {pt}
                                     </p>
                                   </motion.div>
@@ -453,27 +539,27 @@ export default function SlidePresenter({
                             </div>
 
                             {/* Analogy Block */}
-                            <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/20 transition-all duration-300">
-                              <p className="text-xs font-mono font-bold text-indigo-600 uppercase tracking-wider mb-1">
+                            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/20 transition-all duration-300">
+                              <p className="text-[10px] font-mono font-bold text-indigo-600 uppercase tracking-wider mb-0.5">
                                 Analogy
                               </p>
-                              <p className="text-slate-600 text-[14.5px] italic leading-relaxed">
+                              <p className="text-slate-600 text-[13px] italic leading-tight">
                                 "Think of the BIU as a delivery person who brings instructions and data from memory."
                               </p>
                             </div>
                           </div>
 
                           {/* Right Column: EU */}
-                          <div className="flex flex-col justify-between space-y-6">
-                            <div className="space-y-4">
+                          <div className="flex flex-col justify-between space-y-2">
+                            <div className="space-y-1.5">
                               <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
-                                <h3 className="font-display text-lg md:text-xl font-bold text-slate-900 tracking-tight uppercase">
+                                <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
+                                <h3 className="font-display text-sm md:text-base font-bold text-slate-900 tracking-tight uppercase">
                                   Execution Unit (EU)
                                 </h3>
                               </div>
 
-                              <div className="space-y-3.5 pl-4">
+                              <div className="space-y-1.5 pl-2.5">
                                 {[
                                   'Takes instruction bytes from the prefetch queue',
                                   'Decodes instructions',
@@ -486,12 +572,12 @@ export default function SlidePresenter({
                                     initial={{ opacity: 0, x: 10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.3, delay: idx * 0.05 }}
-                                    className="flex gap-3 items-start group hover:translate-x-1 transition-transform duration-200 cursor-default"
+                                    className="flex gap-2 items-start group hover:translate-x-1 transition-transform duration-200 cursor-default"
                                   >
-                                    <div className="flex items-center justify-center w-5 h-5 shrink-0 mt-1">
+                                    <div className="flex items-center justify-center w-3.5 h-3.5 shrink-0 mt-0.5">
                                       <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 group-hover:scale-125 group-hover:bg-indigo-600 transition-all duration-200"></span>
                                     </div>
-                                    <p className="text-slate-700 text-[15px] font-medium leading-relaxed">
+                                    <p className="text-slate-700 text-[13.5px] font-medium leading-tight">
                                       {pt}
                                     </p>
                                   </motion.div>
@@ -500,33 +586,33 @@ export default function SlidePresenter({
                             </div>
 
                             {/* Analogy Block */}
-                            <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/20 transition-all duration-300">
-                              <p className="text-xs font-mono font-bold text-indigo-600 uppercase tracking-wider mb-1">
+                            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/20 transition-all duration-300">
+                              <p className="text-[10px] font-mono font-bold text-indigo-600 uppercase tracking-wider mb-0.5">
                                 Analogy
                               </p>
-                              <p className="text-slate-600 text-[14.5px] italic leading-relaxed">
+                              <p className="text-slate-600 text-[13px] italic leading-tight">
                                 "Think of the EU as the worker who understands and performs the instructions."
                               </p>
                             </div>
                           </div>
                         </div>
                       ) : (
-                        <div className={`grid grid-cols-1 ${['m3-s1', 'm3-s2', 'm3-s3', 'm8-s1', 'm8-s4', 'm8-s5', 'm9-s1', 'm10-s1', 'm10-s2', 'm10-s3', 'm11-s1', 'm12-s1'].includes(slide.id) ? 'grid-cols-1' : 'md:grid-cols-2'} gap-4.5 pr-1`}>
+                        <div className={`grid grid-cols-1 ${['m3-s1', 'm3-s2', 'm3-s3', 'm8-s1', 'm8-s4', 'm8-s5', 'm9-s1', 'm10-s1', 'm10-s2', 'm10-s3', 'm11-s1', 'm12-s1'].includes(slide.id) ? 'grid-cols-1' : 'md:grid-cols-2'} gap-1.5 md:gap-2 pr-1`}>
                           {slide.points.map((pt, idx) => {
                             const isRevealed = !incrementalRevealEnabled || idx < revealedPointsCount;
                             if (!isRevealed) return null;
                             return (
                               <motion.div
                                 key={idx}
-                                initial={{ opacity: 0, y: 12 }}
+                                initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.35, delay: idx * 0.04 }}
-                                className="flex gap-3.5 p-4 rounded-2xl bg-slate-50/40 border border-slate-100 hover:bg-white hover:border-indigo-200 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300 group items-start cursor-default"
+                                transition={{ duration: 0.3, delay: idx * 0.03 }}
+                                className="flex gap-2 p-2 md:p-2.5 rounded-lg bg-slate-50/60 border border-slate-100 hover:bg-white hover:border-indigo-200 hover:shadow-2xs transition-all duration-200 group items-start cursor-default"
                               >
-                                <div className="flex items-center justify-center w-5 h-5 shrink-0 mt-1.5">
-                                  <span className="w-2 h-2 rounded-full bg-indigo-500 group-hover:scale-125 group-hover:bg-indigo-600 transition-all duration-200"></span>
+                                <div className="flex items-center justify-center w-3.5 h-3.5 shrink-0 mt-0.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 group-hover:scale-125 group-hover:bg-indigo-600 transition-all duration-200"></span>
                                 </div>
-                                <p className="text-slate-800 text-base md:text-[16px] font-medium leading-relaxed text-justify flex-1 pt-0.5">
+                                <p className="text-slate-800 text-[13.5px] md:text-[14px] font-medium leading-snug text-justify flex-1">
                                   {pt}
                                 </p>
                               </motion.div>
@@ -546,7 +632,7 @@ export default function SlidePresenter({
             {slide.interactiveType && slide.moduleId !== 'm20' && (
               <div 
                 id="interactive-bento-card"
-                className="min-h-0 flex flex-col transition-all duration-300 text-slate-900 w-full max-w-full max-h-[82vh] xl:max-h-[85vh] overflow-y-auto relative xl:col-span-12 space-y-3"
+                className="min-h-0 flex flex-col transition-all duration-300 text-slate-900 w-full max-w-full relative xl:col-span-12 space-y-3"
               >
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -717,7 +803,7 @@ export default function SlidePresenter({
                         onPointerUp={handlePointerUpOrLeave}
                         onPointerCancel={handlePointerUpOrLeave}
                         onPointerLeave={handlePointerUpOrLeave}
-                        style={{ cursor: magnifier.active ? 'crosshair' : 'auto', touchAction: 'none' }}
+                        style={{ cursor: magnifier.active ? 'crosshair' : 'auto', touchAction: magnifier.active ? 'none' : 'pan-y' }}
                       >
                         {/* Original Interactive Component */}
                         {renderInteractive(slide.interactiveType)}
@@ -761,26 +847,25 @@ export default function SlidePresenter({
           </div>
         </div>
 
-      {/* Control Buttons (Next / Prev) */}
-      <div className="border-t border-slate-200 pt-4 mt-4 flex flex-col gap-3 shrink-0 w-full">
-        {/* Main Navigation Row */}
-        <div className="flex items-center justify-between w-full">
+      {/* Control Buttons (Next / Prev / Magnifier) - Hidden in Full Screen Mode */}
+      {!fullScreenMode && (
+        <div className="border-t border-slate-200/80 pt-2.5 mt-2 flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 shrink-0 w-full z-20 bg-slate-50/95 backdrop-blur-md">
           {/* Previous Button Container */}
-          <div className="w-36 flex justify-start">
+          <div className="flex items-center justify-start shrink-0">
             <button
               onClick={onPrev}
               disabled={isFirst}
-              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-semibold text-xs py-2.5 px-4 bg-white border border-slate-200 rounded-xl shadow-xs hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0"
+              className="flex items-center gap-1.5 text-slate-700 hover:text-slate-900 font-bold text-xs py-2 px-3.5 bg-white border border-slate-200 rounded-xl shadow-xs hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0"
             >
               <ChevronLeft className="w-4 h-4" />
-              Previous
+              <span>Previous</span>
             </button>
           </div>
 
-          {/* Middle Row (Visible on all screens to keep things centered) */}
-          <div className="flex flex-1 items-center justify-center gap-4 px-2">
+          {/* Center Tools & Banners (Status, Dr. M Lakshmipathy, Theory, Magnifier, FullScreen) */}
+          <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 flex-1 min-w-0 px-1">
             {/* Progress bar inside controls (Desktop only) */}
-            <div className="hidden md:flex items-center gap-2 text-slate-400 font-mono text-xs uppercase tracking-wider font-bold">
+            <div className="hidden lg:flex items-center gap-2 text-slate-400 font-mono text-xs uppercase tracking-wider font-bold shrink-0">
               <span>Status:</span>
               {completedSlides.includes(slide.id) ? (
                 <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-150 text-xs">
@@ -793,31 +878,32 @@ export default function SlidePresenter({
               )}
             </div>
 
-            {/* Academic Preparedness Banner - Dr. M Lakshmipathy (Desktop only) */}
+            {/* Academic Preparedness Banner - Dr. M Lakshmipathy */}
             {!projectorMode && (
-              <div className="hidden md:flex flex-col items-center text-center bg-slate-100/60 border border-slate-200/60 rounded-xl px-4 py-1 max-w-xs">
+              <div className="hidden lg:flex flex-col items-center text-center bg-slate-100/60 border border-slate-200/60 rounded-xl px-3 py-1 shrink-0">
                 <p className="text-[10px] font-bold text-slate-800 tracking-wide">
                   Prepared by: <span className="text-indigo-600 font-extrabold">Dr M Lakshmipathy</span>
                 </p>
-                <p className="text-[8px] text-slate-500 font-medium tracking-wide font-mono mt-0.5">
+                <p className="text-[8px] text-slate-500 font-medium tracking-wide font-mono">
                   KEC Kuppam
                 </p>
               </div>
             )}
 
-            {slide.interactiveType && slide.interactiveType !== 'quiz' && (
-              <div className="flex items-center gap-2 shrink-0">
-                {slide.points && (
-                  <button
-                    onClick={() => setIsExplanationOpen(true)}
-                    className="flex items-center gap-2 text-indigo-700 hover:text-indigo-800 font-bold text-xs py-2.5 px-3.5 bg-indigo-50 border border-indigo-150 rounded-xl shadow-xs hover:bg-indigo-100/80 transition-all cursor-pointer shrink-0"
-                    title="View Lesson Explanation text in large projector-friendly modal"
-                  >
-                    <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Theory</span>
-                  </button>
-                )}
+            {/* Full Screen Mode Toggle Button (Icon only) */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFullScreen?.(true);
+              }}
+              className="p-2 rounded-xl text-xs font-bold transition-all border shadow-xs cursor-pointer shrink-0 bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-indigo-200 hover:text-indigo-600 flex items-center justify-center"
+              title="Full Screen Presentation Mode"
+            >
+              <Maximize2 className="w-4 h-4 text-indigo-600" />
+            </button>
 
+            {slide.interactiveType && slide.interactiveType !== 'quiz' && (
+              <div className="flex flex-wrap items-center justify-center gap-1.5 shrink-0">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -836,7 +922,7 @@ export default function SlidePresenter({
                       }
                     }
                   }}
-                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border shadow-xs cursor-pointer shrink-0 ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border shadow-xs cursor-pointer shrink-0 ${
                     magnifierModeEnabled 
                       ? 'bg-indigo-600 border-indigo-700 text-white shadow-indigo-200' 
                       : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -851,18 +937,18 @@ export default function SlidePresenter({
           </div>
 
           {/* Next Button Container */}
-          <div className="w-36 flex justify-end">
+          <div className="flex items-center justify-end shrink-0">
             <button
               onClick={onNext}
               disabled={isLast}
-              className="flex items-center gap-1.5 text-indigo-600 bg-indigo-50 px-5 py-2.5 rounded-xl border border-indigo-150 hover:bg-indigo-100/50 hover:text-indigo-700 transition-colors font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs shrink-0"
+              className="flex items-center gap-1.5 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-150 hover:bg-indigo-100/50 hover:text-indigo-700 transition-colors font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs shrink-0"
             >
-              Next
+              <span>Next</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Projector-friendly Lesson Explanation Modal */}
       <AnimatePresence>

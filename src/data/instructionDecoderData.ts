@@ -1,6 +1,6 @@
 export interface SimulatorInstruction {
   opcode: string;
-  category: 'Data Transfer' | 'Arithmetic' | 'BCD & ASCII Adjust' | 'Logical & Bitwise' | 'Control, Flag & IO';
+  category: 'Data Transfer' | 'Arithmetic' | 'BCD & ASCII Adjust' | 'Logical & Bitwise' | 'Control, Flag & IO' | 'String Operations';
   desc: string;
   setupDesc: string;
   initialRegs: Record<string, number>;
@@ -385,6 +385,42 @@ export const mockInstructions: SimulatorInstruction[] = [
     }
   },
   {
+    opcode: 'AAA',
+    category: 'BCD & ASCII Adjust',
+    desc: 'ASCII Adjust after Addition. Adjusts AL after adding ASCII digits (\'5\' + \'9\' = 6EH) into unpacked decimal digits in AH:AL.',
+    setupDesc: 'Initializes AX = 006EH (from ADD AL, 39H where AL was 35H \'5\' + 39H \'9\' = 6EH). Lower nibble EH > 9.',
+    initialRegs: { AX: 0x006E, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
+    execute: (regs, flags) => {
+      // AL = 6EH. Lower nibble = 0x0E > 9.
+      // AAA adds 6 to AL (6EH + 06H = 74H -> lower nibble 04H), increments AH by 1 (AH=01H), clears upper nibble of AL. AX becomes 0104H.
+      const newAX = 0x0104;
+      return {
+        newRegs: { ...regs, AX: newAX, IP: regs.IP + 1 },
+        newFlags: { ...flags, AF: 1, CF: 1 },
+        mathExplanation: 'AAA inspects AL (6EH). Lower nibble (0EH) > 9. AAA adds 6 to AL, increments AH by 1 (00H → 01H), and clears upper nibble of AL to 0. AX becomes 0104H (decimal 14), with AF=1 and CF=1.'
+      };
+    }
+  },
+  {
+    opcode: 'AAS',
+    category: 'BCD & ASCII Adjust',
+    desc: 'ASCII Adjust after Subtraction. Adjusts AL after subtracting ASCII digits (\'3\' - \'8\' = FBH) into unpacked decimal digit with borrow in AH.',
+    setupDesc: 'Initializes AX = 00FBH (from SUB AL, 38H where AL was 33H \'3\' - 38H \'8\' = FBH). Lower nibble BH > 9.',
+    initialRegs: { AX: 0x00FB, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
+    execute: (regs, flags) => {
+      // AL = FBH. Lower nibble = 0x0B > 9.
+      // AAS subtracts 6 from AL (FBH - 06H = F5H -> lower nibble 05H), decrements AH by 1 (AH becomes FFH), clears upper nibble of AL. AX becomes FF05H.
+      const newAX = 0xFF05;
+      return {
+        newRegs: { ...regs, AX: newAX, IP: regs.IP + 1 },
+        newFlags: { ...flags, AF: 1, CF: 1 },
+        mathExplanation: 'AAS inspects AL (FBH). Lower nibble (0BH) > 9. AAS subtracts 6 from AL, decrements AH by 1 (00H → FFH borrow), and masks upper nibble of AL to 0. AX becomes FF05H (-1 in AH, digit 5 in AL), with AF=1 and CF=1.'
+      };
+    }
+  },
+  {
     opcode: 'AAM',
     category: 'BCD & ASCII Adjust',
     desc: 'ASCII Adjust after Multiplication. Converts a product in AL into two unpacked BCD digits in AH and AL.',
@@ -650,6 +686,158 @@ export const mockInstructions: SimulatorInstruction[] = [
         mathExplanation: 'LOCK prefix asserts bus LOCK signal, ensuring atomic execution of XCHG. AL becomes 00H, successfully acquiring semaphore.'
       };
     }
+  },
+
+  // ================= CATEGORY: STRING OPERATIONS =================
+  {
+    opcode: 'MOVSB',
+    category: 'String Operations',
+    desc: 'Move String Byte: Copies byte from DS:SI to ES:DI, then auto-adjusts SI and DI.',
+    setupDesc: 'Initializes DS:SI = 1000:1000H (Source byte = 5AH) and ES:DI = 4000:2000H. Direction Flag DF = 0.',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0001, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x1000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0, DF: 0 },
+    execute: (regs, flags) => {
+      const step = flags.DF === 1 ? -1 : 1;
+      const newSI = (regs.SI + step) & 0xFFFF;
+      const newDI = (regs.DI + step) & 0xFFFF;
+      return {
+        newRegs: { ...regs, SI: newSI, DI: newDI, IP: regs.IP + 1 },
+        newFlags: { ...flags },
+        mathExplanation: `[MOVSB EXECUTION]: Moved 1 byte from source DS:${regs.SI.toString(16).toUpperCase().padStart(4, '0')}H to destination ES:${regs.DI.toString(16).toUpperCase().padStart(4, '0')}H. Since DF = ${flags.DF}, SI and DI were ${flags.DF === 1 ? 'decremented' : 'incremented'} by 1 (SI → ${newSI.toString(16).toUpperCase().padStart(4, '0')}H, DI → ${newDI.toString(16).toUpperCase().padStart(4, '0')}H). Status flags are unaffected.`
+      };
+    }
+  },
+  {
+    opcode: 'MOVSW',
+    category: 'String Operations',
+    desc: 'Move String Word: Copies 16-bit word from DS:SI to ES:DI, then auto-adjusts SI and DI by 2.',
+    setupDesc: 'Initializes DS:SI = 1000:1000H (Word = 1234H) and ES:DI = 4000:2000H. DF = 0.',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0001, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x1000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0, DF: 0 },
+    execute: (regs, flags) => {
+      const step = flags.DF === 1 ? -2 : 2;
+      const newSI = (regs.SI + step) & 0xFFFF;
+      const newDI = (regs.DI + step) & 0xFFFF;
+      return {
+        newRegs: { ...regs, SI: newSI, DI: newDI, IP: regs.IP + 1 },
+        newFlags: { ...flags },
+        mathExplanation: `[MOVSW EXECUTION]: Transferred 16-bit word (2 bytes) from DS:${regs.SI.toString(16).toUpperCase().padStart(4, '0')}H to ES:${regs.DI.toString(16).toUpperCase().padStart(4, '0')}H. Since DF = ${flags.DF}, SI and DI were ${flags.DF === 1 ? 'decremented' : 'incremented'} by 2 (SI → ${newSI.toString(16).toUpperCase().padStart(4, '0')}H, DI → ${newDI.toString(16).toUpperCase().padStart(4, '0')}H). Status flags are unaffected.`
+      };
+    }
+  },
+  {
+    opcode: 'CMPSB',
+    category: 'String Operations',
+    desc: 'Compare String Byte: Subtracts byte at ES:DI from byte at DS:SI and updates flags (ZF, CF, SF).',
+    setupDesc: 'Initializes DS:SI = 45H and ES:DI = 45H (Matching bytes). Adjusts SI and DI by 1.',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0001, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x1000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0, DF: 0 },
+    execute: (regs, flags) => {
+      const step = flags.DF === 1 ? -1 : 1;
+      const newSI = (regs.SI + step) & 0xFFFF;
+      const newDI = (regs.DI + step) & 0xFFFF;
+      return {
+        newRegs: { ...regs, SI: newSI, DI: newDI, IP: regs.IP + 1 },
+        newFlags: { ...flags, ZF: 1, CF: 0, SF: 0 },
+        mathExplanation: `[CMPSB EXECUTION]: Compared DS:${regs.SI.toString(16).toUpperCase().padStart(4, '0')}H (45H) with ES:${regs.DI.toString(16).toUpperCase().padStart(4, '0')}H (45H). Result = 0 (Match!). ZF set to 1, CF = 0. SI and DI ${flags.DF === 1 ? 'decremented' : 'incremented'} to ${newSI.toString(16).toUpperCase().padStart(4, '0')}H and ${newDI.toString(16).toUpperCase().padStart(4, '0')}H.`
+      };
+    }
+  },
+  {
+    opcode: 'SCASB',
+    category: 'String Operations',
+    desc: 'Scan String Byte: Compares AL with byte at ES:DI, sets flags, and updates DI.',
+    setupDesc: 'Initializes AL = 20H (\' \') and ES:DI = 20H. Searches for target character.',
+    initialRegs: { AX: 0x0020, BX: 0x0000, CX: 0x000A, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x1000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0, DF: 0 },
+    execute: (regs, flags) => {
+      const step = flags.DF === 1 ? -1 : 1;
+      const newDI = (regs.DI + step) & 0xFFFF;
+      return {
+        newRegs: { ...regs, DI: newDI, IP: regs.IP + 1 },
+        newFlags: { ...flags, ZF: 1, CF: 0 },
+        mathExplanation: `[SCASB EXECUTION]: Scanned memory ES:${regs.DI.toString(16).toUpperCase().padStart(4, '0')}H (20H) against AL (${(regs.AX & 0xFF).toString(16).toUpperCase().padStart(2, '0')}H). Match found! Zero Flag ZF = 1. DI updated to ${newDI.toString(16).toUpperCase().padStart(4, '0')}H.`
+      };
+    }
+  },
+  {
+    opcode: 'LODSB',
+    category: 'String Operations',
+    desc: 'Load String Byte: Loads byte from DS:SI into AL, then auto-adjusts SI.',
+    setupDesc: 'Initializes DS:SI = 1000:1000H containing character \'A\' (41H). AL is cleared.',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0001, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x1000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0, DF: 0 },
+    execute: (regs, flags) => {
+      const step = flags.DF === 1 ? -1 : 1;
+      const newSI = (regs.SI + step) & 0xFFFF;
+      return {
+        newRegs: { ...regs, AX: (regs.AX & 0xFF00) | 0x41, SI: newSI, IP: regs.IP + 1 },
+        newFlags: { ...flags },
+        mathExplanation: `[LODSB EXECUTION]: Loaded byte 41H (\'A\') from DS:${regs.SI.toString(16).toUpperCase().padStart(4, '0')}H into AL. SI ${flags.DF === 1 ? 'decremented' : 'incremented'} to ${newSI.toString(16).toUpperCase().padStart(4, '0')}H. Flags unaffected.`
+      };
+    }
+  },
+  {
+    opcode: 'STOSB',
+    category: 'String Operations',
+    desc: 'Store String Byte: Stores byte from AL into ES:DI memory, then auto-adjusts DI.',
+    setupDesc: 'Initializes AL = 24H (\'$\') to fill buffer starting at ES:DI = 4000:2000H.',
+    initialRegs: { AX: 0x0024, BX: 0x0000, CX: 0x0005, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x1000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0, DF: 0 },
+    execute: (regs, flags) => {
+      const step = flags.DF === 1 ? -1 : 1;
+      const newDI = (regs.DI + step) & 0xFFFF;
+      return {
+        newRegs: { ...regs, DI: newDI, IP: regs.IP + 1 },
+        newFlags: { ...flags },
+        mathExplanation: `[STOSB EXECUTION]: Stored AL byte 24H (\'$\') into ES:${regs.DI.toString(16).toUpperCase().padStart(4, '0')}H. DI ${flags.DF === 1 ? 'decremented' : 'incremented'} to ${newDI.toString(16).toUpperCase().padStart(4, '0')}H. Flags unaffected.`
+      };
+    }
+  },
+  {
+    opcode: 'REP MOVSB',
+    category: 'String Operations',
+    desc: 'Repeat Move String Byte: Repeats MOVSB until CX reaches 0.',
+    setupDesc: 'Initializes CX = 0005H (5 bytes to copy) from DS:SI to ES:DI.',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0005, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x1000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0, DF: 0 },
+    execute: (regs, flags) => {
+      return {
+        newRegs: { ...regs, CX: 0x0000, SI: 0x1005, DI: 0x2005, IP: regs.IP + 2 },
+        newFlags: { ...flags },
+        mathExplanation: `[REP MOVSB EXECUTION]: Executed 5 consecutive byte copies from DS:1000H to ES:2000H. CX decremented from 0005H to 0000H. SI → 1005H, DI → 2005H.`
+      };
+    }
+  },
+  {
+    opcode: 'CLD',
+    category: 'String Operations',
+    desc: 'Clear Direction Flag: Clears DF = 0 so string instructions auto-increment pointers.',
+    setupDesc: 'Initializes DF = 1. Execution clears DF = 0 (Auto-increment mode).',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x1000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0, DF: 1 },
+    execute: (regs, flags) => {
+      return {
+        newRegs: { ...regs, IP: regs.IP + 1 },
+        newFlags: { ...flags, DF: 0 },
+        mathExplanation: `[CLD EXECUTION]: Cleared Direction Flag (DF = 0). Subsequent string operations (MOVS, CMPS, etc.) will automatically increment SI and DI pointers forward.`
+      };
+    }
+  },
+  {
+    opcode: 'STD',
+    category: 'String Operations',
+    desc: 'Set Direction Flag: Sets DF = 1 so string instructions auto-decrement pointers.',
+    setupDesc: 'Initializes DF = 0. Execution sets DF = 1 (Auto-decrement mode).',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x1000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0, DF: 0 },
+    execute: (regs, flags) => {
+      return {
+        newRegs: { ...regs, IP: regs.IP + 1 },
+        newFlags: { ...flags, DF: 1 },
+        mathExplanation: `[STD EXECUTION]: Set Direction Flag (DF = 1). Subsequent string operations will automatically decrement SI and DI pointers backward.`
+      };
+    }
   }
 ];
 
@@ -873,6 +1061,28 @@ export function getInstructionFormat(opcode: string): InstructionFormatInfo {
       ]
     };
   }
+  if (op === 'AAA') {
+    return {
+      syntax: 'AAA',
+      addressing: 'Implied Addressing',
+      format: '00110111',
+      machineCode: '37',
+      bytesBreakdown: [
+        { label: 'Opcode', bits: '00110111', hex: '37H', desc: 'ASCII Adjust after Addition' }
+      ]
+    };
+  }
+  if (op === 'AAS') {
+    return {
+      syntax: 'AAS',
+      addressing: 'Implied Addressing',
+      format: '00111111',
+      machineCode: '3F',
+      bytesBreakdown: [
+        { label: 'Opcode', bits: '00111111', hex: '3FH', desc: 'ASCII Adjust after Subtraction' }
+      ]
+    };
+  }
   if (op === 'AAM') {
     return {
       syntax: 'AAM',
@@ -1024,6 +1234,106 @@ export function getInstructionFormat(opcode: string): InstructionFormatInfo {
         { label: 'LOCK Prefix', bits: '11110000', hex: 'F0H', desc: 'Assert lock signal to lock system memory bus' },
         { label: 'Opcode', bits: '10000110', hex: '86H', desc: 'XCHG reg8 with reg/mem8 (w=0)' },
         { label: 'ModR/M', bits: '00000100', hex: '04H', desc: 'mod=00, reg=000 (AL), r/m=100 ([SI])' }
+      ]
+    };
+  }
+  if (op === 'MOVSB') {
+    return {
+      syntax: 'MOVSB',
+      addressing: 'String Addressing (DS:SI to ES:DI)',
+      format: '10100100',
+      machineCode: 'A4',
+      bytesBreakdown: [
+        { label: 'Opcode', bits: '10100100', hex: 'A4H', desc: 'Move byte from DS:SI to ES:DI' }
+      ]
+    };
+  }
+  if (op === 'MOVSW') {
+    return {
+      syntax: 'MOVSW',
+      addressing: 'String Addressing (DS:SI to ES:DI)',
+      format: '10100101',
+      machineCode: 'A5',
+      bytesBreakdown: [
+        { label: 'Opcode', bits: '10100101', hex: 'A5H', desc: 'Move 16-bit word from DS:SI to ES:DI' }
+      ]
+    };
+  }
+  if (op === 'CMPSB') {
+    return {
+      syntax: 'CMPSB',
+      addressing: 'String Addressing (DS:SI vs ES:DI)',
+      format: '10100110',
+      machineCode: 'A6',
+      bytesBreakdown: [
+        { label: 'Opcode', bits: '10100110', hex: 'A6H', desc: 'Compare byte at DS:SI with byte at ES:DI' }
+      ]
+    };
+  }
+  if (op === 'SCASB') {
+    return {
+      syntax: 'SCASB',
+      addressing: 'String Addressing (AL vs ES:DI)',
+      format: '10101110',
+      machineCode: 'AE',
+      bytesBreakdown: [
+        { label: 'Opcode', bits: '10101110', hex: 'AEH', desc: 'Scan byte in AL against memory ES:DI' }
+      ]
+    };
+  }
+  if (op === 'LODSB') {
+    return {
+      syntax: 'LODSB',
+      addressing: 'String Addressing (DS:SI to AL)',
+      format: '10101100',
+      machineCode: 'AC',
+      bytesBreakdown: [
+        { label: 'Opcode', bits: '10101100', hex: 'ACH', desc: 'Load byte from DS:SI into AL' }
+      ]
+    };
+  }
+  if (op === 'STOSB') {
+    return {
+      syntax: 'STOSB',
+      addressing: 'String Addressing (AL to ES:DI)',
+      format: '10101010',
+      machineCode: 'AA',
+      bytesBreakdown: [
+        { label: 'Opcode', bits: '10101010', hex: 'AAH', desc: 'Store byte from AL into ES:DI' }
+      ]
+    };
+  }
+  if (op === 'REP MOVSB') {
+    return {
+      syntax: 'REP MOVSB',
+      addressing: 'String Repeat Addressing (CX times)',
+      format: '11110011 10100100',
+      machineCode: 'F3 A4',
+      bytesBreakdown: [
+        { label: 'REP Prefix', bits: '11110011', hex: 'F3H', desc: 'Repeat prefix (while CX != 0)' },
+        { label: 'Opcode', bits: '10100100', hex: 'A4H', desc: 'Move byte from DS:SI to ES:DI' }
+      ]
+    };
+  }
+  if (op === 'CLD') {
+    return {
+      syntax: 'CLD',
+      addressing: 'Implied Addressing',
+      format: '11111100',
+      machineCode: 'FC',
+      bytesBreakdown: [
+        { label: 'Opcode', bits: '11111100', hex: 'FCH', desc: 'Clear Direction Flag (DF = 0)' }
+      ]
+    };
+  }
+  if (op === 'STD') {
+    return {
+      syntax: 'STD',
+      addressing: 'Implied Addressing',
+      format: '11111101',
+      machineCode: 'FD',
+      bytesBreakdown: [
+        { label: 'Opcode', bits: '11111101', hex: 'FDH', desc: 'Set Direction Flag (DF = 1)' }
       ]
     };
   }
@@ -1331,8 +1641,274 @@ export const eceSlides: EceSlide[] = [
       "3. Crucial for hardware interface controllers, keyboard input, and LED drivers."
     ],
     codeExample: "MOV DX, 0FF78H ; Preload 16-bit port address into DX\nIN AL, DX      ; Input data byte from port into AL"
+  },
+  {
+    title: "13. String Manipulation Instructions",
+    category: "String Operations",
+    points: [
+      "**MOVSB / MOVSW**: Move string byte/word from DS:SI to ES:DI.",
+      "**CMPSB / CMPSW**: Compare string byte/word at DS:SI with ES:DI.",
+      "**SCASB / SCASW**: Scan string byte/word in AL/AX against ES:DI.",
+      "**LODSB / LODSW**: Load string byte/word from DS:SI into AL/AX.",
+      "**STOSB / STOSW**: Store string byte/word from AL/AX into ES:DI."
+    ],
+    notes: [
+      "1. Source index SI is always paired with Data Segment (DS).",
+      "2. Destination index DI is strictly paired with Extra Segment (ES).",
+      "3. SI and DI are automatically incremented (if DF = 0) or decremented (if DF = 1) after each step."
+    ],
+    codeExample: "LEA SI, SRC_BUF ; Load source offset into SI\nLEA DI, DST_BUF ; Load dest offset into DI\nMOVSB           ; Transfer 1 byte and auto-adjust SI & DI"
+  },
+  {
+    title: "14. String Repeat Prefixes & Direction Control",
+    category: "String Operations",
+    points: [
+      "**REP**: Repeat string operation while CX != 0.",
+      "**REPE / REPZ**: Repeat while Equal / Zero (CX != 0 and ZF = 1).",
+      "**REPNE / REPNZ**: Repeat while Not Equal / Not Zero (CX != 0 and ZF = 0).",
+      "**CLD**: Clear Direction Flag (DF = 0) for forward processing (SI++, DI++).",
+      "**STD**: Set Direction Flag (DF = 1) for backward processing (SI--, DI--)."
+    ],
+    notes: [
+      "1. CX is automatically decremented by 1 after each iteration.",
+      "2. REP is used with MOVS and STOS for hardware-accelerated memory block copies.",
+      "3. REPE/REPNE are used with CMPS and SCAS for string searching and comparisons."
+    ],
+    codeExample: "CLD             ; Auto-increment SI and DI\nMOV CX, 0005H   ; Set string length to 5 bytes\nREP MOVSB       ; Copy 5 bytes from DS:SI to ES:DI in hardware loop"
   }
 ];
+
+export interface OperandAnalysis {
+  dstOperand: string;
+  dstType: string;
+  srcOperand: string;
+  srcType: string;
+  transferType: string;
+  description: string;
+}
+
+export function getOperandAnalysis(opcode: string): OperandAnalysis {
+  const op = opcode.trim();
+
+  if (op.startsWith('MOV CX, 037AH')) {
+    return {
+      dstOperand: 'CX',
+      dstType: '16-bit General Register',
+      srcOperand: '037AH',
+      srcType: '16-bit Immediate Constant Data',
+      transferType: 'Immediate-to-Register Transfer',
+      description: 'Loads raw 16-bit constant 037AH directly into CX register.'
+    };
+  }
+  if (op.startsWith('XCHG AX, BX')) {
+    return {
+      dstOperand: 'AX',
+      dstType: '16-bit Accumulator Register',
+      srcOperand: 'BX',
+      srcType: '16-bit Base Register',
+      transferType: 'Atomic Register Swap',
+      description: 'Exchanges the 16-bit values stored in AX and BX simultaneously.'
+    };
+  }
+  if (op === 'XLAT') {
+    return {
+      dstOperand: 'AL',
+      dstType: '8-bit Low Accumulator Register',
+      srcOperand: 'DS:[BX + AL]',
+      srcType: 'Indirect Table Lookup Memory Address',
+      transferType: 'Table Lookup Translation',
+      description: 'Uses BX as base table address and AL as offset index; writes byte entry back into AL.'
+    };
+  }
+  if (op.startsWith('PUSH')) {
+    return {
+      dstOperand: 'SS:SP (Stack Top)',
+      dstType: 'Stack Segment Memory Pointer',
+      srcOperand: op.split(' ')[1] || 'AX',
+      srcType: '16-bit Register',
+      transferType: 'Register to Stack Allocation',
+      description: 'Decrements SP by 2 and writes 16-bit word from register into stack memory.'
+    };
+  }
+  if (op.startsWith('POP')) {
+    return {
+      dstOperand: op.split(' ')[1] || 'DX',
+      dstType: '16-bit Register',
+      srcOperand: 'SS:SP (Stack Top)',
+      srcType: 'Stack Segment Memory Pointer',
+      transferType: 'Stack Memory Deallocation',
+      description: 'Reads 16-bit word from top of stack into register and increments SP by 2.'
+    };
+  }
+  if (op.startsWith('LEA')) {
+    return {
+      dstOperand: 'BX',
+      dstType: '16-bit General Register',
+      srcOperand: '[SI + 0004H]',
+      srcType: 'Effective Memory Address Offset Calculation',
+      transferType: 'Address Calculation (No Memory Read)',
+      description: 'Calculates offset address (SI + 0004H) and stores the offset value directly in BX.'
+    };
+  }
+  if (op.startsWith('LDS') || op.startsWith('LES')) {
+    const isLds = op.startsWith('LDS');
+    return {
+      dstOperand: `${isLds ? 'DS' : 'ES'} & ${op.split(' ')[1]}`,
+      dstType: 'Segment Register & Index Register Pair',
+      srcOperand: '[2000H]',
+      srcType: '32-bit Far Pointer in Data Segment Memory',
+      transferType: 'Far Pointer Memory Load',
+      description: `Loads 16-bit offset into ${op.split(' ')[1]} and 16-bit segment selector into ${isLds ? 'DS' : 'ES'}.`
+    };
+  }
+  if (op.startsWith('MOVSB')) {
+    return {
+      dstOperand: 'ES:DI',
+      dstType: 'Extra Segment Memory Pointer (DI)',
+      srcOperand: 'DS:SI',
+      srcType: 'Data Segment Memory Pointer (SI)',
+      transferType: 'String Memory Byte Copy',
+      description: 'Transfers 1 byte from DS:SI memory to ES:DI memory, auto-adjusting SI and DI.'
+    };
+  }
+  if (op.startsWith('MOVSW')) {
+    return {
+      dstOperand: 'ES:DI',
+      dstType: 'Extra Segment Memory Pointer (DI)',
+      srcOperand: 'DS:SI',
+      srcType: 'Data Segment Memory Pointer (SI)',
+      transferType: 'String Memory Word Copy (16-bit)',
+      description: 'Transfers 2 bytes (word) from DS:SI to ES:DI, auto-adjusting SI and DI by 2.'
+    };
+  }
+  if (op.startsWith('CMPSB')) {
+    return {
+      dstOperand: 'DS:SI',
+      dstType: 'Data Segment Source String Pointer',
+      srcOperand: 'ES:DI',
+      srcType: 'Extra Segment Dest String Pointer',
+      transferType: 'String Memory Byte Comparison',
+      description: 'Compares byte at DS:SI with byte at ES:DI without modifying operands, updating flags.'
+    };
+  }
+  if (op.startsWith('SCASB')) {
+    return {
+      dstOperand: 'ES:DI',
+      dstType: 'Extra Segment Destination Memory Pointer',
+      srcOperand: 'AL',
+      srcType: '8-bit Low Accumulator Register',
+      transferType: 'Accumulator vs String Memory Scan',
+      description: 'Compares byte in AL against memory byte at ES:DI and updates status flags.'
+    };
+  }
+  if (op.startsWith('LODSB')) {
+    return {
+      dstOperand: 'AL',
+      dstType: '8-bit Low Accumulator Register',
+      srcOperand: 'DS:SI',
+      srcType: 'Data Segment Source Memory Pointer',
+      transferType: 'String Memory Load to Accumulator',
+      description: 'Loads byte from memory at DS:SI into AL and auto-adjusts SI.'
+    };
+  }
+  if (op.startsWith('STOSB')) {
+    return {
+      dstOperand: 'ES:DI',
+      dstType: 'Extra Segment Destination Memory Pointer',
+      srcOperand: 'AL',
+      srcType: '8-bit Low Accumulator Register',
+      transferType: 'Accumulator Store to String Memory',
+      description: 'Stores byte from AL into memory at ES:DI and auto-adjusts DI.'
+    };
+  }
+  if (op.startsWith('REP MOVSB')) {
+    return {
+      dstOperand: 'ES:DI',
+      dstType: 'Extra Segment Memory Pointer (DI)',
+      srcOperand: 'DS:SI',
+      srcType: 'Data Segment Memory Pointer (SI)',
+      transferType: 'Hardware Repeated String Copy (CX times)',
+      description: 'Repeats MOVSB instruction in hardware loop while CX != 0, auto-decrementing CX.'
+    };
+  }
+  if (op === 'CLD' || op === 'STD') {
+    return {
+      dstOperand: 'DF Flag',
+      dstType: 'Processor Status Direction Flag',
+      srcOperand: op === 'CLD' ? '0 (Clear)' : '1 (Set)',
+      srcType: 'Immediate Flag Status Bit',
+      transferType: 'Processor Control Flag Modification',
+      description: op === 'CLD' ? 'Clears DF (0) for forward string pointer auto-increment.' : 'Sets DF (1) for backward string pointer auto-decrement.'
+    };
+  }
+  if (op === 'DAA' || op === 'DAS' || op === 'AAA' || op === 'AAS') {
+    return {
+      dstOperand: op.startsWith('AA') ? 'AX (AH:AL)' : 'AL',
+      dstType: op.startsWith('AA') ? '16-bit Unpacked BCD Accumulator Pair' : '8-bit Packed BCD Accumulator',
+      srcOperand: 'Implicit AL & AF/CF Flags',
+      srcType: 'Internal Status Flags & Lower Nibble',
+      transferType: 'Decimal / BCD Arithmetic Adjust',
+      description: 'Adjusts the result in AL/AX after binary arithmetic to form valid BCD/ASCII digits.'
+    };
+  }
+  if (op === 'AAM' || op === 'AAD') {
+    return {
+      dstOperand: 'AX (AH & AL)',
+      dstType: '16-bit Unpacked BCD Register Pair',
+      srcOperand: op === 'AAM' ? 'AL & Immediate 10 (0AH)' : 'AX & Immediate 10 (0AH)',
+      srcType: 'Accumulator & Base 10 Constant',
+      transferType: 'Unpacked BCD Multiply / Divide Adjust',
+      description: op === 'AAM' ? 'Converts binary product in AL into AH=Quotient (tens) and AL=Remainder (units).' : 'Combines AH and AL unpacked BCD digits into binary in AL prior to division.'
+    };
+  }
+  if (op.startsWith('IN AL')) {
+    return {
+      dstOperand: 'AL',
+      dstType: '8-bit Low Accumulator Register',
+      srcOperand: 'DX',
+      srcType: '16-bit I/O Port Address Register',
+      transferType: 'I/O Bus Input Read',
+      description: 'Reads an 8-bit byte from peripheral I/O port address in DX into AL.'
+    };
+  }
+  if (op.startsWith('OUT DX')) {
+    return {
+      dstOperand: 'DX',
+      dstType: '16-bit I/O Port Address Register',
+      srcOperand: 'AL',
+      srcType: '8-bit Low Accumulator Register',
+      transferType: 'I/O Bus Output Write',
+      description: 'Sends an 8-bit byte from AL out to the peripheral I/O port address in DX.'
+    };
+  }
+
+  // Fallback parser for general binary arithmetic / logical instructions
+  const parts = op.split(' ');
+  const mnemonic = parts[0];
+  const operands = parts.slice(1).join(' ').split(',').map(s => s.trim());
+  const dst = operands[0] || 'AL/AX';
+  const src = operands[1] || 'Implied';
+
+  let dstType = 'Register / Memory Operand';
+  if (dst.startsWith('AX') || dst.startsWith('BX') || dst.startsWith('CX') || dst.startsWith('DX')) dstType = '16-bit General Register';
+  else if (dst.startsWith('AL') || dst.startsWith('BL') || dst.startsWith('CL') || dst.startsWith('DL') || dst.startsWith('AH') || dst.startsWith('BH') || dst.startsWith('CH') || dst.startsWith('DH')) dstType = '8-bit Byte Register';
+  else if (dst.startsWith('[')) dstType = 'Memory Offset Address';
+
+  let srcType = 'Register / Constant / Memory Operand';
+  if (src.endsWith('H') || !isNaN(Number(src))) srcType = 'Immediate Constant Value';
+  else if (src.startsWith('AX') || src.startsWith('BX') || src.startsWith('CX') || src.startsWith('DX')) srcType = '16-bit General Register';
+  else if (src.startsWith('AL') || src.startsWith('BL') || src.startsWith('CL') || src.startsWith('DL')) srcType = '8-bit Byte Register';
+  else if (src.startsWith('[')) srcType = 'Memory Offset Address';
+
+  return {
+    dstOperand: dst,
+    dstType,
+    srcOperand: src,
+    srcType,
+    transferType: `${mnemonic} Operation`,
+    description: `Performs ${mnemonic} using ${dst} as destination and ${src} as source.`
+  };
+}
 
 export function getSlideIndexForOpcode(opcode: string): number {
   const op = opcode.trim();
@@ -1352,5 +1928,7 @@ export function getSlideIndexForOpcode(opcode: string): number {
   if (op.startsWith('IN AL')) return 15; 
   if (op.startsWith('OUT DX')) return 15; 
   if (op.startsWith('LOCK')) return 14;  
+  if (op.startsWith('MOVS') || op.startsWith('CMPS') || op.startsWith('SCAS') || op.startsWith('LODS') || op.startsWith('STOS')) return 16;
+  if (op.startsWith('REP') || op.startsWith('CLD') || op.startsWith('STD')) return 17;
   return 0; 
 }

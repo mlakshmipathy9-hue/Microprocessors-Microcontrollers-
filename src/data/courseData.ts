@@ -346,11 +346,12 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
         moduleId: 'm3',
         points: [
-          'Memory Segmentation: The technique of partitioning the 8086\'s 1 MB physical memory address space into smaller logical blocks (segments) of up to 64 KB each.',
-          'Active Segments: At any time, the 8086 can actively reference four main memory areas: Code (CS), Data (DS), Stack (SS), and Extra (ES).',
-          'Segment Registers: These are four dedicated 16-bit registers (CS, DS, SS, ES) in the BIU that hold the starting base address of each respective segment.',
-          '16-Bit Offset: A compact 16-bit pointer holds the relative offset address inside the active 64 KB segment, enabling fast, localized memory access.'
-        ]
+          'Memory Segmentation: The technique of partitioning the 8086\'s 1 MB physical memory address space (00000H - FFFFFH) into smaller logical blocks (segments) of up to 64 KB each.',
+          'Active Segments: At any time, the 8086 can actively reference four main memory areas: Code Segment (CS), Data Segment (DS), Stack Segment (SS), and Extra Segment (ES).',
+          'Segment Registers: Four dedicated 16-bit registers (CS, DS, SS, ES) in the BIU hold the starting base addresses of these active logical segments.',
+          'Where Logical Segments Sit in RAM: All 4 logical segments (CS, DS, SS, ES) reside dynamically inside the Transient Program Area (TPA / User RAM, 00500H - 9FFFFH), cleanly separated from system BIOS and IVT memory.'
+        ],
+        interactiveType: 'memory-calc'
       },
       {
         id: 'm3-s2',
@@ -378,6 +379,21 @@ export const courseData: Module[] = [
         interactiveType: 'memory-calc'
       },
       {
+        id: 'm3-s4',
+        title: '4. 1 MB Physical Memory Map & Logical Segments Layout',
+        moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
+        moduleId: 'm3',
+        points: [
+          '• Complete 1 MB Address Space Map (00000H - FFFFFH): The 8086 1 MB address space is partitioned into reserved System Memory areas (IVT, BDA, VRAM, BIOS ROM) and User Program Memory (TPA).',
+          '• Interrupt Vector Table (IVT - 00000H to 003FFH): Occupies the lowest 1 KB (1024 bytes) of RAM. Stores 256 ISR far pointers (4 bytes each: 2 bytes Segment, 2 bytes Offset) for hardware and software interrupts.',
+          '• BIOS Data Area (BDA - 00400H to 004FFH): Occupies 256 bytes above IVT. Stores active hardware flags, COM/LPT base addresses, keyboard queue buffer, and system timer tick counters.',
+          '• Transient Program Area (TPA / User RAM - 00500H to 9FFFFH): The largest contiguous memory region (~638 KB). THIS IS WHERE LOGICAL SEGMENTS COME! DOS/OS loads user applications here, placing CS, DS, SS, and ES inside this TPA boundary.',
+          '• Video Display Buffer RAM (VRAM - A0000H to BFFFFH): 128 KB reserved for video graphics & text buffers (e.g., B8000H for 80x25 color text display mode).',
+          '• Motherboard System ROM BIOS (F0000H to FFFFFH): 64 KB non-volatile ROM at the top of memory. Stores POST routines, BIOS interrupts, and the critical Reset Bootstrap Vector at FFFF0H (CS=FFFFH, IP=0000H).'
+        ],
+        interactiveType: 'memory-calc'
+      },
+      {
         id: 'm3-quiz',
         title: 'Module 3 Recap Quiz',
         moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
@@ -391,10 +407,21 @@ export const courseData: Module[] = [
             explanation: 'Using the 8086 address segmentation formula: Physical Address = (CS * 10H) + IP. Since CS = 3456H, CS * 10H = 34560H. Adding IP offset (abcH): 34560H + 0abcH = 3501CH.'
           },
           {
-            question: 'If Segment Address = 3000H and Offset = 0100H, what is the computed 20-bit Physical Address?',
-            options: ['30100H', '30000H', '301000H', '3100H'],
+            question: 'Where in the 8086 1 MB physical memory address space do user logical segments (CS, DS, SS, ES) reside?',
+            options: [
+              'Inside the Interrupt Vector Table (00000H - 003FFH)',
+              'Inside the System ROM BIOS (F0000H - FFFFFH)',
+              'Inside the Transient Program Area / User RAM (00500H - 9FFFFH)',
+              'Inside Video Buffer RAM (A0000H - BFFFFH)'
+            ],
+            correctAnswer: 2,
+            explanation: 'Logical user segments (CS, DS, SS, ES) and programs are loaded dynamically into the Transient Program Area (TPA / User RAM), spanning 00500H to 9FFFFH (~638 KB).'
+          },
+          {
+            question: 'What is the physical memory address range occupied by the Interrupt Vector Table (IVT) in the 8086?',
+            options: ['00000H - 003FFH (1 KB)', '00400H - 004FFH (256 B)', 'A0000H - BFFFFH (128 KB)', 'F0000H - FFFFFH (64 KB)'],
             correctAnswer: 0,
-            explanation: 'Following the formula: (3000H * 10H) + 0100H = 30000H + 0100H = 30100H.'
+            explanation: 'The Interrupt Vector Table (IVT) occupies the bottom 1 KB of physical memory (00000H to 003FFH) to store 256 ISR far pointers (4 bytes each).'
           },
           {
             question: 'What is the maximum size of a single memory segment in the 8086?',
@@ -403,22 +430,16 @@ export const courseData: Module[] = [
             explanation: 'Since segment offsets are stored in 16-bit registers (2¹⁶ = 65,536 bytes), the maximum addressable boundary of any segment is exactly 64 KB.'
           },
           {
+            question: 'What physical memory address does the 8086 CPU jump to immediately upon system reset or power-on?',
+            options: ['00000H (IVT Vector 0)', '00400H (BIOS Data Area)', 'FFFF0H (System ROM BIOS Boot Vector)', 'A0000H (Video RAM Base)'],
+            correctAnswer: 2,
+            explanation: 'Upon power-on or hardware reset, CS is loaded with FFFFH and IP with 0000H, forming physical address FFFF0H located in System ROM BIOS (F0000H - FFFFFH).'
+          },
+          {
             question: 'What are the four segment registers in the 8086 Bus Interface Unit?',
             options: ['AX, BX, CX, DX', 'SP, BP, SI, DI', 'CS, DS, SS, ES', 'IP, flags, ALU, decoder'],
             correctAnswer: 2,
             explanation: 'The 8086 BIU defines four 16-bit segment registers: Code Segment (CS), Data Segment (DS), Stack Segment (SS), and Extra Segment (ES).'
-          },
-          {
-            question: 'How many bytes can the 8086 instruction prefetch queue store?',
-            options: ['2 bytes', '4 bytes', '6 bytes', '8 bytes'],
-            correctAnswer: 2,
-            explanation: 'The 8086 contains a 6-byte instruction queue, whereas the 8088 contains a 4-byte instruction queue.'
-          },
-          {
-            question: 'Which 16-bit offset register is automatically paired with the CS segment register to fetch instructions?',
-            options: ['SP (Stack Pointer)', 'IP (Instruction Pointer)', 'SI (Source Index)', 'BX (Base Register)'],
-            correctAnswer: 1,
-            explanation: 'The Code Segment (CS) register is always paired with the Instruction Pointer (IP) register to locate the next instruction byte in physical memory (CS:IP).'
           },
           {
             question: 'Why does the 8086 use memory segmentation?',
@@ -1060,11 +1081,12 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 10: 8086 Instruction Set',
         moduleId: 'm10',
         points: [
-          'Data Transfer (MOV, PUSH, POP, XCHG, LEA, XLAT): Moves or copies data between registers and memory. PUSH/POP manage the stack segment. LEA calculates logical offsets.',
-          'Arithmetic (ADD, ADC, SUB, SBB, INC, DEC, MUL, DIV, CMP): Performs binary math operations. ADC/SBB include Carry flags for multi-word math. INC/DEC do not affect CF. CMP updates flags without storing results.',
-          'Logical & Bitwise (AND, OR, XOR, NOT, TEST): Performs bitwise logic and masking operations. XOR AX, AX is a fast register clear. TEST performs bit checks without altering operands.',
-          'Shift & Rotate (SHL, SHR, SAR, ROL, ROR, RCL, RCR): Shifts or rotates bit patterns. SAR preserves the sign bit for signed math. RCL/RCR rotate through the Carry Flag.',
-          'Control & String Operations (JMP, JZ, LOOP, CALL, RET, MOVS, CLD): Manages control flow and block memory transfers using SI/DI register pointers and Direction Flag (DF).'
+          'Data Transfer Instructions (MOV, PUSH, POP, XCHG, LEA, LDS, LES, XLAT): Copies or transfers data between registers, stack, and memory segments.',
+          'Arithmetic Instructions (ADD, ADC, SUB, SBB, INC, DEC, MUL, IMUL, DIV, IDIV, CMP): Executes binary math, 2\'s complement operations, and updates status flags.',
+          'Logical & Bitwise Instructions (AND, OR, XOR, NOT, TEST, SHL, SHR, SAR, ROL, ROR): Performs bit masking, logic operations, and bit shift/rotations.',
+          '🧵 String Manipulation Instructions (MOVSB/MOVSW, CMPSB/CMPSW, SCASB/SCASW, LODSB/LODSW, STOSB/STOSW): Hardware-accelerated memory block operations. Source operand is always addressed by DS:SI and destination operand is addressed by ES:DI.',
+          '🔁 String Repeat Prefixes & Direction Control (REP, REPE/REPZ, REPNE/REPNZ, CLD, STD): REP repeats string operations CX times. CLD clears Direction Flag (DF=0) to auto-increment SI and DI pointers; STD sets DF=1 to auto-decrement SI and DI pointers.',
+          'Control Flow & Branch Instructions (JMP, JZ/JNZ, JC/JNC, JS/JNS, LOOP, CALL, RET): Controls program execution flow, subroutines, and iterative loops.'
         ],
         interactiveType: 'instruction-decoder'
       },

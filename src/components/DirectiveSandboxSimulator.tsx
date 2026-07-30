@@ -22,7 +22,12 @@ import {
   PhoneCall,
   ArrowUpRight,
   Play,
-  RotateCcw
+  RotateCcw,
+  Calculator,
+  Zap,
+  FastForward,
+  Plus,
+  Minus
 } from 'lucide-react';
 
 const hexFormat = (num: number) => (num & 0xFFFF).toString(16).toUpperCase().padStart(4, '0') + 'H';
@@ -349,29 +354,247 @@ END START`,
 
 interface DirectiveSandboxSimulatorProps {
   initialLabId?: string;
+  hideExp1a?: boolean;
 }
 
-export default function DirectiveSandboxSimulator({ initialLabId }: DirectiveSandboxSimulatorProps = {}) {
-  const [activeTab, setActiveTab] = useState<'directives' | 'styles' | 'models' | 'nearfar' | 'sandbox'>('directives');
+export default function DirectiveSandboxSimulator({ initialLabId, hideExp1a }: DirectiveSandboxSimulatorProps = {}) {
+  const [activeTab, setActiveTab] = useState<'directives' | 'styles' | 'models' | 'nearfar' | 'sandbox' | 'multiprecision'>('directives');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedDirectiveId, setSelectedDirectiveId] = useState<string>('DB');
   const [selectedStyleId, setSelectedStyleId] = useState<'standard' | 'simplified' | 'com'>('standard');
   const [selectedModelId, setSelectedModelId] = useState<'tiny' | 'small' | 'medium' | 'compact' | 'large' | 'huge'>('small');
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
 
+  // Multi-Precision Addition & Subtraction (Exp 1A) State
+  const [mpBitWidth, setMpBitWidth] = useState<32 | 64>(32);
+  const [mpOp, setMpOp] = useState<'ADD' | 'SUB'>('ADD');
+  const [mpOpAHex, setMpOpAHex] = useState<string>('12345678');
+  const [mpOpBHex, setMpOpBHex] = useState<string>('9ABCDEF0');
+  const [mpStepIdx, setMpStepIdx] = useState<number>(0);
+  const [mpAutoPlay, setMpAutoPlay] = useState<boolean>(false);
+
+  const handleSetMpBitWidth = (bits: 32 | 64) => {
+    setMpBitWidth(bits);
+    setMpStepIdx(0);
+    setMpAutoPlay(false);
+    if (bits === 32) {
+      setMpOpAHex('12345678');
+      setMpOpBHex('9ABCDEF0');
+    } else {
+      setMpOpAHex('123456789ABCDEF0');
+      setMpOpBHex('FEDCBA9876543210');
+    }
+  };
+
+  useEffect(() => {
+    if (hideExp1a && activeTab === 'multiprecision') {
+      setActiveTab('directives');
+    }
+  }, [hideExp1a, activeTab]);
+
   useEffect(() => {
     if (initialLabId) {
-      if (initialLabId === 'stacklab' || initialLabId === 'stack') {
+      if ((initialLabId === 'multiprecision' || initialLabId === 'exp1a' || initialLabId === 'm20-s1') && !hideExp1a) {
+        setActiveTab('multiprecision');
+      } else if (initialLabId === 'stacklab' || initialLabId === 'stack') {
         setActiveTab('nearfar');
         setNearFarSubMode('stacklab');
       } else if (initialLabId === 'nearfar' || initialLabId === 'procs') {
         setActiveTab('nearfar');
         setNearFarSubMode('procs');
-      } else if (['directives', 'styles', 'models', 'sandbox', 'nearfar'].includes(initialLabId)) {
-        setActiveTab(initialLabId as any);
+      } else if (['directives', 'styles', 'models', 'sandbox', 'nearfar', 'multiprecision'].includes(initialLabId)) {
+        if (initialLabId === 'multiprecision' && hideExp1a) {
+          setActiveTab('directives');
+        } else {
+          setActiveTab(initialLabId as any);
+        }
       }
     }
-  }, [initialLabId]);
+  }, [initialLabId, hideExp1a]);
+
+  interface MpStepInfo {
+    stepNum: number;
+    codeLine: string;
+    explanation: string;
+    axVal: number;
+    cf: number;
+    zf: number;
+    sf: number;
+    activeWordIdx: number;
+    storedResultWords: (number | null)[];
+    codeBlockIdx: number;
+  }
+
+  const getMpSteps = (): MpStepInfo[] => {
+    const is32 = mpBitWidth === 32;
+    const isAdd = mpOp === 'ADD';
+    const numWords = is32 ? 2 : 4;
+    
+    // Parse hex input into 16-bit words (Little-Endian: Word 0 = LSB, Word N-1 = MSB)
+    const cleanA = mpOpAHex.replace(/[^0-9A-Fa-f]/g, '').padStart(numWords * 4, '0').slice(-(numWords * 4));
+    const cleanB = mpOpBHex.replace(/[^0-9A-Fa-f]/g, '').padStart(numWords * 4, '0').slice(-(numWords * 4));
+
+    const wordsA: number[] = [];
+    const wordsB: number[] = [];
+    for (let i = numWords - 1; i >= 0; i--) {
+      const chunkA = cleanA.substr(i * 4, 4);
+      const chunkB = cleanB.substr(i * 4, 4);
+      wordsA.push(parseInt(chunkA, 16) || 0);
+      wordsB.push(parseInt(chunkB, 16) || 0);
+    }
+
+    const steps: MpStepInfo[] = [];
+    const currentResults: (number | null)[] = Array(numWords).fill(null);
+
+    // Initial Step 0
+    steps.push({
+      stepNum: 0,
+      codeLine: `; --- ${mpBitWidth}-Bit Multi-Precision ${isAdd ? 'Addition (ADC)' : 'Subtraction (SBB)'} Initialization ---`,
+      explanation: `Program initialized in RAM. Operands A (${cleanA.toUpperCase()}H) and B (${cleanB.toUpperCase()}H) loaded into Data Segment memory in Little-Endian word order.`,
+      axVal: 0,
+      cf: 0,
+      zf: 0,
+      sf: 0,
+      activeWordIdx: -1,
+      storedResultWords: [...currentResults],
+      codeBlockIdx: 0
+    });
+
+    let currentCF = 0;
+    let currentAX = 0;
+    let lineIdx = 1;
+
+    for (let w = 0; w < numWords; w++) {
+      const offsetStr = w === 0 ? '' : ` + ${w * 2}`;
+      const wordA = wordsA[w];
+      const wordB = wordsB[w];
+
+      // 1. Load Word w of Operand A into AX
+      currentAX = wordA;
+      steps.push({
+        stepNum: steps.length,
+        codeLine: `MOV AX, WORD PTR [NUM1${offsetStr}]`,
+        explanation: `Loads Word ${w} (Bits ${w * 16}..${(w + 1) * 16 - 1}) of Operand A (${hexFormat(wordA)}) into register AX.`,
+        axVal: currentAX,
+        cf: currentCF,
+        zf: 0,
+        sf: 0,
+        activeWordIdx: w,
+        storedResultWords: [...currentResults],
+        codeBlockIdx: lineIdx++
+      });
+
+      // 2. Add/Subtract Word w of Operand B
+      let rawResult = 0;
+      let opInst = '';
+      if (w === 0) {
+        opInst = isAdd ? 'ADD' : 'SUB';
+        if (isAdd) {
+          rawResult = wordA + wordB;
+        } else {
+          rawResult = wordA - wordB;
+        }
+      } else {
+        opInst = isAdd ? 'ADC' : 'SBB';
+        if (isAdd) {
+          rawResult = wordA + wordB + currentCF;
+        } else {
+          rawResult = wordA - wordB - currentCF;
+        }
+      }
+
+      // Compute Flags
+      let nextCF = 0;
+      if (isAdd) {
+        nextCF = rawResult > 0xFFFF ? 1 : 0;
+      } else {
+        nextCF = rawResult < 0 ? 1 : 0;
+      }
+
+      currentAX = (rawResult & 0xFFFF);
+      if (currentAX < 0) currentAX += 0x10000;
+      const prevCF = currentCF;
+      currentCF = nextCF;
+
+      const zf = currentAX === 0 ? 1 : 0;
+      const sf = (currentAX & 0x8000) ? 1 : 0;
+
+      const detailMsg = isAdd
+        ? (w === 0
+            ? `Executes 16-bit ADD (${hexFormat(wordA)} + ${hexFormat(wordB)} = ${(wordA + wordB).toString(16).toUpperCase()}H). ${nextCF ? 'CARRY OVER DETECTED! Sets Carry Flag CF = 1.' : 'No carry overflow. CF = 0.'}`
+            : `Executes 16-bit ADC (Add with Carry: ${hexFormat(wordA)} + ${hexFormat(wordB)} + Carry(${prevCF}) = ${(rawResult & 0xFFFF).toString(16).toUpperCase()}H). ${nextCF ? 'Propagates Carry out! Sets CF = 1.' : 'Carry resolved. CF = 0.'}`)
+        : (w === 0
+            ? `Executes 16-bit SUB (${hexFormat(wordA)} - ${hexFormat(wordB)}). ${nextCF ? 'BORROW REQUIRED! Sets Carry Flag (Borrow) CF = 1.' : 'No borrow needed. CF = 0.'}`
+            : `Executes 16-bit SBB (Subtract with Borrow: ${hexFormat(wordA)} - ${hexFormat(wordB)} - Borrow(${prevCF})). ${nextCF ? 'Propagates Borrow! Sets CF = 1.' : 'Borrow resolved. CF = 0.'}`);
+
+      steps.push({
+        stepNum: steps.length,
+        codeLine: `${opInst} AX, WORD PTR [NUM2${offsetStr}]`,
+        explanation: detailMsg,
+        axVal: currentAX,
+        cf: currentCF,
+        zf,
+        sf,
+        activeWordIdx: w,
+        storedResultWords: [...currentResults],
+        codeBlockIdx: lineIdx++
+      });
+
+      // 3. Store Result Word w into RAM
+      currentResults[w] = currentAX;
+      steps.push({
+        stepNum: steps.length,
+        codeLine: `MOV WORD PTR [RESULT${offsetStr}], AX`,
+        explanation: `Stores Word ${w} result (${hexFormat(currentAX)}) into RAM offset RESULT${offsetStr}.`,
+        axVal: currentAX,
+        cf: currentCF,
+        zf,
+        sf,
+        activeWordIdx: w,
+        storedResultWords: [...currentResults],
+        codeBlockIdx: lineIdx++
+      });
+    }
+
+    // Final Summary Step
+    let fullHexResult = '';
+    for (let i = numWords - 1; i >= 0; i--) {
+      fullHexResult += (currentResults[i] ?? 0).toString(16).toUpperCase().padStart(4, '0');
+    }
+
+    steps.push({
+      stepNum: steps.length,
+      codeLine: `; --- ${mpBitWidth}-Bit ${isAdd ? 'Addition' : 'Subtraction'} Execution Complete ---`,
+      explanation: `🎉 Complete ${mpBitWidth}-bit ${isAdd ? 'multi-precision sum' : 'multi-precision difference'} = ${fullHexResult}H stored in RAM. ${currentCF ? '⚠️ Final 33rd/65th bit carry out occurred!' : '✅ Calculation finished cleanly with 0 final carry.'}`,
+      axVal: currentAX,
+      cf: currentCF,
+      zf: currentAX === 0 ? 1 : 0,
+      sf: (currentAX & 0x8000) ? 1 : 0,
+      activeWordIdx: -1,
+      storedResultWords: [...currentResults],
+      codeBlockIdx: lineIdx
+    });
+
+    return steps;
+  };
+
+  useEffect(() => {
+    let timer: any = null;
+    if (mpAutoPlay) {
+      const steps = getMpSteps();
+      timer = setInterval(() => {
+        setMpStepIdx(prev => {
+          if (prev < steps.length - 1) {
+            return prev + 1;
+          } else {
+            setMpAutoPlay(false);
+            return prev;
+          }
+        });
+      }, 1400);
+    }
+    return () => clearInterval(timer);
+  }, [mpAutoPlay, mpBitWidth, mpOp, mpOpAHex, mpOpBHex]);
 
   // NEAR / FAR Calls & Stack Operations Simulator State
   const [nearFarSubMode, setNearFarSubMode] = useState<'procs' | 'stacklab'>('procs');
@@ -575,6 +798,20 @@ export default function DirectiveSandboxSimulator({ initialLabId }: DirectiveSan
             <PhoneCall className="w-4 h-4 text-indigo-600" />
             NEAR & FAR Calls
           </button>
+          {!hideExp1a && (
+            <button
+              id="btn-tab-multiprecision"
+              onClick={() => setActiveTab('multiprecision')}
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                activeTab === 'multiprecision'
+                  ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Calculator className="w-4 h-4 text-indigo-600" />
+              Exp 1A: Multi-Precision
+            </button>
+          )}
           <button
             id="btn-tab-sandbox"
             onClick={() => setActiveTab('sandbox')}
@@ -2183,6 +2420,510 @@ EXT_SUBROUTINE ENDP`}
             </div>
           </motion.div>
         )}
+
+        {/* TAB 6: MULTI-PRECISION ADDITION & SUBTRACTION SIMULATOR (EXP 1A) */}
+        {activeTab === 'multiprecision' && (() => {
+          const steps = getMpSteps();
+          const currStep = steps[Math.min(mpStepIdx, steps.length - 1)] || steps[0];
+
+          // Compute MASM Assembly Source Code for current setup
+          const numWords = mpBitWidth === 32 ? 2 : 4;
+          const cleanA = mpOpAHex.replace(/[^0-9A-Fa-f]/g, '').padStart(numWords * 4, '0').slice(-(numWords * 4));
+          const cleanB = mpOpBHex.replace(/[^0-9A-Fa-f]/g, '').padStart(numWords * 4, '0').slice(-(numWords * 4));
+
+          const masmCode = `; =========================================================
+; 8086 ALP: Exp 1A - ${mpBitWidth}-Bit Multi-Precision ${mpOp === 'ADD' ? 'Addition' : 'Subtraction'}
+; Memory Storage: Little-Endian Word Sequence in Data Segment
+; =========================================================
+.MODEL SMALL
+.STACK 100H
+
+.DATA
+  ; ${mpBitWidth}-bit Operands declared in Little-Endian Word Sequence
+  NUM1 DW ${Array.from({ length: numWords }).map((_, i) => `${cleanA.substr((numWords - 1 - i) * 4, 4)}H`).join(', ')}
+  NUM2 DW ${Array.from({ length: numWords }).map((_, i) => `${cleanB.substr((numWords - 1 - i) * 4, 4)}H`).join(', ')}
+  RESULT DW ${numWords} DUP(0)
+  CARRY DB 0
+
+.CODE
+MAIN PROC
+  MOV AX, @DATA
+  MOV DS, AX
+
+  ; --- Word 0 (Bits 0..15) ---
+  MOV AX, WORD PTR [NUM1]
+  ${mpOp === 'ADD' ? 'ADD' : 'SUB'} AX, WORD PTR [NUM2]
+  MOV WORD PTR [RESULT], AX
+
+${Array.from({ length: numWords - 1 }).map((_, i) => {
+  const w = i + 1;
+  return `  ; --- Word ${w} (Bits ${w * 16}..${(w + 1) * 16 - 1}) ---
+  MOV AX, WORD PTR [NUM1 + ${w * 2}]
+  ${mpOp === 'ADD' ? 'ADC' : 'SBB'} AX, WORD PTR [NUM2 + ${w * 2}]
+  MOV WORD PTR [RESULT + ${w * 2}], AX`;
+}).join('\n\n')}
+
+  ; --- Store Final Carry/Borrow Out Status ---
+  ADC CARRY, 0  ; Add carry bit into memory byte
+
+  ; --- DOS Program Exit ---
+  MOV AH, 4CH
+  INT 21H
+MAIN ENDP
+END MAIN`;
+
+          return (
+            <motion.div
+              key="multiprecision-tab"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              {/* Header Badge */}
+              <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-4 sm:p-6 rounded-2xl border border-purple-800/80 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="bg-purple-500/20 text-purple-300 border border-purple-400/30 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-wider uppercase">
+                      UNIT 4 • EXP 1A LAB
+                    </span>
+                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-wider uppercase">
+                      32-BIT / 64-BIT HARDWARE SIMULATOR
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                    <Calculator className="w-5 h-5 text-purple-400" />
+                    Multi-Precision Arithmetic Execution Engine
+                  </h3>
+                  <p className="text-xs text-purple-200/80 mt-1 max-w-2xl">
+                    16-bit CPUs like the Intel 8086 cannot process 32-bit or 64-bit numbers in a single clock cycle. Multi-precision operations partition numbers into 16-bit words, executing <code className="text-amber-300 font-bold">ADD</code> for Word 0, and chaining <code className="text-amber-300 font-bold">ADC (Add with Carry)</code> / <code className="text-amber-300 font-bold">SBB (Subtract with Borrow)</code> across higher words to propagate carry flags seamlessly.
+                  </p>
+                </div>
+
+                {/* Bit Width & Operation Switches */}
+                <div className="flex flex-wrap items-center gap-2 bg-slate-950/70 p-2 rounded-xl border border-purple-800/50 shrink-0">
+                  <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+                    <button
+                      onClick={() => handleSetMpBitWidth(32)}
+                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                        mpBitWidth === 32 ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      32-Bit (2 Words)
+                    </button>
+                    <button
+                      onClick={() => handleSetMpBitWidth(64)}
+                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                        mpBitWidth === 64 ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      64-Bit (4 Words)
+                    </button>
+                  </div>
+
+                  <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+                    <button
+                      onClick={() => { setMpOp('ADD'); setMpStepIdx(0); setMpAutoPlay(false); }}
+                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                        mpOp === 'ADD' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      ADD / ADC
+                    </button>
+                    <button
+                      onClick={() => { setMpOp('SUB'); setMpStepIdx(0); setMpAutoPlay(false); }}
+                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                        mpOp === 'SUB' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                      SUB / SBB
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Interactive Inputs & Presets Panel */}
+              <div className="bg-slate-900 text-slate-100 p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-amber-400" />
+                    Configure Operands & Preset Hardware Scenarios
+                  </span>
+
+                  {/* Preset Buttons */}
+                  <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
+                    <span className="text-slate-400 text-[10px] uppercase font-bold mr-1">Presets:</span>
+                    <button
+                      onClick={() => {
+                        setMpBitWidth(32);
+                        setMpOp('ADD');
+                        setMpOpAHex('FFFFFFFF');
+                        setMpOpBHex('00000001');
+                        setMpStepIdx(0);
+                        setMpAutoPlay(false);
+                      }}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] transition-all cursor-pointer"
+                    >
+                      32-Bit Overflow Carry (FFFFFFFF + 1)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMpBitWidth(32);
+                        setMpOp('ADD');
+                        setMpOpAHex('12345678');
+                        setMpOpBHex('9ABCDEF0');
+                        setMpStepIdx(0);
+                        setMpAutoPlay(false);
+                      }}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] transition-all cursor-pointer"
+                    >
+                      32-Bit Standard Math
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMpBitWidth(64);
+                        setMpOp('ADD');
+                        setMpOpAHex('123456789ABCDEF0');
+                        setMpOpBHex('FEDCBA9876543210');
+                        setMpStepIdx(0);
+                        setMpAutoPlay(false);
+                      }}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] transition-all cursor-pointer"
+                    >
+                      64-Bit Chained Words
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMpBitWidth(32);
+                        setMpOp('SUB');
+                        setMpOpAHex('00001000');
+                        setMpOpBHex('00002000');
+                        setMpStepIdx(0);
+                        setMpAutoPlay(false);
+                      }}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] transition-all cursor-pointer"
+                    >
+                      32-Bit Subtraction Borrow
+                    </button>
+                  </div>
+                </div>
+
+                {/* Hex Inputs Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono">
+                  <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                    <label className="text-[11px] text-purple-300 font-bold uppercase tracking-wider block mb-1.5 flex justify-between">
+                      <span>Operand A (NUM1) - {mpBitWidth}-Bit Hex</span>
+                      <span className="text-slate-400 font-normal">Little-Endian Word Sequence</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500 font-bold">0x</span>
+                      <input
+                        type="text"
+                        value={mpOpAHex}
+                        maxLength={mpBitWidth / 4}
+                        onChange={(e) => {
+                          setMpOpAHex(e.target.value.toUpperCase());
+                          setMpStepIdx(0);
+                          setMpAutoPlay(false);
+                        }}
+                        className="bg-slate-900 text-emerald-400 font-extrabold text-sm border border-slate-700 rounded-lg px-3 py-1.5 w-full focus:outline-none focus:border-purple-500 tracking-wider"
+                      />
+                      <span className="text-slate-400 font-bold text-xs">H</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                    <label className="text-[11px] text-purple-300 font-bold uppercase tracking-wider block mb-1.5 flex justify-between">
+                      <span>Operand B (NUM2) - {mpBitWidth}-Bit Hex</span>
+                      <span className="text-slate-400 font-normal">Little-Endian Word Sequence</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500 font-bold">0x</span>
+                      <input
+                        type="text"
+                        value={mpOpBHex}
+                        maxLength={mpBitWidth / 4}
+                        onChange={(e) => {
+                          setMpOpBHex(e.target.value.toUpperCase());
+                          setMpStepIdx(0);
+                          setMpAutoPlay(false);
+                        }}
+                        className="bg-slate-900 text-emerald-400 font-extrabold text-sm border border-slate-700 rounded-lg px-3 py-1.5 w-full focus:outline-none focus:border-purple-500 tracking-wider"
+                      />
+                      <span className="text-slate-400 font-bold text-xs">H</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step Execution Control Toolbar */}
+              <div className="bg-slate-100 border border-slate-200 p-3 sm:p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <span className="bg-indigo-600 text-white font-mono font-black px-2.5 py-1 rounded-lg text-xs">
+                    Step {mpStepIdx} / {steps.length - 1}
+                  </span>
+                  <span className="text-xs font-bold text-slate-700">
+                    {mpStepIdx === 0 ? 'Ready to begin execution' : currStep.codeLine}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setMpStepIdx(0); setMpAutoPlay(false); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs transition-all cursor-pointer shadow-xs"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Reset
+                  </button>
+
+                  <button
+                    onClick={() => { setMpStepIdx(prev => Math.max(0, prev - 1)); setMpAutoPlay(false); }}
+                    disabled={mpStepIdx === 0}
+                    className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 disabled:opacity-40 text-slate-700 rounded-xl font-bold text-xs transition-all cursor-pointer shadow-xs"
+                  >
+                    ← Step Back
+                  </button>
+
+                  <button
+                    onClick={() => { setMpStepIdx(prev => Math.min(steps.length - 1, prev + 1)); setMpAutoPlay(false); }}
+                    disabled={mpStepIdx === steps.length - 1}
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white rounded-xl font-bold text-xs transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                  >
+                    Step Forward →
+                  </button>
+
+                  <button
+                    onClick={() => setMpAutoPlay(!mpAutoPlay)}
+                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer shadow-xs ${
+                      mpAutoPlay ? 'bg-amber-500 hover:bg-amber-600 text-slate-950' : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    }`}
+                  >
+                    {mpAutoPlay ? (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-slate-950 animate-ping" />
+                        Pause Stepper
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        Auto Play
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* 3-Column Execution Dashboard */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                {/* Column 1: Assembly Code View (4 cols) */}
+                <div className="lg:col-span-4 bg-slate-950 text-slate-200 p-4 rounded-2xl border border-slate-800 space-y-3 font-mono text-xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+                      <span className="text-purple-400 font-bold uppercase text-[10px] tracking-wider flex items-center gap-1.5">
+                        <FileCode className="w-4 h-4 text-purple-400" />
+                        8086 Assembly Program Stepper
+                      </span>
+                      <span className="text-[10px] text-slate-400">MASM / TASM</span>
+                    </div>
+
+                    <div className="space-y-1">
+                      {steps.map((st, sIdx) => {
+                        const isCurrent = sIdx === mpStepIdx;
+                        return (
+                          <div
+                            key={sIdx}
+                            onClick={() => { setMpStepIdx(sIdx); setMpAutoPlay(false); }}
+                            className={`p-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-between text-[11px] ${
+                              isCurrent
+                                ? 'bg-purple-900/90 text-white font-extrabold border-l-4 border-amber-400 pl-2 shadow-sm'
+                                : sIdx < mpStepIdx
+                                ? 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                                : 'text-slate-500 hover:bg-slate-900'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <span className="text-[9px] text-slate-500 w-4 font-normal">{st.stepNum}</span>
+                              <code className="truncate">{st.codeLine}</code>
+                            </div>
+                            {isCurrent && (
+                              <span className="bg-amber-400 text-slate-950 text-[9px] px-1.5 py-0.5 rounded font-black shrink-0">
+                                ACTIVE
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-800/80 text-[10px] text-slate-400 flex items-center gap-2">
+                    <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    <span>Click any instruction line above to jump directly to that step.</span>
+                  </div>
+                </div>
+
+                {/* Column 2: Execution & Hardware Micro-Engine (4 cols) */}
+                <div className="lg:col-span-4 bg-white border border-slate-200 p-4 sm:p-5 rounded-2xl shadow-xs space-y-4 flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                      <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                        <Cpu className="w-4 h-4 text-indigo-600" />
+                        Microprocessor Registers & Flags
+                      </span>
+                      <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+                        16-Bit Execution Unit
+                      </span>
+                    </div>
+
+                    {/* AX Register Monitor */}
+                    <div className="bg-slate-900 text-white p-3.5 rounded-xl border border-slate-800 space-y-1 font-mono">
+                      <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider block">
+                        Accumulator Register (AX)
+                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xl font-black text-amber-400">
+                          {hexFormat(currStep.axVal)}
+                        </span>
+                        <div className="text-[10px] text-slate-300 font-sans text-right">
+                          AH = {byteHexFormat((currStep.axVal >> 8) & 0xFF)} | AL = {byteHexFormat(currStep.axVal & 0xFF)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Flags Register Monitor */}
+                    <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                        8086 Status Flags Register
+                      </span>
+                      <div className="grid grid-cols-3 gap-2 font-mono text-center">
+                        <div className={`p-2 rounded-lg border transition-all ${
+                          currStep.cf ? 'bg-amber-100 border-amber-400 text-amber-900 font-extrabold shadow-xs' : 'bg-white border-slate-200 text-slate-400'
+                        }`}>
+                          <span className="text-[9px] block uppercase font-bold text-slate-500">Carry (CF)</span>
+                          <span className="text-sm">{currStep.cf}</span>
+                        </div>
+                        <div className={`p-2 rounded-lg border transition-all ${
+                          currStep.zf ? 'bg-emerald-100 border-emerald-400 text-emerald-900 font-extrabold shadow-xs' : 'bg-white border-slate-200 text-slate-400'
+                        }`}>
+                          <span className="text-[9px] block uppercase font-bold text-slate-500">Zero (ZF)</span>
+                          <span className="text-sm">{currStep.zf}</span>
+                        </div>
+                        <div className={`p-2 rounded-lg border transition-all ${
+                          currStep.sf ? 'bg-indigo-100 border-indigo-400 text-indigo-900 font-extrabold shadow-xs' : 'bg-white border-slate-200 text-slate-400'
+                        }`}>
+                          <span className="text-[9px] block uppercase font-bold text-slate-500">Sign (SF)</span>
+                          <span className="text-sm">{currStep.sf}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step Hardware Commentary */}
+                    <div className="bg-purple-50 border border-purple-200 p-3.5 rounded-xl text-xs text-purple-950 space-y-1.5 leading-relaxed">
+                      <div className="flex items-center gap-1.5 font-bold text-purple-900">
+                        <Sparkles className="w-4 h-4 text-purple-600" />
+                        <span>Step Execution Explanation</span>
+                      </div>
+                      <p>{currStep.explanation}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 3: Data Segment RAM Memory Grid (4 cols) */}
+                <div className="lg:col-span-4 bg-slate-900 text-slate-100 p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-4 font-mono">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <span className="text-xs font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+                      <Database className="w-4 h-4 text-purple-400" />
+                      Data Segment RAM (Little-Endian)
+                    </span>
+                    <span className="text-[10px] text-slate-400">DS:0000H</span>
+                  </div>
+
+                  {/* Words RAM Grid */}
+                  <div className="space-y-3 text-xs">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                      RESULT Array Memory Offsets:
+                    </span>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {Array.from({ length: numWords }).map((_, wIdx) => {
+                        const val = currStep.storedResultWords[wIdx];
+                        const isActive = currStep.activeWordIdx === wIdx;
+                        const offsetHex = (wIdx * 2).toString(16).toUpperCase().padStart(4, '0') + 'H';
+
+                        return (
+                          <div
+                            key={wIdx}
+                            className={`p-3 rounded-xl border text-center transition-all ${
+                              isActive
+                                ? 'bg-purple-950 border-purple-400 text-white ring-2 ring-purple-500/50 shadow-md'
+                                : val !== null
+                                ? 'bg-emerald-950/60 border-emerald-800/80 text-emerald-200'
+                                : 'bg-slate-950 border-slate-800 text-slate-500'
+                            }`}
+                          >
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">
+                              Word {wIdx} (DS:{offsetHex})
+                            </span>
+                            <span className="text-base font-black my-1 block">
+                              {val !== null ? hexFormat(val) : '????H'}
+                            </span>
+                            <span className="text-[8px] block font-sans text-slate-400">
+                              Bits {wIdx * 16}..{(wIdx + 1) * 16 - 1}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                      <div className="text-purple-300 font-bold flex justify-between">
+                        <span>Current Computed Full Result:</span>
+                        <span className="text-emerald-400 font-mono font-extrabold">
+                          {(() => {
+                            let resHex = '';
+                            for (let i = numWords - 1; i >= 0; i--) {
+                              const wVal = currStep.storedResultWords[i];
+                              resHex += wVal !== null ? (wVal & 0xFFFF).toString(16).toUpperCase().padStart(4, '0') : '????';
+                            }
+                            return resHex + 'H';
+                          })()}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 leading-normal">
+                        Word 0 is stored at lowest offset (DS:0000H), followed by higher words up to Word {numWords - 1} (DS:000{numWords * 2 - 2}H).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Complete Assembly Language Program Source Code Box */}
+              <div className="bg-slate-950 text-slate-100 p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-3 font-mono text-xs">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="w-4 h-4 text-emerald-400" />
+                    <span className="text-emerald-400 font-bold text-xs uppercase tracking-wider">
+                      Complete MASM 8086 Assembly Source Code (Exp 1A)
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => handleCopyCode(masmCode)}
+                    className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedCode ? 'Copied Code!' : 'Copy Code'}
+                  </button>
+                </div>
+
+                <pre className="bg-slate-900 p-4 rounded-xl text-slate-300 overflow-x-auto leading-relaxed border border-slate-800/80 text-[11px]">
+                  {masmCode}
+                </pre>
+              </div>
+            </motion.div>
+          );
+        })()}
       </div>
     </div>
   );

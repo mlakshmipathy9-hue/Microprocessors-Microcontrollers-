@@ -22,9 +22,37 @@ export default function App() {
     return true;
   });
 
-  // Projector / Cast Presentation States
+  // Projector / Cast / Fullscreen Presentation States
   const [projectorMode, setProjectorMode] = useState(false);
+  const [fullScreenMode, setFullScreenMode] = useState(false);
   const [projectorScale, setProjectorScale] = useState(1.0); // scale multiplier for projectors
+
+  const handleToggleFullScreen = (enable?: boolean) => {
+    const nextState = enable !== undefined ? enable : !fullScreenMode;
+    setFullScreenMode(nextState);
+
+    if (nextState) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } else {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setFullScreenMode(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+    };
+  }, []);
   const [contrastMode, setContrastMode] = useState<'normal' | 'high-contrast-light' | 'high-contrast-dark'>('normal');
   const [laserPointerActive, setLaserPointerActive] = useState(false);
   const [hudMinimized, setHudMinimized] = useState(false);
@@ -542,8 +570,8 @@ export default function App() {
         />
       )}
 
-      {/* Navigation Sidebar (Collapsible) - Hidden when Projector Mode is Active to maximize viewport */}
-      {!projectorMode && (
+      {/* Navigation Sidebar (Collapsible) - Hidden when Projector or FullScreen Mode is Active */}
+      {!projectorMode && !fullScreenMode && (
         <Sidebar
           modules={courseData}
           currentModuleId={currentModule.id}
@@ -703,8 +731,8 @@ export default function App() {
           )
         )}
 
-        {/* Top Navbar / Header banner - Hidden when Projector Mode is Active */}
-        {!projectorMode && (
+        {/* Top Navbar / Header banner - Hidden when Projector or FullScreen Mode is Active */}
+        {!projectorMode && !fullScreenMode && (
           <header className="h-16 bg-white/75 backdrop-blur-md border-b border-sky-200/50 flex items-center justify-between px-4 md:px-6 shrink-0 shadow-xs relative z-10">
             <div className="flex items-center gap-2.5 md:gap-3 min-w-0">
               <button
@@ -729,18 +757,6 @@ export default function App() {
 
             {/* Cast & Present Mode Trigger Buttons */}
             <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
-              <button
-                onClick={() => {
-                  setProjectorMode(true);
-                  setSidebarOpen(false); // Close sidebar automatically to maximize area
-                }}
-                className="flex items-center gap-1 text-[11px] font-bold py-1.5 px-2.5 md:px-3.5 bg-indigo-600 border border-indigo-700 rounded-lg hover:bg-indigo-700 text-white transition-all shadow-xs cursor-pointer"
-                title="Cast to Projector Fullscreen (P)"
-              >
-                <Tv className="w-3.5 h-3.5 text-indigo-100 animate-pulse" />
-                <span className="hidden sm:inline">Projector View</span>
-              </button>
-
               {/* Progress counter */}
               <div className="text-xs font-mono text-indigo-600 font-bold bg-indigo-50 px-2 md:px-2.5 py-1 rounded-md border border-indigo-150 shrink-0">
                 {completedSlides.length.toString().padStart(2, '0')}/{totalCourseSlides.toString().padStart(2, '0')}
@@ -772,6 +788,8 @@ export default function App() {
             projectorMode={projectorMode}
             showInteractive={showInteractiveOnSlide}
             activeLabId={activeLabId}
+            fullScreenMode={fullScreenMode}
+            onToggleFullScreen={handleToggleFullScreen}
           />
         </main>
       </div>
