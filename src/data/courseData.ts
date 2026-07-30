@@ -334,65 +334,38 @@ export const courseData: Module[] = [
   },
   {
     id: 'm3',
-    title: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
+    title: 'Module 3: Memory Segmentation',
     slides: [
       {
-        id: 'm3-s1',
-        title: '1. What is Memory Segmentation?',
-        moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
-        moduleId: 'm3',
-        points: [
-          'Memory Segmentation: The technique of partitioning the 8086\'s 1 MB physical memory address space (00000H - FFFFFH) into smaller logical blocks (segments) of up to 64 KB each.',
-          'Active Segments: At any time, the 8086 can actively reference four main memory areas: Code Segment (CS), Data Segment (DS), Stack Segment (SS), and Extra Segment (ES).',
-          'Segment Registers: Four dedicated 16-bit registers (CS, DS, SS, ES) in the BIU hold the starting base addresses of these active logical segments.',
-          'Where Logical Segments Sit in RAM: All 4 logical segments (CS, DS, SS, ES) reside dynamically inside the Transient Program Area (TPA / User RAM, 00500H - 9FFFFH), cleanly separated from system BIOS and IVT memory.'
-        ],
-        interactiveType: 'memory-calc'
-      },
-      {
         id: 'm3-s2',
-        title: '2. 1 MB Memory Bit & Byte Math',
-        moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
+        title: '1. 1 MB Memory Bit & Byte Math',
+        moduleTitle: 'Module 3: Memory Segmentation',
         moduleId: 'm3',
         points: [
           'Addressable Locations: With a 20-bit address bus, the 8086 can address 2²⁰ physical locations: 2²⁰ = 1,048,576 locations.',
           'Byte-Addressable Memory: Each individual location stores exactly 1 Byte (8 bits). Therefore, maximum addressable memory capacity is exactly 1,048,576 Bytes (1 MB).',
           'Capacity in Bits: Since 1 MB = 1,048,576 Bytes and 1 Byte = 8 bits, the total capacity is 1,048,576 × 8 = 8,388,608 bits.',
           'Exponentials Formula: Maximum Capacity = 1 MB = 2²⁰ Bytes = 2²³ bits. Understanding these conversions is key for exams!'
-        ]
-      },
-      {
-        id: 'm3-s3',
-        title: '3. Need, Types & Physical Address Calculation',
-        moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
-        moduleId: 'm3',
-        points: [
-          '• Why Segmentation is Needed: A 16-bit register addresses max 64 KB (2¹⁶ = 65,536 bytes), but the 8086 has a 20-bit address bus enabling access to 1 MB RAM (2²⁰ = 1,048,576 bytes). Segmentation bridges this hardware gap by logically dividing 1 MB memory into max 64 KB logical blocks.',
-          '• Purpose of Each Segment Register:\n  1. Code Segment (CS): Holds executable machine instructions. Paired with IP (CS:IP) for instruction fetching.\n  2. Data Segment (DS): Holds static variables, constants, and global data. Paired with BX/SI/DI (DS:BX) for data access.\n  3. Stack Segment (SS): Holds function call frames, return addresses, local variables, & PUSH/POP data. Paired with SP/BP (SS:SP).\n  4. Extra Segment (ES): Holds additional data, targeted as string operation destination buffer. Paired with DI (ES:DI).',
-          '• Segment Placement & Types: Segment bases begin at 16-byte Paragraph Boundaries (ending in 0H). Segments can be Disjoint (separated), Overlapping (sharing RAM to conserve memory), or Fully Overlapped (CS=DS=SS=ES). Dynamic relocation allows loading programs anywhere in RAM on-the-fly!',
-          '• 20-Bit Physical Address Calculation: Formula: Physical Address = (Segment Register × 10H) + Offset Register. The BIU left-shifts segment base by 4 bits (adds 0H) then adds offset. Worked Example: Given CS = 3456H and IP = 0ABCH: Base = 34560H. Physical Address = 34560H + 0ABCH = 3501CH.'
         ],
         interactiveType: 'memory-calc'
       },
       {
-        id: 'm3-s4',
-        title: '4. 1 MB Physical Memory Map & Logical Segments Layout',
-        moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
+        id: 'm3-s1',
+        title: '2. What is Memory Segmentation?',
+        moduleTitle: 'Module 3: Memory Segmentation',
         moduleId: 'm3',
         points: [
-          '• Complete 1 MB Address Space Map (00000H - FFFFFH): The 8086 1 MB address space is partitioned into reserved System Memory areas (IVT, BDA, VRAM, BIOS ROM) and User Program Memory (TPA).',
-          '• Interrupt Vector Table (IVT - 00000H to 003FFH): Occupies the lowest 1 KB (1024 bytes) of RAM. Stores 256 ISR far pointers (4 bytes each: 2 bytes Segment, 2 bytes Offset) for hardware and software interrupts.',
-          '• BIOS Data Area (BDA - 00400H to 004FFH): Occupies 256 bytes above IVT. Stores active hardware flags, COM/LPT base addresses, keyboard queue buffer, and system timer tick counters.',
-          '• Transient Program Area (TPA / User RAM - 00500H to 9FFFFH): The largest contiguous memory region (~638 KB). THIS IS WHERE LOGICAL SEGMENTS COME! DOS/OS loads user applications here, placing CS, DS, SS, and ES inside this TPA boundary.',
-          '• Video Display Buffer RAM (VRAM - A0000H to BFFFFH): 128 KB reserved for video graphics & text buffers (e.g., B8000H for 80x25 color text display mode).',
-          '• Motherboard System ROM BIOS (F0000H to FFFFFH): 64 KB non-volatile ROM at the top of memory. Stores POST routines, BIOS interrupts, and the critical Reset Bootstrap Vector at FFFF0H (CS=FFFFH, IP=0000H).'
+          '• Definition of Memory Segmentation: Memory Segmentation is a memory management technique in the 8086 processor where the complete 1 MB physical address space (00000H to FFFFFH) is divided into smaller logical memory blocks called Segments, each up to 64 KB (65,536 bytes) in capacity.',
+          '• Why Segmentation is Essential: Since internal 8086 registers (IP, SP, BX, SI, DI) are only 16 bits wide (addressing max 64 KB), Memory Segmentation allows a 16-bit processor to address 1 MB of physical RAM by pairing a 16-bit Segment Base Register with a 16-bit Offset Register.',
+          '• Four Active Logical Segments: At any given instant, the CPU actively references 4 main segments mapped by 16-bit registers in the BIU: Code Segment (CS), Data Segment (DS), Stack Segment (SS), and Extra Segment (ES).',
+          '• Placement & Key Advantages: All 4 logical segments reside inside User RAM (Transient Program Area: 00500H - 9FFFFH). Segmentation provides code relocation, modular code/data separation, program memory protection, and efficient multi-tasking memory access.'
         ],
         interactiveType: 'memory-calc'
       },
       {
         id: 'm3-quiz',
         title: 'Module 3 Recap Quiz',
-        moduleTitle: 'Module 3: Bus Interface Unit (BIU) & Memory Segmentation',
+        moduleTitle: 'Module 3: Memory Segmentation',
         moduleId: 'm3',
         interactiveType: 'quiz',
         quizQuestions: [
@@ -464,8 +437,22 @@ export const courseData: Module[] = [
         ]
       },
       {
+        id: 'm4-s3',
+        title: '2. Interactive 8086 Pin Diagram & M/IO Pin Function',
+        moduleTitle: 'Module 4: 8086 Pin Configuration & Operating Modes',
+        moduleId: 'm4',
+        points: [
+          'Address/Data Bus Pins: AD0 to AD15 (Pins 2-16 & 39).',
+          'M/IO Pin (Pin 28 in Min Mode): Connected to Memory & I/O Address Decoders. HIGH (+5V) selects 1 MB Memory space; LOW (0V) selects 64 KB I/O Port space (IN/OUT instructions).',
+          'Control Signals: RD (Read), WR (Write), ALE (Address Latch Enable), READY (Acknowledge from slow memory).',
+          'Minimum Mode Bus Commands: M/IO combined with RD & WR forms MEMR (1, RD=0), MEMW (1, WR=0), IOR (0, RD=0), and IOW (0, WR=0).',
+          'Maximum Mode (Pin 28 = S2): Pin 28 becomes status line S2 sent to external 8288 Bus Controller, which outputs separate MRDC/MWTC & IORC/IOWC lines.'
+        ],
+        interactiveType: 'pins'
+      },
+      {
         id: 'm4-s2',
-        title: '2. Minimum Mode vs. Maximum Mode Environments',
+        title: '3. Minimum Mode vs. Maximum Mode Environments',
         moduleTitle: 'Module 4: 8086 Pin Configuration & Operating Modes',
         moduleId: 'm4',
         points: [
@@ -475,19 +462,6 @@ export const courseData: Module[] = [
           'Memory vs. I/O Addressing: Minimum Mode uses a single M/IO pin with RD/WR. Maximum Mode uses separate 8288 command lines: MRDC/MWTC for Memory and IORC/IOWC for I/O.'
         ],
         interactiveType: 'min-mode-hardware'
-      },
-      {
-        id: 'm4-s3',
-        title: '3. Interactive 8086 Pin Diagram',
-        moduleTitle: 'Module 4: 8086 Pin Configuration & Operating Modes',
-        moduleId: 'm4',
-        points: [
-          'Address/Data Bus Pins: AD0 to AD15 (Pins 2-16 & 39).',
-          'Control Signals: RD (Read), WR (Write), ALE (Address Latch Enable), READY (Acknowledge from slow memory).',
-          'Status Signals: S0 to S7 (shared with address lines A16-A19 and BHE).',
-          'MN/MX Pin (Pin 33): Configures the chip to operate in Minimum Mode (+5V) or Maximum Mode (GND).'
-        ],
-        interactiveType: 'pins'
       },
       {
         id: 'm4-s4',

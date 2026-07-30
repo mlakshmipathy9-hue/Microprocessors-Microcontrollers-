@@ -238,7 +238,7 @@ interface MemoryCalculationSimulatorProps {
   defaultTab?: 'calculator' | 'segmented-structure' | 'physical-map';
 }
 
-export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }: MemoryCalculationSimulatorProps) {
+export default function MemoryCalculationSimulator({ defaultTab = 'segmented-structure' }: MemoryCalculationSimulatorProps) {
   const [activeTab, setActiveTab] = useState<'calculator' | 'segmented-structure' | 'physical-map'>(defaultTab);
 
   useEffect(() => {
@@ -254,10 +254,11 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
   const [shiftedSeg, setShiftedSeg] = useState('10000');
 
   const [selectedSegmentId, setSelectedSegmentId] = useState<string>('cs');
+  const [selectedIvtType, setSelectedIvtType] = useState<number>(33); // Default 21H (33 in decimal)
   
   // 1MB Physical Memory Map states
   const [selectedMapBlock, setSelectedMapBlock] = useState<string>('ivt');
-  const [bankOp, setBankOp] = useState<'read-byte-even' | 'read-byte-odd' | 'read-word-even' | 'read-word-odd'>('read-word-even');
+  const [bankOp, setBankOp] = useState<'read-byte-even' | 'read-byte-odd' | 'read-word-even' | 'read-word-odd' | 'read-ivt-vector'>('read-word-even');
 
   useEffect(() => {
     // Validate hex input
@@ -316,20 +317,12 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
         {/* Tab Selection buttons */}
         <div className="flex flex-wrap items-center bg-slate-200 p-1 rounded-lg gap-1">
           <button
-            onClick={() => setActiveTab('calculator')}
-            className={`px-3 py-1.5 text-[13px] font-bold rounded-md transition-all cursor-pointer ${
-              activeTab === 'calculator' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-700 hover:text-slate-900'
-            }`}
-          >
-            Address Calculator
-          </button>
-          <button
             onClick={() => setActiveTab('segmented-structure')}
             className={`px-3 py-1.5 text-[13px] font-bold rounded-md transition-all cursor-pointer ${
               activeTab === 'segmented-structure' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-700 hover:text-slate-900'
             }`}
           >
-            How it works &amp; Why needed
+            Definition and Need
           </button>
           <button
             onClick={() => setActiveTab('physical-map')}
@@ -338,6 +331,14 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
             }`}
           >
             1MB Physical Memory Map
+          </button>
+          <button
+            onClick={() => setActiveTab('calculator')}
+            className={`px-3 py-1.5 text-[13px] font-bold rounded-md transition-all cursor-pointer ${
+              activeTab === 'calculator' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-700 hover:text-slate-900'
+            }`}
+          >
+            Address Calculator
           </button>
         </div>
       </div>
@@ -565,6 +566,52 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
               transition={{ duration: 0.2 }}
               className="space-y-6"
             >
+              {/* Definition & Need Callout Box */}
+              <div className="bg-gradient-to-r from-indigo-900/10 via-purple-900/10 to-blue-900/10 border-l-4 border-indigo-600 p-4.5 rounded-r-xl space-y-3 shadow-2xs">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-indigo-950 font-bold text-[14px]">
+                    <BookOpen className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>Definition of Memory Segmentation</span>
+                  </div>
+                  <p className="text-[13px] text-slate-800 leading-relaxed font-medium">
+                    <strong>Memory Segmentation</strong> is a memory management technique in the 8086 microprocessor where the complete <strong>1 MB physical address space (00000H to FFFFFH)</strong> is logically divided into smaller blocks called <strong>Segments</strong> (up to 64 KB each). By combining a 16-bit Segment Base Register (CS, DS, SS, ES) with a 16-bit Offset Register (IP, SP, BX, etc.), the 16-bit 8086 processor can generate 20-bit physical addresses to seamlessly access 1 MB of physical RAM.
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-indigo-200/60 space-y-2">
+                  <div className="flex items-center gap-2 text-indigo-950 font-bold text-[13.5px]">
+                    <Cpu className="w-4 h-4 text-purple-600 shrink-0" />
+                    <span>Why is Memory Segmentation Needed?</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[12.5px] text-slate-800">
+                    <div className="bg-white/80 backdrop-blur-xs p-2.5 rounded-lg border border-indigo-100 shadow-2xs space-y-1">
+                      <strong className="text-indigo-900 block font-bold">1. Hardware Gap (16-bit vs 20-bit)</strong>
+                      <p className="text-slate-700 leading-snug">
+                        Internal registers (IP, SP, BX) are only 16-bit (max 64 KB reach), but physical memory bus is 20-bit (1 MB). Segmentation bridges this by pairing a segment base and an offset to address 1 MB.
+                      </p>
+                    </div>
+                    <div className="bg-white/80 backdrop-blur-xs p-2.5 rounded-lg border border-indigo-100 shadow-2xs space-y-1">
+                      <strong className="text-indigo-900 block font-bold">2. Dynamic Code Relocation</strong>
+                      <p className="text-slate-700 leading-snug">
+                        Programs can be loaded into any free region in RAM without rewriting internal offset addresses. Updating the CS segment register instantly updates the physical execution base.
+                      </p>
+                    </div>
+                    <div className="bg-white/80 backdrop-blur-xs p-2.5 rounded-lg border border-indigo-100 shadow-2xs space-y-1">
+                      <strong className="text-indigo-900 block font-bold">3. Logical Code & Data Separation</strong>
+                      <p className="text-slate-700 leading-snug">
+                        Separates instructions (CS), data (DS), stack (SS), and string targets (ES) into dedicated blocks, preventing data overwrites and improving structural program safety.
+                      </p>
+                    </div>
+                    <div className="bg-white/80 backdrop-blur-xs p-2.5 rounded-lg border border-indigo-100 shadow-2xs space-y-1">
+                      <strong className="text-indigo-900 block font-bold">4. Shared Memory & Multi-Tasking</strong>
+                      <p className="text-slate-700 leading-snug">
+                        Allows multiple tasks or subroutines to share common data/extra segments while maintaining insulated, secure private code execution paths.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Top Selector Banner */}
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
@@ -576,7 +623,7 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                     Click the buttons to toggle between Overlap and Non-Overlap modes, or hover over registers &amp; segments to inspect them.
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setSelectedSegmentId('non-overlap')}
                     className={`px-3.5 py-2 rounded-lg text-[13px] font-bold transition-all cursor-pointer ${
@@ -606,6 +653,16 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                     }`}
                   >
                     I/O Address Space
+                  </button>
+                  <button
+                    onClick={() => setSelectedSegmentId('ivt')}
+                    className={`px-3.5 py-2 rounded-lg text-[13px] font-bold transition-all cursor-pointer ${
+                      selectedSegmentId === 'ivt'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    Interrupt Vector Table (IVT)
                   </button>
                 </div>
               </div>
@@ -826,7 +883,7 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                           {/* Segment 1: CS */}
                           <div
                             onMouseEnter={() => setSelectedSegmentId('cs')}
-                            className={`border-2 rounded-lg p-2.5 relative cursor-pointer transition-all shadow-xs h-[85px] ${
+                            className={`border-2 rounded-lg p-2 relative cursor-pointer transition-all shadow-xs h-[72px] ${
                               selectedSegmentId === 'cs' ? 'bg-indigo-50 border-indigo-600 ring-2 ring-indigo-400/55' : 'bg-white border-slate-200 hover:border-indigo-400'
                             }`}
                           >
@@ -834,14 +891,14 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                               <span className="text-indigo-800 font-bold">Code Segment (64 KB)</span>
                               <span>CS: 1000H</span>
                             </div>
-                            <p className="text-[13px] text-slate-600 mt-1">Holds program instructions.</p>
-                            <div className="absolute bottom-1.5 right-2.5 text-[10px] font-mono font-bold text-slate-500">10000H - 1FFFFH</div>
+                            <p className="text-[12px] text-slate-600 mt-0.5">Holds program instructions.</p>
+                            <div className="absolute bottom-1 right-2.5 text-[10px] font-mono font-bold text-slate-500">10000H - 1FFFFH</div>
                           </div>
 
                           {/* Segment 2: DS */}
                           <div
                             onMouseEnter={() => setSelectedSegmentId('ds')}
-                            className={`border-2 rounded-lg p-2.5 relative cursor-pointer transition-all shadow-xs h-[85px] ${
+                            className={`border-2 rounded-lg p-2 relative cursor-pointer transition-all shadow-xs h-[72px] ${
                               selectedSegmentId === 'ds' ? 'bg-emerald-50 border-emerald-600 ring-2 ring-emerald-400/55' : 'bg-white border-slate-200 hover:border-emerald-400'
                             }`}
                           >
@@ -849,14 +906,14 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                               <span className="text-emerald-800 font-bold">Data Segment (64 KB)</span>
                               <span>DS: 3000H</span>
                             </div>
-                            <p className="text-[13px] text-slate-600 mt-1">Holds static variable storage.</p>
-                            <div className="absolute bottom-1.5 right-2.5 text-[10px] font-mono font-bold text-slate-500">30000H - 3FFFFH</div>
+                            <p className="text-[12px] text-slate-600 mt-0.5">Holds static variable storage.</p>
+                            <div className="absolute bottom-1 right-2.5 text-[10px] font-mono font-bold text-slate-500">30000H - 3FFFFH</div>
                           </div>
 
                           {/* Segment 3: SS */}
                           <div
                             onMouseEnter={() => setSelectedSegmentId('ss')}
-                            className={`border-2 rounded-lg p-2.5 relative cursor-pointer transition-all shadow-xs h-[85px] ${
+                            className={`border-2 rounded-lg p-2 relative cursor-pointer transition-all shadow-xs h-[72px] ${
                               selectedSegmentId === 'ss' ? 'bg-rose-50 border-rose-600 ring-2 ring-rose-400/55' : 'bg-white border-slate-200 hover:border-rose-400'
                             }`}
                           >
@@ -864,14 +921,14 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                               <span className="text-rose-800 font-bold">Stack Segment (64 KB)</span>
                               <span>SS: 5000H</span>
                             </div>
-                            <p className="text-[13px] text-slate-600 mt-1">Holds return vectors &amp; variables.</p>
-                            <div className="absolute bottom-1.5 right-2.5 text-[10px] font-mono font-bold text-slate-500">50000H - 5FFFFH</div>
+                            <p className="text-[12px] text-slate-600 mt-0.5">Holds return vectors &amp; variables.</p>
+                            <div className="absolute bottom-1 right-2.5 text-[10px] font-mono font-bold text-slate-500">50000H - 5FFFFH</div>
                           </div>
 
                           {/* Segment 4: ES */}
                           <div
                             onMouseEnter={() => setSelectedSegmentId('es')}
-                            className={`border-2 rounded-lg p-2.5 relative cursor-pointer transition-all shadow-xs h-[85px] ${
+                            className={`border-2 rounded-lg p-2 relative cursor-pointer transition-all shadow-xs h-[72px] ${
                               selectedSegmentId === 'es' ? 'bg-amber-50 border-amber-600 ring-2 ring-amber-400/55' : 'bg-white border-slate-200 hover:border-amber-400'
                             }`}
                           >
@@ -879,8 +936,25 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                               <span className="text-amber-800 font-bold">Extra Segment (64 KB)</span>
                               <span>ES: 7000H</span>
                             </div>
-                            <p className="text-[13px] text-slate-600 mt-1">Holds high-speed transfer targets.</p>
-                            <div className="absolute bottom-1.5 right-2.5 text-[10px] font-mono font-bold text-slate-500">70000H - 7FFFFH</div>
+                            <p className="text-[12px] text-slate-600 mt-0.5">Holds high-speed transfer targets.</p>
+                            <div className="absolute bottom-1 right-2.5 text-[10px] font-mono font-bold text-slate-500">70000H - 7FFFFH</div>
+                          </div>
+
+                          {/* Reserved Base Memory: Interrupt Vector Table (IVT) */}
+                          <div
+                            onMouseEnter={() => setSelectedSegmentId('ivt')}
+                            onClick={() => setSelectedSegmentId('ivt')}
+                            className={`border-2 rounded-lg p-2 relative cursor-pointer transition-all shadow-xs h-[52px] ${
+                              selectedSegmentId === 'ivt' ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-400/55' : 'bg-slate-50 border-slate-300 hover:border-blue-400'
+                            }`}
+                          >
+                            <div className="flex justify-between text-[11px] font-mono text-slate-600 font-bold">
+                              <span className="text-blue-800 font-bold flex items-center gap-1">
+                                <Database className="w-3 h-3 text-blue-600" /> Interrupt Vector Table (IVT - 1 KB)
+                              </span>
+                              <span>00000H - 003FFH</span>
+                            </div>
+                            <p className="text-[11px] text-slate-600 mt-0.5">Holds 256 ISR far pointers (4 bytes each)</p>
                           </div>
                         </div>
                       )}
@@ -890,60 +964,6 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                     <div className="flex justify-between items-center text-[11px] font-mono font-bold text-slate-400 border-t border-slate-100 pt-1 z-10">
                       <span>Top Address: FFFFF H</span>
                       <span>(1 MB Total Space)</span>
-                    </div>
-                  </div>
-
-                  {/* 1 MB Memory Bit/Byte Calculation Card */}
-                  <div className="mt-4 bg-indigo-50/50 border border-indigo-150 rounded-xl p-4 space-y-3">
-                    <span className="text-[11px] uppercase tracking-wider font-mono font-bold text-indigo-700 block">
-                      1 MB Memory Bit &amp; Location Math
-                    </span>
-                    <div className="text-[12.5px] text-slate-700 space-y-2">
-                      <p className="leading-relaxed">
-                        In the <strong>8086 Microprocessor</strong>, the physical address bus is <strong>20-bit</strong> wide.
-                      </p>
-                      
-                      {/* Equations Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-[11.5px] bg-white p-3 rounded-lg border border-slate-150">
-                        <div className="space-y-1">
-                          <span className="text-slate-500 text-[10px] uppercase font-sans font-bold">Standard Storage Math</span>
-                          <div>• 1 Byte = 8 bits</div>
-                          <div>• 1 KB = 1024 Bytes</div>
-                          <div>• 1 MB = 1024 KB</div>
-                          <div className="pt-1 border-t border-dashed border-slate-200">
-                            <strong>1,048,576 Bytes</strong>
-                          </div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-slate-500 text-[10px] uppercase font-sans font-bold">8086 Physical Limits</span>
-                          <div>• 20-bit Bus = 2<sup>20</sup> locations</div>
-                          <div>• 2<sup>20</sup> = 1,048,576 locations</div>
-                          <div>• 1 Location = 1 Byte (8 bits)</div>
-                          <div className="pt-1 border-t border-dashed border-slate-200">
-                            <strong>8,388,608 bits</strong>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Exponential Summary */}
-                      <div className="bg-indigo-950 text-indigo-100 rounded-lg p-2.5 text-center font-mono text-[12px] space-y-1">
-                        <div className="flex justify-around items-center">
-                          <div>
-                            <span className="text-indigo-300 text-[10px] block font-sans">MAX MEMORY (BYTES)</span>
-                            <strong>2<sup>20</sup> Bytes</strong>
-                          </div>
-                          <div className="text-indigo-400">|</div>
-                          <div>
-                            <span className="text-indigo-300 text-[10px] block font-sans">MAX MEMORY (BITS)</span>
-                            <strong>2<sup>23</sup> bits</strong>
-                          </div>
-                        </div>
-                      </div>
-
-                      <p className="text-[11.5px] text-slate-500 italic mt-1 leading-normal">
-                        * Since each memory location stores exactly 1 byte (8 bits), the maximum addressable space of 1,048,576 locations matches exactly 1 MB (1,048,576 Bytes = 8,388,608 bits).
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -1120,8 +1140,94 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                       </div>
                     )}
 
+                    {selectedSegmentId === 'ivt' && (
+                      <div className="space-y-3">
+                        <strong className="text-blue-950 font-bold text-[14px] block border-b border-blue-100 pb-1 flex items-center justify-between">
+                          <span>Interrupt Vector Table (IVT) Details</span>
+                          <span className="text-[11px] font-mono bg-blue-100 text-blue-800 px-2 py-0.5 rounded">00000H - 003FFH</span>
+                        </strong>
+                        <p className="text-[12.5px] text-slate-700 leading-relaxed">
+                          The <strong>Interrupt Vector Table (IVT)</strong> resides at the lowest 1 KB of physical memory (00000H to 003FFH). It stores 256 vector pointers for interrupts (Type 0 to 255).
+                        </p>
+
+                        <div className="bg-white border border-blue-200 rounded-lg p-3 space-y-2">
+                          <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">
+                            IVT Vector Address Formula:
+                          </span>
+                          <div className="bg-blue-50 p-2 rounded text-center font-mono font-bold text-[13px] text-blue-900 border border-blue-200">
+                            Vector Physical Address = INT Type Number × 4
+                          </div>
+
+                          <div className="space-y-1 pt-1">
+                            <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">
+                              Select Common Interrupt Vector:
+                            </span>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[11px]">
+                              {[
+                                { label: 'INT 00H (Divide Zero)', val: 0, addr: '00000H' },
+                                { label: 'INT 02H (NMI Pin)', val: 2, addr: '00008H' },
+                                { label: 'INT 03H (Breakpoint)', val: 3, addr: '0000CH' },
+                                { label: 'INT 08H (Timer IRQ)', val: 8, addr: '00020H' },
+                                { label: 'INT 10H (Video BIOS)', val: 16, addr: '00040H' },
+                                { label: 'INT 21H (DOS API)', val: 33, addr: '00084H' },
+                              ].map((item) => (
+                                <button
+                                  key={item.val}
+                                  onClick={() => setSelectedIvtType(item.val)}
+                                  className={`p-1.5 rounded border text-left font-mono transition-all cursor-pointer ${
+                                    selectedIvtType === item.val
+                                      ? 'bg-blue-600 text-white font-bold border-blue-700 shadow-2xs'
+                                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  <div className="font-bold">{item.label.split(' ')[0]} {item.label.split(' ')[1]}</div>
+                                  <div className="text-[9.5px] opacity-80">{item.addr}</div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Selected Vector 4-byte breakdown */}
+                          {(() => {
+                            const baseAddrDec = selectedIvtType * 4;
+                            const hexAddr = baseAddrDec.toString(16).toUpperCase().padStart(5, '0');
+                            const hexAddr1 = (baseAddrDec + 1).toString(16).toUpperCase().padStart(5, '0');
+                            const hexAddr2 = (baseAddrDec + 2).toString(16).toUpperCase().padStart(5, '0');
+                            const hexAddr3 = (baseAddrDec + 3).toString(16).toUpperCase().padStart(5, '0');
+
+                            return (
+                              <div className="bg-slate-900 text-white rounded-lg p-2.5 font-mono text-[11.5px] space-y-1.5 mt-2">
+                                <div className="flex justify-between items-center text-indigo-300 font-bold border-b border-slate-800 pb-1">
+                                  <span>INT {selectedIvtType.toString(16).toUpperCase().padStart(2, '0')}H Far Pointer</span>
+                                  <span>Base Address: {hexAddr}H</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-1 text-[11px]">
+                                  <div className="bg-slate-800 p-1.5 rounded border border-slate-700">
+                                    <span className="text-slate-400 block text-[9.5px]">{hexAddr}H: Offset (IP) Low Byte</span>
+                                    <span className="text-emerald-400 font-bold">IP [7:0]</span>
+                                  </div>
+                                  <div className="bg-slate-800 p-1.5 rounded border border-slate-700">
+                                    <span className="text-slate-400 block text-[9.5px]">{hexAddr1}H: Offset (IP) High Byte</span>
+                                    <span className="text-emerald-400 font-bold">IP [15:8]</span>
+                                  </div>
+                                  <div className="bg-slate-800 p-1.5 rounded border border-slate-700">
+                                    <span className="text-slate-400 block text-[9.5px]">{hexAddr2}H: Segment (CS) Low Byte</span>
+                                    <span className="text-indigo-400 font-bold">CS [7:0]</span>
+                                  </div>
+                                  <div className="bg-slate-800 p-1.5 rounded border border-slate-700">
+                                    <span className="text-slate-400 block text-[9.5px]">{hexAddr3}H: Segment (CS) High Byte</span>
+                                    <span className="text-indigo-400 font-bold">CS [15:8]</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Fallback default */}
-                    {!['cs', 'ds', 'ss', 'es', 'overlap', 'non-overlap', 'io-space'].includes(selectedSegmentId) && (
+                    {!['cs', 'ds', 'ss', 'es', 'overlap', 'non-overlap', 'io-space', 'ivt'].includes(selectedSegmentId) && (
                       <div className="space-y-2">
                         <strong className="text-slate-900 font-bold text-[13px] block">Quick Exam Guide:</strong>
                         <p className="text-[13px] text-slate-700 leading-relaxed">
@@ -1233,6 +1339,61 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                     <div className="flex justify-between items-center text-[10.5px] font-mono font-bold text-slate-500 border-t border-slate-200 pt-1.5 z-10">
                       <span>00000 H (Base of Memory)</span>
                       <span>0 Bytes (IVT Vector 0)</span>
+                    </div>
+                  </div>
+
+                  {/* 1 MB Memory Bit & Location Math Card */}
+                  <div className="mt-3 bg-gradient-to-br from-indigo-50/80 to-purple-50/50 border border-indigo-150 rounded-xl p-3.5 space-y-2.5 shadow-2xs">
+                    <div className="flex items-center gap-2 text-[12px] uppercase tracking-wider font-mono font-bold text-indigo-900 border-b border-indigo-100 pb-1.5">
+                      <Calculator className="w-4 h-4 text-indigo-600" />
+                      <span>1 MB Memory Bit &amp; Location Math</span>
+                    </div>
+                    <div className="text-[12px] text-slate-700 space-y-2">
+                      <p className="leading-relaxed font-medium">
+                        In the <strong>8086 Microprocessor</strong>, the physical address bus is <strong>20-bit</strong> wide.
+                      </p>
+                      
+                      {/* Equations Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-[11px] bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                        <div className="space-y-1">
+                          <span className="text-slate-500 text-[9.5px] uppercase font-sans font-bold block">Standard Storage Math</span>
+                          <div>• 1 Byte = 8 bits</div>
+                          <div>• 1 KB = 1024 Bytes</div>
+                          <div>• 1 MB = 1024 KB</div>
+                          <div className="pt-1 border-t border-dashed border-slate-200 text-indigo-900 font-bold">
+                            1,048,576 Bytes
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <span className="text-slate-500 text-[9.5px] uppercase font-sans font-bold block">8086 Physical Limits</span>
+                          <div>• 20-bit Bus = 2<sup>20</sup> locations</div>
+                          <div>• 2<sup>20</sup> = 1,048,576 locations</div>
+                          <div>• 1 Location = 1 Byte (8 bits)</div>
+                          <div className="pt-1 border-t border-dashed border-slate-200 text-indigo-900 font-bold">
+                            8,388,608 bits
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Exponential Summary */}
+                      <div className="bg-indigo-950 text-indigo-100 rounded-lg p-2.5 text-center font-mono text-[11.5px] space-y-1 shadow-2xs">
+                        <div className="flex justify-around items-center">
+                          <div>
+                            <span className="text-indigo-300 text-[9.5px] block font-sans font-bold">MAX MEMORY (BYTES)</span>
+                            <strong className="text-white text-[13px]">2<sup>20</sup> Bytes</strong>
+                          </div>
+                          <div className="text-indigo-400 font-light">|</div>
+                          <div>
+                            <span className="text-indigo-300 text-[9.5px] block font-sans font-bold">MAX MEMORY (BITS)</span>
+                            <strong className="text-white text-[13px]">2<sup>23</sup> bits</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-slate-600 italic leading-snug">
+                        * Since each memory location stores exactly 1 byte (8 bits), the maximum addressable space of 1,048,576 locations matches exactly 1 MB (1,048,576 Bytes = 8,388,608 bits).
+                      </p>
                     </div>
                   </div>
 
@@ -1399,13 +1560,33 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                             Requires 2 physical cycles! Splitting transfer.
                           </span>
                         </button>
+
+                        <button
+                          onClick={() => setBankOp('read-ivt-vector')}
+                          className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                            bankOp === 'read-ivt-vector'
+                              ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-300/40 text-blue-950 font-bold'
+                              : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700 font-semibold'
+                          }`}
+                        >
+                          <span className="font-bold text-[13px] flex items-center justify-between w-full">
+                            <span className="flex items-center gap-1.5 text-blue-900">
+                              <Database className="w-3.5 h-3.5 text-blue-600" />
+                              <span>5. Fetch IVT Vector Pointer</span>
+                            </span>
+                            <span className="font-mono text-[10.5px] bg-blue-100 text-blue-800 px-1.5 rounded">INT 21H @ 00084 H</span>
+                          </span>
+                          <span className="text-[11px] text-slate-500 mt-1 leading-normal">
+                            Fetches 4-byte CS:IP far pointer across 2 bus cycles!
+                          </span>
+                        </button>
                       </div>
                     </div>
 
                     {/* Hardware Schematic Visualization */}
                     {(() => {
-                      const isEvenActive = bankOp === 'read-byte-even' || bankOp === 'read-word-even' || bankOp === 'read-word-odd';
-                      const isOddActive = bankOp === 'read-byte-odd' || bankOp === 'read-word-even' || bankOp === 'read-word-odd';
+                      const isEvenActive = bankOp === 'read-byte-even' || bankOp === 'read-word-even' || bankOp === 'read-word-odd' || bankOp === 'read-ivt-vector';
+                      const isOddActive = bankOp === 'read-byte-odd' || bankOp === 'read-word-even' || bankOp === 'read-word-odd' || bankOp === 'read-ivt-vector';
                       
                       let cycles = 1;
                       let bheSignal = '1 (HIGH)';
@@ -1437,6 +1618,12 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                         a0Signal = 'Cycle 1: 1 (HIGH) | Cycle 2: 0 (LOW)';
                         dataBusStatus = 'Cycle 1: D8-D15 (Lower Byte) | Cycle 2: D0-D7 (Upper Byte)';
                         designVibe = 'border-amber-500 bg-amber-50/20';
+                      } else if (bankOp === 'read-ivt-vector') {
+                        cycles = 2;
+                        bheSignal = 'Cycle 1: 0 (LOW) | Cycle 2: 0 (LOW)';
+                        a0Signal = 'Cycle 1: 0 (LOW) | Cycle 2: 0 (LOW)';
+                        dataBusStatus = 'Cycle 1: 16-bit IP Offset (00084H) | Cycle 2: 16-bit CS Segment (00086H)';
+                        designVibe = 'border-blue-500 bg-blue-50/20';
                       }
 
                       return (
@@ -1512,12 +1699,15 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                                   ? 'text-emerald-600' 
                                   : bankOp === 'read-word-odd'
                                   ? 'text-amber-600 animate-pulse'
+                                  : bankOp === 'read-ivt-vector'
+                                  ? 'text-blue-600 font-bold'
                                   : 'text-slate-600'
                               }`}>
                                 {bankOp === 'read-word-even' && 'Peak Speed (1 Cycle)'}
                                 {bankOp === 'read-word-odd' && 'Split Cycle (Slowdown)'}
                                 {bankOp === 'read-byte-even' && 'Standard (1 Cycle)'}
                                 {bankOp === 'read-byte-odd' && 'Standard (1 Cycle)'}
+                                {bankOp === 'read-ivt-vector' && 'IVT Far Vector (2 Cycles)'}
                               </div>
                             </div>
                           </div>
@@ -1531,6 +1721,11 @@ export default function MemoryCalculationSimulator({ defaultTab = 'calculator' }
                             {bankOp === 'read-word-odd' && (
                               <p className="mt-2 text-amber-300 border-t border-slate-800 pt-2 font-sans font-medium">
                                 ⚠️ <strong>Misaligned word penalty:</strong> Since address 00041H is ODD, the lower byte of the word sits in address 00041H (Odd Bank), but the upper byte sits in address 00042H (Even Bank). The processor cannot activate both banks at once for two different address alignments, forcing the BIU to run <strong>two back-to-back hardware cycles</strong>. Align variables on even addresses to keep code running fast!
+                              </p>
+                            )}
+                            {bankOp === 'read-ivt-vector' && (
+                              <p className="mt-2 text-blue-300 border-t border-slate-800 pt-2 font-sans font-medium">
+                                ⚡ <strong>IVT Vector Transfer:</strong> Fetching the 4-byte interrupt vector for INT 21H from address 00084H requires reading a 32-bit far pointer (CS:IP). Since the 8086 data bus is 16-bit wide, the BIU performs <strong>Cycle 1</strong> to fetch the 16-bit Offset (IP = 00084H/00085H) from both Even and Odd banks simultaneously, followed immediately by <strong>Cycle 2</strong> to fetch the 16-bit Segment (CS = 00086H/00087H)!
                               </p>
                             )}
                           </div>
