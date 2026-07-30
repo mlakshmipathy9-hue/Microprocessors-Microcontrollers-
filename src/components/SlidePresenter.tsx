@@ -597,7 +597,7 @@ export default function SlidePresenter({
                           </div>
                         </div>
                       ) : (
-                        <div className={`grid grid-cols-1 ${['m3-s1', 'm3-s2', 'm3-s3', 'm8-s1', 'm8-s4', 'm8-s5', 'm9-s1', 'm10-s1', 'm10-s2', 'm10-s3', 'm11-s1', 'm12-s1'].includes(slide.id) ? 'grid-cols-1' : 'md:grid-cols-2'} gap-1.5 md:gap-2 pr-1`}>
+                        <div className={`grid grid-cols-1 ${['m2-s3', 'm3-s1', 'm3-s2', 'm3-s3', 'm4-s1', 'm4-s2', 'm8-s1', 'm8-s4', 'm8-s5', 'm9-s1', 'm10-s1', 'm10-s2', 'm10-s3', 'm11-s1', 'm12-s1'].includes(slide.id) || slide.moduleId === 'm1' ? 'grid-cols-1' : 'md:grid-cols-2'} gap-1.5 md:gap-2 pr-1`}>
                           {slide.points.map((pt, idx) => {
                             const isRevealed = !incrementalRevealEnabled || idx < revealedPointsCount;
                             if (!isRevealed) return null;

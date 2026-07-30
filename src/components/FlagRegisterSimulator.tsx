@@ -1060,129 +1060,53 @@ export default function FlagRegisterSimulator() {
               </div>
             </div>
 
-            {/* Flag Detail & ALU Scenario Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-              <div className="lg:col-span-6 bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
-                {selectedFlag ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-display font-bold text-lg text-slate-800">
-                          {selectedFlag.fullName}
-                        </h4>
-                        <span className={`text-xs uppercase font-mono px-2 py-0.5 rounded-full font-bold inline-block ${
-                          selectedFlag.type === 'status' ? 'bg-blue-100 text-blue-800' :
-                          selectedFlag.type === 'control' ? 'bg-amber-100 text-amber-800' :
-                          'bg-slate-200 text-slate-600'
-                        }`}>
-                          {selectedFlag.type} flag
-                        </span>
-                      </div>
-                      <span className="font-mono text-2xl font-bold text-slate-300">
-                        Bit {selectedFlag.bit}
+            {/* Flag Detail Card */}
+            <div className="w-full bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col justify-between">
+              {selectedFlag ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-display font-bold text-lg text-slate-800">
+                        {selectedFlag.fullName}
+                      </h4>
+                      <span className={`text-xs uppercase font-mono px-2 py-0.5 rounded-full font-bold inline-block ${
+                        selectedFlag.type === 'status' ? 'bg-blue-100 text-blue-800' :
+                        selectedFlag.type === 'control' ? 'bg-amber-100 text-amber-800' :
+                        'bg-slate-200 text-slate-600'
+                      }`}>
+                        {selectedFlag.type} flag
                       </span>
                     </div>
+                    <span className="font-mono text-2xl font-bold text-slate-300">
+                      Bit {selectedFlag.bit}
+                    </span>
+                  </div>
 
-                    <div className="border-t border-slate-100 pt-3 space-y-3">
-                      <p className="text-slate-600 text-xs">
-                        {selectedFlag.desc}
-                      </p>
+                  <div className="border-t border-slate-100 pt-3 space-y-3">
+                    <p className="text-slate-600 text-xs">
+                      {selectedFlag.desc}
+                    </p>
 
-                      {selectedFlag.type !== 'unused' && (
-                        <div className="grid grid-cols-2 gap-3 text-xs">
-                          <div className="bg-white p-2.5 rounded-lg border border-slate-100">
-                            <span className="font-mono font-bold text-indigo-600 block mb-0.5">Bit = 1</span>
-                            <p className="text-slate-500 text-xs leading-relaxed">{selectedFlag.setDesc}</p>
-                          </div>
-                          <div className="bg-white p-2.5 rounded-lg border border-slate-100">
-                            <span className="font-mono font-bold text-slate-400 block mb-0.5">Bit = 0</span>
-                            <p className="text-slate-500 text-xs leading-relaxed">{selectedFlag.clearDesc}</p>
-                          </div>
+                    {selectedFlag.type !== 'unused' && (
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="bg-white p-2.5 rounded-lg border border-slate-100">
+                          <span className="font-mono font-bold text-indigo-600 block mb-0.5">Bit = 1</span>
+                          <p className="text-slate-500 text-xs leading-relaxed">{selectedFlag.setDesc}</p>
                         </div>
-                      )}
-                    </div>
+                        <div className="bg-white p-2.5 rounded-lg border border-slate-100">
+                          <span className="font-mono font-bold text-slate-400 block mb-0.5">Bit = 0</span>
+                          <p className="text-slate-500 text-xs leading-relaxed">{selectedFlag.clearDesc}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="text-center py-6 text-slate-400">
-                    <HelpCircle className="w-8 h-8 mx-auto mb-1 opacity-50" />
-                    <p className="text-xs">Select any bit in the register above to study its detailed function.</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="lg:col-span-6 bg-white p-4 rounded-xl border border-slate-100 space-y-3">
-                <div>
-                  <h4 className="font-display font-bold text-sm text-slate-800 flex items-center gap-1.5">
-                    <CheckCircle className="w-4 h-4 text-emerald-500" />
-                    ALU Arithmetic Scenario Player
-                  </h4>
-                  <p className="text-xs text-slate-500">
-                    Observe how instructions change conditional status flags.
-                  </p>
                 </div>
-
-                <div className="space-y-2">
-                  <button
-                    onClick={() => applyScenario('zero-result')}
-                    className={`w-full text-left p-2.5 rounded-lg border transition-all text-xs flex justify-between items-center cursor-pointer ${
-                      testScenario === 'zero-result'
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
-                        : 'hover:bg-slate-50 text-slate-700 border-slate-100'
-                    }`}
-                  >
-                    <div>
-                      <strong className="font-mono">SUB AX, AX</strong> (Result is exactly 0)
-                      <p className="text-xs text-slate-500 mt-0.5">Sets ZF = 1. PF = 1 since zero has even parity.</p>
-                    </div>
-                    <span className="text-xs font-mono bg-white px-1.5 py-0.5 border rounded-sm font-semibold text-emerald-700 shrink-0">Run</span>
-                  </button>
-
-                  <button
-                    onClick={() => applyScenario('unsigned-carry')}
-                    className={`w-full text-left p-2.5 rounded-lg border transition-all text-xs flex justify-between items-center cursor-pointer ${
-                      testScenario === 'unsigned-carry'
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
-                        : 'hover:bg-slate-50 text-slate-700 border-slate-100'
-                    }`}
-                  >
-                    <div>
-                      <strong className="font-mono">ADD AL, 1</strong> (AL was 255 / FFH)
-                      <p className="text-xs text-slate-500 mt-0.5">8-bit unsigned roll-over. Sets Carry Flag CF = 1.</p>
-                    </div>
-                    <span className="text-xs font-mono bg-white px-1.5 py-0.5 border rounded-sm font-semibold text-emerald-700 shrink-0">Run</span>
-                  </button>
-
-                  <button
-                    onClick={() => applyScenario('signed-overflow')}
-                    className={`w-full text-left p-2.5 rounded-lg border transition-all text-xs flex justify-between items-center cursor-pointer ${
-                      testScenario === 'signed-overflow'
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
-                        : 'hover:bg-slate-50 text-slate-700 border-slate-100'
-                    }`}
-                  >
-                    <div>
-                      <strong className="font-mono">ADD AL, 1</strong> (AL was 127 / +7FH)
-                      <p className="text-xs text-slate-500 mt-0.5">Signed overflow (+127 + 1 = -128). Sets OF = 1, SF = 1.</p>
-                    </div>
-                    <span className="text-xs font-mono bg-white px-1.5 py-0.5 border rounded-sm font-semibold text-emerald-700 shrink-0">Run</span>
-                  </button>
-
-                  <button
-                    onClick={() => applyScenario('negative-result')}
-                    className={`w-full text-left p-2.5 rounded-lg border transition-all text-xs flex justify-between items-center cursor-pointer ${
-                      testScenario === 'negative-result'
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
-                        : 'hover:bg-slate-50 text-slate-700 border-slate-100'
-                    }`}
-                  >
-                    <div>
-                      <strong className="font-mono">SUB AL, 5</strong> (AL was 2)
-                      <p className="text-xs text-slate-500 mt-0.5">Results in -3. Sets Sign Flag SF = 1, and Carry CF = 1 (borrow).</p>
-                    </div>
-                    <span className="text-xs font-mono bg-white px-1.5 py-0.5 border rounded-sm font-semibold text-emerald-700 shrink-0">Run</span>
-                  </button>
+              ) : (
+                <div className="text-center py-6 text-slate-400">
+                  <HelpCircle className="w-8 h-8 mx-auto mb-1 opacity-50" />
+                  <p className="text-xs">Select any bit in the register above to study its detailed function.</p>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         )}

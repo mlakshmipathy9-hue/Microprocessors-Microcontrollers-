@@ -382,7 +382,7 @@ export default function EvolutionTimeline({ defaultTab = 'timeline' }: { default
               transition={{ duration: 0.2 }}
               className="space-y-4"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 {/* Microprocessor card */}
                 <div className="bg-indigo-50/50 p-5 rounded-xl border border-indigo-100">
                   <div className="flex items-center gap-3 mb-3">
@@ -395,6 +395,10 @@ export default function EvolutionTimeline({ defaultTab = 'timeline' }: { default
                     </div>
                   </div>
                   <ul className="space-y-2 text-xs text-indigo-950">
+                    <li className="flex items-start gap-2">
+                      <ArrowRight className="w-3.5 h-3.5 text-indigo-600 mt-0.5 shrink-0" />
+                      <span><strong>Dependent System</strong>: Requires external support chips (RAM, ROM, I/O ports, clock generator) to form a functioning computer.</span>
+                    </li>
                     <li className="flex items-start gap-2">
                       <ArrowRight className="w-3.5 h-3.5 text-indigo-600 mt-0.5 shrink-0" />
                       <span><strong>CPU Only</strong>: Contains ONLY the central processing unit on a single silicon chip.</span>
@@ -428,6 +432,10 @@ export default function EvolutionTimeline({ defaultTab = 'timeline' }: { default
                   <ul className="space-y-2 text-xs text-emerald-950">
                     <li className="flex items-start gap-2">
                       <ArrowRight className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span><strong>Independent System</strong>: Self-contained standalone system-on-chip that operates independently without external memory/I/O ICs.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <ArrowRight className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
                       <span><strong>System-on-Chip (SoC)</strong>: Combines CPU, RAM, ROM, I/O, Timers, and ADC on a SINGLE silicon chip.</span>
                     </li>
                     <li className="flex items-start gap-2">
@@ -459,6 +467,16 @@ export default function EvolutionTimeline({ defaultTab = 'timeline' }: { default
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
+                      <tr>
+                        <td className="py-2 font-medium">System Type (Autonomy)</td>
+                        <td className="py-2"><strong>Dependent System</strong> (Requires external RAM, ROM, I/O ports &amp; clock generator to function)</td>
+                        <td className="py-2"><strong>Independent System</strong> (Self-contained standalone system-on-chip with built-in RAM, ROM, &amp; I/O)</td>
+                      </tr>
+                      <tr>
+                        <td className="py-2 font-medium">Component Independence</td>
+                        <td className="py-2"><strong>Independent Modules</strong> (External RAM/ROM/I/O can be expanded or replaced independently)</td>
+                        <td className="py-2"><strong>Fixed Dependent Integration</strong> (On-chip memory &amp; peripherals are fixed by silicon design)</td>
+                      </tr>
                       <tr>
                         <td className="py-2 font-medium">Internal Structure</td>
                         <td className="py-2">Only CPU (ALU, CU, Registers)</td>

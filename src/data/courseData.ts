@@ -23,10 +23,10 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 1: Evolution of Microprocessors',
         moduleId: 'm1',
         points: [
-          'Microprocessor (MPU) contains only the Central Processing Unit (CPU). Memory (RAM, ROM) and I/O timers are connected externally.',
-          'Microcontroller (MCU) integrates CPU, RAM, ROM, I/O ports, timers, and serial interfaces onto a single silicon chip.',
-          'MPUs are general-purpose, flexible, fast, and expensive (used in laptops, servers).',
-          'MCUs are application-specific, power-efficient, and highly cost-effective (used in washing machines, automotive ECUs, remote controllers).'
+          'Microprocessor (MPU) is a Dependent System: Contains CPU only and depends on external memory (RAM/ROM), I/O ports, and timing ICs to function.',
+          'Microcontroller (MCU) is an Independent System: Complete standalone system-on-chip with built-in CPU, RAM, ROM, I/O ports, and timers on a single silicon die.',
+          'MPU offers Independent Component Flexibility: External RAM, ROM, and I/O can be expanded or upgraded independently according to system demands.',
+          'MCU features Fixed Dependent Integration: On-chip memory capacity and peripheral interfaces are fixed on-die for cost-effective embedded applications.'
         ],
         interactiveType: 'evolution'
       },
@@ -258,11 +258,7 @@ export const courseData: Module[] = [
           '1. General Purpose Data Registers (AX, BX, CX, DX): 16-bit EU registers used for arithmetic, logic, and data manipulation. Each can be split into two 8-bit high/low registers (AH/AL, BH/BL, CH/CL, DH/DL). AX = Accumulator, BX = Base, CX = Count, DX = Data.',
           '2. Segment Registers (CS, DS, SS, ES): 16-bit BIU registers holding 16-bit base addresses for Code Segment (CS), Data Segment (DS), Stack Segment (SS), and Extra Segment (ES) in the 1 MB physical memory space.',
           '3. Pointer & Index Registers (IP, SP, BP, SI, DI): 16-bit registers holding memory offsets. IP = Instruction Pointer (next instruction offset), SP = Stack Pointer (top of stack offset), BP = Base Pointer (stack parameter offset), SI = Source Index, DI = Destination Index.',
-          '4. Special / Flag Register (16-Bit Status & Control Flags): 16-bit register containing 9 active flags (6 Status & 3 Control Flags).',
-          '• Auxiliary Carry Flag (AF): Carry from Bit 3 to Bit 4 (half-carry / nibble carry). Used for BCD arithmetic adjustments (DAA/DAS). Contrast with CF, which is full MSB carry out.',
-          '• Overflow Flag (OF): Set during signed 2\'s complement arithmetic if result exceeds signed capacity (-128 to +127 for 8-bit). Triggered when Carry-In to MSB ≠ Carry-Out from MSB. Contrast with CF (unsigned carry).',
-          '• Sign Flag (SF): Directly copies MSB (Bit 7 or Bit 15). SF=1 indicates negative result; SF=0 indicates positive or zero. SF shows result sign, while OF shows signed math corruption.',
-          '• Parity Flag (PF): Set to 1 if the LOWER 8 bits (AL byte) contain an EVEN number of 1 bits. PF=0 for odd parity. Inspects low byte only even in 16-bit operations.'
+          '4. Special / Flag Register (16-Bit Status & Control Flags): 16-bit register containing 9 active flags (6 Status & 3 Control Flags).'
         ],
         interactiveType: 'flags'
       },
@@ -457,19 +453,7 @@ export const courseData: Module[] = [
     slides: [
       {
         id: 'm4-s1',
-        title: '1. Operating Modes Overview',
-        moduleTitle: 'Module 4: 8086 Pin Configuration & Operating Modes',
-        moduleId: 'm4',
-        points: [
-          'To maximize flexibility, the 8086 operates in two distinct modes depending on physical system wiring.',
-          'Minimum Mode: Standard simple configuration. Pin MN/MX = +5V. CPU operates alone on the bus, generating signals directly.',
-          'Maximum Mode: Advanced multi-processor configuration. Pin MN/MX = 0V (GND). Status lines are sent to external 8288 Bus Controller.'
-        ],
-        interactiveType: 'min-mode-hardware'
-      },
-      {
-        id: 'm4-s2',
-        title: '2. Pin Configuration Overview',
+        title: '1. Pin Configuration Overview',
         moduleTitle: 'Module 4: 8086 Pin Configuration & Operating Modes',
         moduleId: 'm4',
         points: [
@@ -478,6 +462,19 @@ export const courseData: Module[] = [
           'Multiplexing: Pins transmit Address during the T1 clock state, and transition to transmit Data during T2, T3, and T4 states.',
           'Power Supply: Vcc (Pin 40, +5V DC) and GND (Pins 1 & 20).'
         ]
+      },
+      {
+        id: 'm4-s2',
+        title: '2. Minimum Mode vs. Maximum Mode Environments',
+        moduleTitle: 'Module 4: 8086 Pin Configuration & Operating Modes',
+        moduleId: 'm4',
+        points: [
+          'MN/MX Pin Strapping: MN/MX (Pin 33) tied to +5V enables Minimum Mode; tied to GND (0V) enables Maximum Mode.',
+          'Single CPU vs. Multi-Processor: Minimum Mode runs a single standalone CPU. Maximum Mode supports parallel co-processors (Intel 8087 Math NDP & 8089 I/O Processor).',
+          'Bus Control Generation: Minimum Mode CPU generates control lines (ALE, DEN, DT/R, M/IO, RD, WR) directly. Maximum Mode requires an external Intel 8288 Bus Controller to decode CPU status bits (S0, S1, S2).',
+          'Memory vs. I/O Addressing: Minimum Mode uses a single M/IO pin with RD/WR. Maximum Mode uses separate 8288 command lines: MRDC/MWTC for Memory and IORC/IOWC for I/O.'
+        ],
+        interactiveType: 'min-mode-hardware'
       },
       {
         id: 'm4-s3',
@@ -494,14 +491,14 @@ export const courseData: Module[] = [
       },
       {
         id: 'm4-s4',
-        title: '4. Interactive Mode Wiring Comparator',
+        title: '4. Key Differences: Minimum vs. Maximum Mode Summary',
         moduleTitle: 'Module 4: 8086 Pin Configuration & Operating Modes',
         moduleId: 'm4',
         points: [
-          'Observe pins 24 to 31. They completely change functions depending on system wiring!',
-          'Minimum mode pins: ALE, DEN, WR, M/IO, HOLD, HLDA, INTA, DT/R.',
-          'Maximum mode pins: S0, S1, S2, LOCK, QS0, QS1, RQ/GT0, RQ/GT1.',
-          'Max mode supports numeric co-processors like 8087 (Math coprocessor) using status decoding.'
+          '1. Pin 33 (MN/MX): Tied to +5V for Minimum Mode; Tied to GND (0V) for Maximum Mode.',
+          '2. Hardware Complexity: Minimum Mode needs NO external bus controller. Maximum Mode MANDATES the Intel 8288 Bus Controller chip.',
+          '3. Dual-Function Pins (24–31): Minimum Mode provides INTA, ALE, DEN, DT/R, M/IO, WR, HLDA, HOLD. Maximum Mode reconfigures them to QS1, QS0, S0, S1, S2, LOCK, RQ/GT1, RQ/GT0.',
+          '4. Bus Request & Arbitration: Minimum Mode uses simple HOLD/HLDA DMA lines. Maximum Mode uses bidirectional RQ/GT0 & RQ/GT1 Request/Grant lines plus LOCK signal.'
         ],
         interactiveType: 'modes'
       },
