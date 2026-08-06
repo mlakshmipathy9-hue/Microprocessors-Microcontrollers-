@@ -738,94 +738,96 @@ export default function DirectiveSandboxSimulator({ initialLabId, hideExp1a }: D
   return (
     <div id="directive-sandbox-simulator" className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 text-slate-800 flex flex-col justify-between shadow-xs min-h-[750px] max-w-7xl mx-auto w-full">
       {/* Top Main Navigation Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 mb-6">
-        <div>
-          <h2 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            <Binary className="w-5 h-5 text-indigo-600" />
-            8086 Assembler Directives & Programming Styles
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Interactive compile-time directive reference, program structure comparison, and RAM memory layout analyzer
-          </p>
-        </div>
+      {activeTab !== 'multiprecision' && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 mb-6">
+          <div>
+            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+              <Binary className="w-5 h-5 text-indigo-600" />
+              8086 Assembler Directives & Programming Styles
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Interactive compile-time directive reference, program structure comparison, and RAM memory layout analyzer
+            </p>
+          </div>
 
-        <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner">
-          <button
-            id="btn-tab-directives"
-            onClick={() => setActiveTab('directives')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              activeTab === 'directives'
-                ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <BookOpen className="w-4 h-4 text-indigo-600" />
-            Assembler Directives
-          </button>
-          <button
-            id="btn-tab-styles"
-            onClick={() => setActiveTab('styles')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              activeTab === 'styles'
-                ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Code2 className="w-4 h-4 text-indigo-600" />
-            Programming Styles
-          </button>
-          <button
-            id="btn-tab-models"
-            onClick={() => setActiveTab('models')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              activeTab === 'models'
-                ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Layers className="w-4 h-4 text-indigo-600" />
-            Memory Models (.MODEL)
-          </button>
-          <button
-            id="btn-tab-nearfar"
-            onClick={() => setActiveTab('nearfar')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              activeTab === 'nearfar'
-                ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <PhoneCall className="w-4 h-4 text-indigo-600" />
-            NEAR & FAR Calls
-          </button>
-          {!hideExp1a && (
+          <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner">
             <button
-              id="btn-tab-multiprecision"
-              onClick={() => setActiveTab('multiprecision')}
+              id="btn-tab-directives"
+              onClick={() => setActiveTab('directives')}
               className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                activeTab === 'multiprecision'
+                activeTab === 'directives'
                   ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Calculator className="w-4 h-4 text-indigo-600" />
-              Exp 1A: Multi-Precision
+              <BookOpen className="w-4 h-4 text-indigo-600" />
+              Assembler Directives
             </button>
-          )}
-          <button
-            id="btn-tab-sandbox"
-            onClick={() => setActiveTab('sandbox')}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              activeTab === 'sandbox'
-                ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Database className="w-4 h-4 text-indigo-600" />
-            Memory Layout Sandbox
-          </button>
+            <button
+              id="btn-tab-styles"
+              onClick={() => setActiveTab('styles')}
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                activeTab === 'styles'
+                  ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Code2 className="w-4 h-4 text-indigo-600" />
+              Programming Styles
+            </button>
+            <button
+              id="btn-tab-models"
+              onClick={() => setActiveTab('models')}
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                activeTab === 'models'
+                  ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Layers className="w-4 h-4 text-indigo-600" />
+              Memory Models (.MODEL)
+            </button>
+            <button
+              id="btn-tab-nearfar"
+              onClick={() => setActiveTab('nearfar')}
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                activeTab === 'nearfar'
+                  ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <PhoneCall className="w-4 h-4 text-indigo-600" />
+              NEAR & FAR Calls
+            </button>
+            {!hideExp1a && (
+              <button
+                id="btn-tab-multiprecision"
+                onClick={() => setActiveTab('multiprecision')}
+                className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  activeTab === 'multiprecision'
+                    ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Calculator className="w-4 h-4 text-indigo-600" />
+                Exp 1A: Multi-Precision
+              </button>
+            )}
+            <button
+              id="btn-tab-sandbox"
+              onClick={() => setActiveTab('sandbox')}
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                activeTab === 'sandbox'
+                  ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Database className="w-4 h-4 text-indigo-600" />
+              Memory Layout Sandbox
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Content Area */}
       <div className="flex-1 min-h-[580px]">
@@ -2480,32 +2482,32 @@ END MAIN`;
               className="space-y-6"
             >
               {/* Header Badge */}
-              <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white p-4 sm:p-6 rounded-2xl border border-purple-800/80 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-slate-50 border border-purple-200 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="bg-purple-500/20 text-purple-300 border border-purple-400/30 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-wider uppercase">
+                    <span className="bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-wider uppercase">
                       UNIT 4 • EXP 1A LAB
                     </span>
-                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-wider uppercase">
+                    <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-wider uppercase">
                       32-BIT / 64-BIT HARDWARE SIMULATOR
                     </span>
                   </div>
-                  <h3 className="text-base sm:text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
-                    <Calculator className="w-5 h-5 text-purple-400" />
+                  <h3 className="text-base sm:text-xl font-extrabold text-slate-950 tracking-tight flex items-center gap-2">
+                    <Calculator className="w-5 h-5 text-purple-600" />
                     Multi-Precision Arithmetic Execution Engine
                   </h3>
-                  <p className="text-xs text-purple-200/80 mt-1 max-w-2xl">
-                    16-bit CPUs like the Intel 8086 cannot process 32-bit or 64-bit numbers in a single clock cycle. Multi-precision operations partition numbers into 16-bit words, executing <code className="text-amber-300 font-bold">ADD</code> for Word 0, and chaining <code className="text-amber-300 font-bold">ADC (Add with Carry)</code> / <code className="text-amber-300 font-bold">SBB (Subtract with Borrow)</code> across higher words to propagate carry flags seamlessly.
+                  <p className="text-xs text-slate-600 mt-1 max-w-2xl">
+                    16-bit CPUs like the Intel 8086 cannot process 32-bit or 64-bit numbers in a single clock cycle. Multi-precision operations partition numbers into 16-bit words, executing <code className="text-indigo-800 font-bold bg-indigo-100 px-1 py-0.5 rounded">ADD</code> for Word 0, and chaining <code className="text-indigo-800 font-bold bg-indigo-100 px-1 py-0.5 rounded">ADC (Add with Carry)</code> / <code className="text-rose-800 font-bold bg-rose-100 px-1 py-0.5 rounded">SBB (Subtract with Borrow)</code> across higher words to propagate carry flags seamlessly.
                   </p>
                 </div>
 
                 {/* Bit Width & Operation Switches */}
-                <div className="flex flex-wrap items-center gap-2 bg-slate-950/70 p-2 rounded-xl border border-purple-800/50 shrink-0">
-                  <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+                <div className="flex flex-wrap items-center gap-2 bg-white p-2 rounded-xl border border-purple-200 shadow-2xs shrink-0">
+                  <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
                     <button
                       onClick={() => handleSetMpBitWidth(32)}
                       className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                        mpBitWidth === 32 ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                        mpBitWidth === 32 ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       32-Bit (2 Words)
@@ -2513,18 +2515,18 @@ END MAIN`;
                     <button
                       onClick={() => handleSetMpBitWidth(64)}
                       className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                        mpBitWidth === 64 ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                        mpBitWidth === 64 ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       64-Bit (4 Words)
                     </button>
                   </div>
 
-                  <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+                  <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
                     <button
                       onClick={() => { setMpOp('ADD'); setMpStepIdx(0); setMpAutoPlay(false); }}
                       className={`px-3 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1 cursor-pointer ${
-                        mpOp === 'ADD' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                        mpOp === 'ADD' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -2533,7 +2535,7 @@ END MAIN`;
                     <button
                       onClick={() => { setMpOp('SUB'); setMpStepIdx(0); setMpAutoPlay(false); }}
                       className={`px-3 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1 cursor-pointer ${
-                        mpOp === 'SUB' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                        mpOp === 'SUB' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       <Minus className="w-3.5 h-3.5" />
@@ -2542,18 +2544,67 @@ END MAIN`;
                   </div>
                 </div>
               </div>
+              {/* Theory & Concept Division */}
+              <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-4 sm:p-5 text-slate-900 space-y-3 shadow-2xs">
+                <div className="flex items-center gap-2 border-b border-amber-200/70 pb-2.5">
+                  <div className="p-1.5 bg-amber-200 text-amber-900 rounded-lg">
+                    <BookOpen className="w-4 h-4 text-amber-800" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-extrabold text-amber-950 uppercase tracking-wider">
+                      Theory &amp; Concept: 8086 Multi-Precision Arithmetic Logic
+                    </h4>
+                    <p className="text-[11px] text-amber-800 font-medium">
+                      Hardware Register Constraints, Little-Endian RAM Storage, and Carry/Borrow Propagation Chaining
+                    </p>
+                  </div>
+                </div>
 
-              {/* Interactive Inputs & Presets Panel */}
-              <div className="bg-slate-900 text-slate-100 p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
-                    <Zap className="w-4 h-4 text-amber-400" />
-                    Configure Operands & Preset Hardware Scenarios
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  {/* Concept 1: Register Limitations */}
+                  <div className="bg-white/80 p-3 rounded-xl border border-amber-200/80 space-y-1">
+                    <div className="font-bold text-amber-900 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                      <Cpu className="w-3.5 h-3.5 text-amber-700" />
+                      1. 16-Bit Register Limitation
+                    </div>
+                    <p className="text-slate-700 leading-relaxed text-[11px]">
+                      The 8086 CPU features 16-bit registers (AX, BX, CX, DX). 32-bit and 64-bit numbers exceed single-register capacity and must be partitioned into 16-bit word sequences.
+                    </p>
+                  </div>
+
+                  {/* Concept 2: Little-Endian RAM Organization */}
+                  <div className="bg-white/80 p-3 rounded-xl border border-amber-200/80 space-y-1">
+                    <div className="font-bold text-amber-900 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                      <Database className="w-3.5 h-3.5 text-amber-700" />
+                      2. Little-Endian RAM Layout
+                    </div>
+                    <p className="text-slate-700 leading-relaxed text-[11px]">
+                      Multi-byte values are arranged in Data Segment RAM with the Least Significant Word (LSW, Word 0) at lowest address <code className="font-mono text-amber-900 font-bold bg-amber-100 px-1 rounded">DS:0000H</code>.
+                    </p>
+                  </div>
+
+                  {/* Concept 3: Carry & Borrow Chaining */}
+                  <div className="bg-white/80 p-3 rounded-xl border border-amber-200/80 space-y-1">
+                    <div className="font-bold text-amber-900 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                      <Zap className="w-3.5 h-3.5 text-amber-700" />
+                      3. ADC &amp; SBB Flag Propagation
+                    </div>
+                    <p className="text-slate-700 leading-relaxed text-[11px]">
+                      Word 0 uses <code className="font-bold text-emerald-800 bg-emerald-100 px-1 rounded">ADD</code> / <code className="font-bold text-rose-800 bg-rose-100 px-1 rounded">SUB</code>. Words 1..N use <code className="font-bold text-indigo-900 bg-indigo-100 px-1 rounded">ADC</code> (Add with Carry: <code className="font-mono text-[10px]">AX+[NUM2]+CF</code>) or <code className="font-bold text-rose-900 bg-rose-100 px-1 rounded">SBB</code> (Subtract with Borrow).
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white text-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4 shadow-2xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-amber-600" />
+                    Configure Operands &amp; Preset Hardware Scenarios
                   </span>
 
                   {/* Preset Buttons */}
                   <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
-                    <span className="text-slate-400 text-[10px] uppercase font-bold mr-1">Presets:</span>
+                    <span className="text-slate-500 text-[10px] uppercase font-bold mr-1">Presets:</span>
                     <button
                       onClick={() => {
                         setMpBitWidth(32);
@@ -2563,7 +2614,7 @@ END MAIN`;
                         setMpStepIdx(0);
                         setMpAutoPlay(false);
                       }}
-                      className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] transition-all cursor-pointer"
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer"
                     >
                       32-Bit Overflow Carry (FFFFFFFF + 1)
                     </button>
@@ -2576,7 +2627,7 @@ END MAIN`;
                         setMpStepIdx(0);
                         setMpAutoPlay(false);
                       }}
-                      className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] transition-all cursor-pointer"
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer"
                     >
                       32-Bit Standard Math
                     </button>
@@ -2589,7 +2640,7 @@ END MAIN`;
                         setMpStepIdx(0);
                         setMpAutoPlay(false);
                       }}
-                      className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] transition-all cursor-pointer"
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer"
                     >
                       64-Bit Chained Words
                     </button>
@@ -2602,7 +2653,7 @@ END MAIN`;
                         setMpStepIdx(0);
                         setMpAutoPlay(false);
                       }}
-                      className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] transition-all cursor-pointer"
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer"
                     >
                       32-Bit Subtraction Borrow
                     </button>
@@ -2611,13 +2662,13 @@ END MAIN`;
 
                 {/* Hex Inputs Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono">
-                  <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                    <label className="text-[11px] text-purple-300 font-bold uppercase tracking-wider block mb-1.5 flex justify-between">
+                  <div className="bg-purple-50/60 p-3 rounded-xl border border-purple-200">
+                    <label className="text-[11px] text-purple-900 font-bold uppercase tracking-wider block mb-1.5 flex justify-between">
                       <span>Operand A (NUM1) - {mpBitWidth}-Bit Hex</span>
-                      <span className="text-slate-400 font-normal">Little-Endian Word Sequence</span>
+                      <span className="text-slate-500 font-normal">Little-Endian Word Sequence</span>
                     </label>
                     <div className="flex items-center gap-2">
-                      <span className="text-slate-500 font-bold">0x</span>
+                      <span className="text-slate-400 font-bold">0x</span>
                       <input
                         type="text"
                         value={mpOpAHex}
@@ -2627,19 +2678,19 @@ END MAIN`;
                           setMpStepIdx(0);
                           setMpAutoPlay(false);
                         }}
-                        className="bg-slate-900 text-emerald-400 font-extrabold text-sm border border-slate-700 rounded-lg px-3 py-1.5 w-full focus:outline-none focus:border-purple-500 tracking-wider"
+                        className="bg-white text-emerald-800 font-extrabold text-sm border border-slate-300 rounded-lg px-3 py-1.5 w-full focus:outline-none focus:border-purple-500 tracking-wider shadow-2xs"
                       />
-                      <span className="text-slate-400 font-bold text-xs">H</span>
+                      <span className="text-slate-600 font-bold text-xs">H</span>
                     </div>
                   </div>
 
-                  <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                    <label className="text-[11px] text-purple-300 font-bold uppercase tracking-wider block mb-1.5 flex justify-between">
+                  <div className="bg-purple-50/60 p-3 rounded-xl border border-purple-200">
+                    <label className="text-[11px] text-purple-900 font-bold uppercase tracking-wider block mb-1.5 flex justify-between">
                       <span>Operand B (NUM2) - {mpBitWidth}-Bit Hex</span>
-                      <span className="text-slate-400 font-normal">Little-Endian Word Sequence</span>
+                      <span className="text-slate-500 font-normal">Little-Endian Word Sequence</span>
                     </label>
                     <div className="flex items-center gap-2">
-                      <span className="text-slate-500 font-bold">0x</span>
+                      <span className="text-slate-400 font-bold">0x</span>
                       <input
                         type="text"
                         value={mpOpBHex}
@@ -2649,9 +2700,9 @@ END MAIN`;
                           setMpStepIdx(0);
                           setMpAutoPlay(false);
                         }}
-                        className="bg-slate-900 text-emerald-400 font-extrabold text-sm border border-slate-700 rounded-lg px-3 py-1.5 w-full focus:outline-none focus:border-purple-500 tracking-wider"
+                        className="bg-white text-emerald-800 font-extrabold text-sm border border-slate-300 rounded-lg px-3 py-1.5 w-full focus:outline-none focus:border-purple-500 tracking-wider shadow-2xs"
                       />
-                      <span className="text-slate-400 font-bold text-xs">H</span>
+                      <span className="text-slate-600 font-bold text-xs">H</span>
                     </div>
                   </div>
                 </div>
@@ -2717,14 +2768,14 @@ END MAIN`;
               {/* 3-Column Execution Dashboard */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                 {/* Column 1: Assembly Code View (4 cols) */}
-                <div className="lg:col-span-4 bg-slate-950 text-slate-200 p-4 rounded-2xl border border-slate-800 space-y-3 font-mono text-xs flex flex-col justify-between">
+                <div className="lg:col-span-4 bg-white text-slate-800 p-4 rounded-2xl border border-slate-200 space-y-3 font-mono text-xs flex flex-col justify-between shadow-2xs">
                   <div>
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
-                      <span className="text-purple-400 font-bold uppercase text-[10px] tracking-wider flex items-center gap-1.5">
-                        <FileCode className="w-4 h-4 text-purple-400" />
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-3">
+                      <span className="text-purple-800 font-bold uppercase text-[10px] tracking-wider flex items-center gap-1.5">
+                        <FileCode className="w-4 h-4 text-purple-600" />
                         8086 Assembly Program Stepper
                       </span>
-                      <span className="text-[10px] text-slate-400">MASM / TASM</span>
+                      <span className="text-[10px] text-slate-500 font-semibold">MASM / TASM</span>
                     </div>
 
                     <div className="space-y-1">
@@ -2736,18 +2787,18 @@ END MAIN`;
                             onClick={() => { setMpStepIdx(sIdx); setMpAutoPlay(false); }}
                             className={`p-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-between text-[11px] ${
                               isCurrent
-                                ? 'bg-purple-900/90 text-white font-extrabold border-l-4 border-amber-400 pl-2 shadow-sm'
+                                ? 'bg-purple-100 text-purple-950 font-extrabold border-l-4 border-purple-600 pl-2 shadow-xs'
                                 : sIdx < mpStepIdx
-                                ? 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-                                : 'text-slate-500 hover:bg-slate-900'
+                                ? 'text-slate-700 hover:bg-slate-100'
+                                : 'text-slate-400 hover:bg-slate-50'
                             }`}
                           >
                             <div className="flex items-center gap-2 truncate">
-                              <span className="text-[9px] text-slate-500 w-4 font-normal">{st.stepNum}</span>
+                              <span className="text-[9px] text-slate-400 w-4 font-normal">{st.stepNum}</span>
                               <code className="truncate">{st.codeLine}</code>
                             </div>
                             {isCurrent && (
-                              <span className="bg-amber-400 text-slate-950 text-[9px] px-1.5 py-0.5 rounded font-black shrink-0">
+                              <span className="bg-purple-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0">
                                 ACTIVE
                               </span>
                             )}
@@ -2757,8 +2808,8 @@ END MAIN`;
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-800/80 text-[10px] text-slate-400 flex items-center gap-2">
-                    <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <div className="pt-3 border-t border-slate-200 text-[10px] text-slate-500 flex items-center gap-2">
+                    <Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                     <span>Click any instruction line above to jump directly to that step.</span>
                   </div>
                 </div>
@@ -2769,7 +2820,7 @@ END MAIN`;
                     <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                       <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                         <Cpu className="w-4 h-4 text-indigo-600" />
-                        Microprocessor Registers & Flags
+                        Microprocessor Registers &amp; Flags
                       </span>
                       <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
                         16-Bit Execution Unit
@@ -2777,15 +2828,15 @@ END MAIN`;
                     </div>
 
                     {/* AX Register Monitor */}
-                    <div className="bg-slate-900 text-white p-3.5 rounded-xl border border-slate-800 space-y-1 font-mono">
-                      <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider block">
+                    <div className="bg-purple-50/80 text-slate-900 p-3.5 rounded-xl border border-purple-200 space-y-1 font-mono">
+                      <span className="text-[10px] font-bold text-purple-900 uppercase tracking-wider block">
                         Accumulator Register (AX)
                       </span>
                       <div className="flex items-center justify-between">
-                        <span className="text-xl font-black text-amber-400">
+                        <span className="text-xl font-black text-purple-900">
                           {hexFormat(currStep.axVal)}
                         </span>
-                        <div className="text-[10px] text-slate-300 font-sans text-right">
+                        <div className="text-[10px] text-slate-600 font-sans font-medium text-right">
                           AH = {byteHexFormat((currStep.axVal >> 8) & 0xFF)} | AL = {byteHexFormat(currStep.axVal & 0xFF)}
                         </div>
                       </div>
@@ -2830,18 +2881,18 @@ END MAIN`;
                 </div>
 
                 {/* Column 3: Data Segment RAM Memory Grid (4 cols) */}
-                <div className="lg:col-span-4 bg-slate-900 text-slate-100 p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-4 font-mono">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                    <span className="text-xs font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
-                      <Database className="w-4 h-4 text-purple-400" />
+                <div className="lg:col-span-4 bg-white text-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4 font-mono shadow-2xs">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                    <span className="text-xs font-bold uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
+                      <Database className="w-4 h-4 text-purple-600" />
                       Data Segment RAM (Little-Endian)
                     </span>
-                    <span className="text-[10px] text-slate-400">DS:0000H</span>
+                    <span className="text-[10px] text-slate-500 font-semibold">DS:0000H</span>
                   </div>
 
                   {/* Words RAM Grid */}
                   <div className="space-y-3 text-xs">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
                       RESULT Array Memory Offsets:
                     </span>
 
@@ -2856,19 +2907,19 @@ END MAIN`;
                             key={wIdx}
                             className={`p-3 rounded-xl border text-center transition-all ${
                               isActive
-                                ? 'bg-purple-950 border-purple-400 text-white ring-2 ring-purple-500/50 shadow-md'
+                                ? 'bg-purple-100 border-2 border-purple-500 text-purple-950 ring-2 ring-purple-200 shadow-xs'
                                 : val !== null
-                                ? 'bg-emerald-950/60 border-emerald-800/80 text-emerald-200'
-                                : 'bg-slate-950 border-slate-800 text-slate-500'
+                                ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold'
+                                : 'bg-slate-50 border-slate-200 text-slate-400'
                             }`}
                           >
-                            <span className="text-[9px] font-bold text-slate-400 block uppercase">
+                            <span className="text-[9px] font-bold text-slate-500 block uppercase">
                               Word {wIdx} (DS:{offsetHex})
                             </span>
                             <span className="text-base font-black my-1 block">
                               {val !== null ? hexFormat(val) : '????H'}
                             </span>
-                            <span className="text-[8px] block font-sans text-slate-400">
+                            <span className="text-[8px] block font-sans text-slate-500 font-medium">
                               Bits {wIdx * 16}..{(wIdx + 1) * 16 - 1}
                             </span>
                           </div>
@@ -2876,10 +2927,10 @@ END MAIN`;
                       })}
                     </div>
 
-                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
-                      <div className="text-purple-300 font-bold flex justify-between">
+                    <div className="bg-purple-50/70 p-3 rounded-xl border border-purple-200 text-[11px] text-slate-800 space-y-1">
+                      <div className="text-purple-950 font-bold flex justify-between">
                         <span>Current Computed Full Result:</span>
-                        <span className="text-emerald-400 font-mono font-extrabold">
+                        <span className="text-emerald-700 font-mono font-extrabold">
                           {(() => {
                             let resHex = '';
                             for (let i = numWords - 1; i >= 0; i--) {
@@ -2890,7 +2941,7 @@ END MAIN`;
                           })()}
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-400 leading-normal">
+                      <p className="text-[10px] text-slate-600 leading-normal font-sans">
                         Word 0 is stored at lowest offset (DS:0000H), followed by higher words up to Word {numWords - 1} (DS:000{numWords * 2 - 2}H).
                       </p>
                     </div>
@@ -2899,25 +2950,25 @@ END MAIN`;
               </div>
 
               {/* Complete Assembly Language Program Source Code Box */}
-              <div className="bg-slate-950 text-slate-100 p-4 sm:p-5 rounded-2xl border border-slate-800 space-y-3 font-mono text-xs">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="bg-white text-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-3 font-mono text-xs shadow-2xs">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                   <div className="flex items-center gap-2">
-                    <Terminal className="w-4 h-4 text-emerald-400" />
-                    <span className="text-emerald-400 font-bold text-xs uppercase tracking-wider">
+                    <Terminal className="w-4 h-4 text-emerald-600" />
+                    <span className="text-emerald-800 font-bold text-xs uppercase tracking-wider">
                       Complete MASM 8086 Assembly Source Code (Exp 1A)
                     </span>
                   </div>
 
                   <button
                     onClick={() => handleCopyCode(masmCode)}
-                    className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer"
                   >
-                    {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
                     {copiedCode ? 'Copied Code!' : 'Copy Code'}
                   </button>
                 </div>
 
-                <pre className="bg-slate-900 p-4 rounded-xl text-slate-300 overflow-x-auto leading-relaxed border border-slate-800/80 text-[11px]">
+                <pre className="bg-slate-50 p-4 rounded-xl text-slate-800 overflow-x-auto leading-relaxed border border-slate-200 text-[11px] font-bold">
                   {masmCode}
                 </pre>
               </div>

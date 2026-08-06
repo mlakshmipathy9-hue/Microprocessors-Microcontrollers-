@@ -10,6 +10,8 @@
       "DOM.Iterable"
     ],
     "skipLibCheck": true,
+    "incremental": true,
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo",
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",

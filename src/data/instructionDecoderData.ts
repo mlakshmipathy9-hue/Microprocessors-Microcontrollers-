@@ -1,6 +1,6 @@
 export interface SimulatorInstruction {
   opcode: string;
-  category: 'Data Transfer' | 'Arithmetic' | 'BCD & ASCII Adjust' | 'Logical & Bitwise' | 'Control, Flag & IO' | 'String Operations';
+  category: 'Data Transfer' | 'Arithmetic' | 'BCD & ASCII Adjust' | 'Logical' | 'Bitwise' | 'Control' | 'Flag' | 'I/O' | 'String Operations';
   desc: string;
   setupDesc: string;
   initialRegs: Record<string, number>;
@@ -241,7 +241,7 @@ export const mockInstructions: SimulatorInstruction[] = [
   {
     opcode: 'MUL BH',
     category: 'Arithmetic',
-    desc: 'Performs unsigned multiplication: AX = AL * BH.',
+    desc: 'Performs 8-bit unsigned multiplication: AX = AL * BH.',
     setupDesc: 'Initializes AL = 05H and BH = 10H (16 in decimal) to perform 8-bit unsigned multiplication.',
     initialRegs: { AX: 0x0005, BX: 0x1000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
     initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
@@ -266,9 +266,33 @@ export const mockInstructions: SimulatorInstruction[] = [
     }
   },
   {
+    opcode: 'IMUL BL',
+    category: 'Arithmetic',
+    desc: 'Performs 8-bit signed (2\'s complement) multiplication: AX = AL * BL.',
+    setupDesc: 'Initializes AL = FFH (-1 in 2\'s complement) and BL = 05H (+5 decimal) to demonstrate signed multiplication.',
+    initialRegs: { AX: 0x00FF, BX: 0x0005, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
+    execute: (regs, flags) => {
+      // Treat AL (FFH) as -1 and BL (05H) as +5
+      const alSigned = (regs.AX & 0xFF) > 127 ? (regs.AX & 0xFF) - 256 : (regs.AX & 0xFF);
+      const blSigned = (regs.BX & 0xFF) > 127 ? (regs.BX & 0xFF) - 256 : (regs.BX & 0xFF);
+      const prodSigned = alSigned * blSigned; // -1 * 5 = -5 -> 0xFFFB in 16-bit
+      const prod16 = prodSigned & 0xFFFF;
+      const newRegs = { ...regs, AX: prod16, IP: regs.IP + 2 };
+      const ah = (prod16 & 0xFF00) >> 8;
+      const signExtAh = (prod16 & 0x80) ? 0xFF : 0x00;
+      const cf_of = ah !== signExtAh ? 1 : 0;
+      return {
+        newRegs,
+        newFlags: { ...flags, CF: cf_of, OF: cf_of, SF: (prod16 & 0x8000) ? 1 : 0, ZF: prod16 === 0 ? 1 : 0 },
+        mathExplanation: 'IMUL BL multiplies signed AL (FFH = -1) by signed BL (05H = +5) = FFFBH (-5 decimal) in AX. Sign is preserved algebraically (-1 × +5 = -5).'
+      };
+    }
+  },
+  {
     opcode: 'DIV BL',
     category: 'Arithmetic',
-    desc: 'Performs unsigned division: AX divided by BL. Quotient saved in AL, Remainder in AH.',
+    desc: 'Performs 8-bit unsigned division: AX divided by BL. Quotient in AL, Remainder in AH.',
     setupDesc: 'Initializes AX = 0019H (25 in decimal) and BL = 05H to perform 8-bit unsigned division.',
     initialRegs: { AX: 0x0019, BX: 0x0005, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
     initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
@@ -283,6 +307,30 @@ export const mockInstructions: SimulatorInstruction[] = [
         newRegs,
         newFlags: { ...flags },
         mathExplanation: 'DIV BL divides AX (25) by BL (5). Quotient = 5 in AL, Remainder = 0 in AH. AX becomes 0005H. Status flags are technically undefined after execution.'
+      };
+    }
+  },
+  {
+    opcode: 'IDIV BL',
+    category: 'Arithmetic',
+    desc: 'Performs 8-bit signed (2\'s complement) division: AX divided by BL. Quotient in AL, Remainder in AH.',
+    setupDesc: 'Initializes AX = FFFBH (-5 decimal) and BL = 02H (+2 decimal) to demonstrate signed division.',
+    initialRegs: { AX: 0xFFFB, BX: 0x0002, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
+    execute: (regs, flags) => {
+      // AX = -5, BL = 2 -> Quotient = -2 (FEH), Remainder = -1 (FFH)
+      const axSigned = regs.AX > 32767 ? regs.AX - 65536 : regs.AX;
+      const blSigned = (regs.BX & 0xFF) > 127 ? (regs.BX & 0xFF) - 256 : (regs.BX & 0xFF);
+      const qSigned = Math.trunc(axSigned / blSigned);
+      const rSigned = axSigned % blSigned;
+      const qByte = qSigned & 0xFF;
+      const rByte = rSigned & 0xFF;
+      const newAX = (rByte << 8) | qByte;
+      const newRegs = { ...regs, AX: newAX, IP: regs.IP + 2 };
+      return {
+        newRegs,
+        newFlags: { ...flags },
+        mathExplanation: 'IDIV BL divides signed AX (FFFBH = -5) by BL (02H = +2). Quotient = -2 (FEH in AL), Remainder = -1 (FFH in AH). Result AX = FFFEH.'
       };
     }
   },
@@ -469,10 +517,10 @@ export const mockInstructions: SimulatorInstruction[] = [
     }
   },
 
-  // ================= CATEGORY: LOGICAL & BITWISE =================
+  // ================= CATEGORY: LOGICAL =================
   {
     opcode: 'XOR AX, AX',
-    category: 'Logical & Bitwise',
+    category: 'Logical',
     desc: 'Performs bitwise XOR of AX with itself, clearing AX to 0.',
     setupDesc: 'Initializes AX = FFFFH. Logical instructions always clear Carry (CF) and Overflow (OF).',
     initialRegs: { AX: 0xFFFF, BX: 0x0020, CX: 0x0005, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
@@ -496,7 +544,7 @@ export const mockInstructions: SimulatorInstruction[] = [
   },
   {
     opcode: 'AND AL, 0FH',
-    category: 'Logical & Bitwise',
+    category: 'Logical',
     desc: 'Logical bitwise AND of AL with immediate constant 0FH to isolate the lower nibble.',
     setupDesc: 'Initializes AL = A5H. Logical operations clear CF and OF.',
     initialRegs: { AX: 0x00A5, BX: 0x0010, CX: 0x0005, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
@@ -523,7 +571,7 @@ export const mockInstructions: SimulatorInstruction[] = [
   },
   {
     opcode: 'OR AH, CL',
-    category: 'Logical & Bitwise',
+    category: 'Logical',
     desc: 'Performs logical bitwise OR between registers AH and CL, saving the result in AH.',
     setupDesc: 'Initializes AH = 50H and CL = 0FH.',
     initialRegs: { AX: 0x5000, BX: 0x0000, CX: 0x000F, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
@@ -543,7 +591,7 @@ export const mockInstructions: SimulatorInstruction[] = [
   },
   {
     opcode: 'NOT BX',
-    category: 'Logical & Bitwise',
+    category: 'Logical',
     desc: 'Performs bit-by-bit complement (NOT) of register BX.',
     setupDesc: 'Initializes BX = 0000H. Crucially, the NOT instruction does NOT modify any flags!',
     initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
@@ -558,9 +606,11 @@ export const mockInstructions: SimulatorInstruction[] = [
       };
     }
   },
+
+  // ================= CATEGORY: BITWISE =================
   {
     opcode: 'NEG BL',
-    category: 'Logical & Bitwise',
+    category: 'Bitwise',
     desc: 'Performs 2\'s complement negation of register BL.',
     setupDesc: 'Initializes BL = 02H. NEG updates all condition code flags (CF is set to 1 if source is non-zero).',
     initialRegs: { AX: 0x0000, BX: 0x0002, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
@@ -579,7 +629,7 @@ export const mockInstructions: SimulatorInstruction[] = [
   },
   {
     opcode: 'SHL CX, 1',
-    category: 'Logical & Bitwise',
+    category: 'Bitwise',
     desc: 'Shifts CX left by 1 bit position. Equivalent to multiplying CX by 2.',
     setupDesc: 'Initializes CX = 4000H to show a left shift where the sign bit changes.',
     initialRegs: { AX: 0x0012, BX: 0x0010, CX: 0x4000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
@@ -607,10 +657,90 @@ export const mockInstructions: SimulatorInstruction[] = [
     }
   },
 
-  // ================= CATEGORY: CONTROL, FLAG & IO =================
+  // ================= CATEGORY: CONTROL =================
+  {
+    opcode: 'JMP 0150H',
+    category: 'Control',
+    desc: 'Unconditional Jump: Loads Instruction Pointer (IP) directly with target address 0150H.',
+    setupDesc: 'Initializes IP = 0100H. Unconditional branching bypasses sequential execution.',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
+    execute: (regs, flags) => {
+      return {
+        newRegs: { ...regs, IP: 0x0150 },
+        newFlags: { ...flags },
+        mathExplanation: 'JMP 0150H sets IP directly to target address 0150H. Flags are unaffected.'
+      };
+    }
+  },
+  {
+    opcode: 'LOOP 0100H',
+    category: 'Control',
+    desc: 'Loop according to CX: Decrements CX by 1; if CX ≠ 0, jumps to target address 0100H.',
+    setupDesc: 'Initializes CX = 0005H and IP = 010CH.',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0005, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x010C },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
+    execute: (regs, flags) => {
+      const newCX = regs.CX - 1;
+      const targetIP = newCX !== 0 ? 0x0100 : regs.IP + 2;
+      return {
+        newRegs: { ...regs, CX: newCX, IP: targetIP },
+        newFlags: { ...flags },
+        mathExplanation: `LOOP decrements CX (${regs.CX.toString(16).toUpperCase().padStart(4, '0')}H → ${newCX.toString(16).toUpperCase().padStart(4, '0')}H). Since CX ≠ 0, jumps to 0100H.`
+      };
+    }
+  },
+  {
+    opcode: 'CALL 0200H',
+    category: 'Control',
+    desc: 'Call Procedure: Pushes current IP onto stack and transfers control to target address 0200H.',
+    setupDesc: 'Initializes SP = FFFE3H, IP = 0100H. Pushes return address (0103H) onto stack.',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
+    execute: (regs, flags) => {
+      return {
+        newRegs: { ...regs, SP: regs.SP - 2, IP: 0x0200 },
+        newFlags: { ...flags },
+        mathExplanation: 'CALL 0200H pushes return IP (0103H) onto stack (SP: FFFEH → FFFCH) and sets IP = 0200H.'
+      };
+    }
+  },
+  {
+    opcode: 'RET',
+    category: 'Control',
+    desc: 'Return from Procedure: Pops return address from stack into IP to resume caller flow.',
+    setupDesc: 'Initializes SP = FFFCH (pointing to top of stack containing return address 0103H).',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFC, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0208 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
+    execute: (regs, flags) => {
+      return {
+        newRegs: { ...regs, SP: regs.SP + 2, IP: 0x0103 },
+        newFlags: { ...flags },
+        mathExplanation: 'RET pops return IP (0103H) from stack (SP: FFFCH → FFFEH) and jumps to 0103H.'
+      };
+    }
+  },
+  {
+    opcode: 'LOCK XCHG [SI], AL',
+    category: 'Control',
+    desc: 'Asserts the bus LOCK prefix before performing an exchange with shared memory.',
+    setupDesc: 'Initializes AL = 01H (semaphore token). SI holds resource offset.',
+    initialRegs: { AX: 0x0001, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
+    execute: (regs, flags) => {
+      const newAX = (regs.AX & 0xFF00) | 0x00; 
+      return {
+        newRegs: { ...regs, AX: newAX, IP: regs.IP + 3 },
+        newFlags: { ...flags },
+        mathExplanation: 'LOCK prefix asserts bus LOCK signal, ensuring atomic execution of XCHG. AL becomes 00H, successfully acquiring semaphore.'
+      };
+    }
+  },
+
+  // ================= CATEGORY: FLAG =================
   {
     opcode: 'STC',
-    category: 'Control, Flag & IO',
+    category: 'Flag',
     desc: 'Sets the Carry Flag (CF) to 1.',
     setupDesc: 'Initializes CF = 0.',
     initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
@@ -624,8 +754,23 @@ export const mockInstructions: SimulatorInstruction[] = [
     }
   },
   {
+    opcode: 'CLC',
+    category: 'Flag',
+    desc: 'Clears the Carry Flag (CF) to 0.',
+    setupDesc: 'Initializes CF = 1.',
+    initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 1, SF: 0, OF: 0, AF: 0, PF: 0 },
+    execute: (regs, flags) => {
+      return {
+        newRegs: { ...regs, IP: regs.IP + 1 },
+        newFlags: { ...flags, CF: 0 },
+        mathExplanation: 'CLC clears the Carry Flag (CF = 0) directly.'
+      };
+    }
+  },
+  {
     opcode: 'LAHF',
-    category: 'Control, Flag & IO',
+    category: 'Flag',
     desc: 'Loads the AH register with the low byte of the Flag register (SF, ZF, AF, PF, CF).',
     setupDesc: 'Initializes AH = 00H, and sets ZF = 1, CF = 1 to show bits transfer.',
     initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
@@ -641,8 +786,25 @@ export const mockInstructions: SimulatorInstruction[] = [
     }
   },
   {
+    opcode: 'SAHF',
+    category: 'Flag',
+    desc: 'Stores bits 7, 6, 4, 2, 0 of register AH into flags SF, ZF, AF, PF, CF.',
+    setupDesc: 'Initializes AH = 0D5H (11010101B). Copies bits directly into flags.',
+    initialRegs: { AX: 0xD500, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
+    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
+    execute: (regs, flags) => {
+      return {
+        newRegs: { ...regs, IP: regs.IP + 1 },
+        newFlags: { ...flags, SF: 1, ZF: 1, AF: 1, PF: 1, CF: 1 },
+        mathExplanation: 'SAHF copies bit settings from AH (D5H) directly into status flags: SF=1, ZF=1, AF=1, PF=1, CF=1.'
+      };
+    }
+  },
+
+  // ================= CATEGORY: I/O =================
+  {
     opcode: 'IN AL, 0C8H',
-    category: 'Control, Flag & IO',
+    category: 'I/O',
     desc: 'Reads an 8-bit byte from physical fixed I/O port 0C8H into AL.',
     setupDesc: 'Initializes AL = 00H. Fixed port 0C8H holds byte 39H.',
     initialRegs: { AX: 0x0000, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
@@ -658,7 +820,7 @@ export const mockInstructions: SimulatorInstruction[] = [
   },
   {
     opcode: 'OUT DX, AL',
-    category: 'Control, Flag & IO',
+    category: 'I/O',
     desc: 'Outputs the byte in AL to the variable port address contained in DX.',
     setupDesc: 'Initializes DX = 0FFF8H (port address) and AL = A5H (data to output).',
     initialRegs: { AX: 0x00A5, BX: 0x0000, CX: 0x0000, DX: 0xFFF8, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
@@ -668,22 +830,6 @@ export const mockInstructions: SimulatorInstruction[] = [
         newRegs: { ...regs, IP: regs.IP + 2 },
         newFlags: { ...flags },
         mathExplanation: 'OUT copies AL byte (A5H) directly to port address DX (0FFF8H). No flags are modified.'
-      };
-    }
-  },
-  {
-    opcode: 'LOCK XCHG [SI], AL',
-    category: 'Control, Flag & IO',
-    desc: 'Asserts the bus LOCK prefix before performing an exchange with shared memory.',
-    setupDesc: 'Initializes AL = 01H (semaphore token). SI holds resource offset.',
-    initialRegs: { AX: 0x0001, BX: 0x0000, CX: 0x0000, DX: 0x0000, SP: 0xFFFE, BP: 0x0000, SI: 0x1000, DI: 0x2000, CS: 0x1000, DS: 0x2000, SS: 0x3000, ES: 0x4000, IP: 0x0100 },
-    initialFlags: { ZF: 0, CF: 0, SF: 0, OF: 0, AF: 0, PF: 0 },
-    execute: (regs, flags) => {
-      const newAX = (regs.AX & 0xFF00) | 0x00; 
-      return {
-        newRegs: { ...regs, AX: newAX, IP: regs.IP + 3 },
-        newFlags: { ...flags },
-        mathExplanation: 'LOCK prefix asserts bus LOCK signal, ensuring atomic execution of XCHG. AL becomes 00H, successfully acquiring semaphore.'
       };
     }
   },
@@ -1004,6 +1150,18 @@ export function getInstructionFormat(opcode: string): InstructionFormatInfo {
       ]
     };
   }
+  if (op === 'IMUL BL') {
+    return {
+      syntax: 'IMUL BL',
+      addressing: 'Register Addressing (implied AL/AX signed product)',
+      format: '1111011 w [mod 101 r/m]',
+      machineCode: 'F6 ED',
+      bytesBreakdown: [
+        { label: 'Opcode', bits: '11110110', hex: 'F6H', desc: 'IMUL 8-bit register (w=0)' },
+        { label: 'ModR/M', bits: '11101101', hex: 'EDH', desc: 'mod=11, ext=101 (IMUL), r/m=101 (BL)' }
+      ]
+    };
+  }
   if (op === 'DIV BL') {
     return {
       syntax: 'DIV BL',
@@ -1013,6 +1171,18 @@ export function getInstructionFormat(opcode: string): InstructionFormatInfo {
       bytesBreakdown: [
         { label: 'Opcode', bits: '11110110', hex: 'F6H', desc: 'DIV 8-bit register (w=0)' },
         { label: 'ModR/M', bits: '11110011', hex: 'F3H', desc: 'mod=11, ext=110 (DIV), r/m=011 (BL)' }
+      ]
+    };
+  }
+  if (op === 'IDIV BL') {
+    return {
+      syntax: 'IDIV BL',
+      addressing: 'Register Addressing (implied AL/AH signed quotient/remainder)',
+      format: '1111011 w [mod 111 r/m]',
+      machineCode: 'F6 FB',
+      bytesBreakdown: [
+        { label: 'Opcode', bits: '11110110', hex: 'F6H', desc: 'IDIV 8-bit register (w=0)' },
+        { label: 'ModR/M', bits: '11111011', hex: 'FBH', desc: 'mod=11, ext=111 (IDIV), r/m=011 (BL)' }
       ]
     };
   }
@@ -1576,35 +1746,37 @@ export const eceSlides: EceSlide[] = [
     codeExample: "SUB AX, BX ; Subtract BX from AX\nSBB DX, CX ; Subtract CX from DX with Borrow flag"
   },
   {
-    title: "9. MUL - Unsigned Multiplication",
+    title: "9. MUL & IMUL - Unsigned & Signed Multiplication",
     category: "Arithmetic",
     points: [
-      "**Format**: `MUL Source` (Multiply AL or AX with Source)",
-      "**Byte multiplication**: `AX = AL * Source (8-bit)`",
-      "**Word multiplication**: `DX:AX = AX * Source (16-bit)`",
-      "Result is double-width: fits into AX (8-bit) or DX:AX pair (16-bit)."
+      "**MUL (Unsigned)**: `MUL Source` multiplies unsigned operands (AL * Src -> AX or AX * Src -> DX:AX).",
+      "**IMUL (Signed)**: `IMUL Source` multiplies 2's complement signed operands, preserving algebraic sign (+ * + = +, + * - = -).",
+      "**Byte multiplication (8-bit)**: `AX = AL * Source` (16-bit double-width result).",
+      "**Word multiplication (16-bit)**: `DX:AX = AX * Source` (32-bit double-width result in DX:AX register pair)."
     ],
     notes: [
-      "1. Register can be any general-purpose register.",
-      "2. CF and OF are set to 1 if upper half of product (AH or DX) is non-zero; else cleared.",
-      "3. Source operand cannot be immediate data."
+      "1. Source operand can be any general register or memory location, but NOT an immediate constant.",
+      "2. For MUL: CF and OF are set to 1 if upper half of product (AH or DX) is non-zero.",
+      "3. For IMUL: CF and OF are set to 1 if upper half is NOT a sign extension of lower half."
     ],
-    codeExample: "MUL BH ; Multiply AL with BH, 16-bit product saved in AX\nMUL CX ; Multiply AX with CX, 32-bit product in DX:AX"
+    codeExample: "MUL BL   ; Unsigned AL * BL -> Product in AX\nIMUL BL  ; Signed 2's complement AL * BL -> Product in AX\nMUL CX   ; Unsigned AX * CX -> 32-bit product in DX:AX"
   },
   {
-    title: "10. DIV - Unsigned Division",
+    title: "10. DIV & IDIV - Unsigned & Signed Division",
     category: "Arithmetic",
     points: [
-      "**Format**: `DIV Source` (Divide AX or DX:AX by Source)",
-      "**Byte division**: `AL = AX / Source` (Quotient), `AH = AX % Source` (Remainder)",
-      "**Word division**: `AX = DX:AX / Source` (Quotient), `DX = DX:AX % Source` (Remainder)"
+      "**DIV (Unsigned)**: `DIV Source` divides unsigned dividend (AX or DX:AX) by divisor.",
+      "**IDIV (Signed)**: `IDIV Source` divides 2's complement signed dividend by signed divisor.",
+      "**Byte division (8-bit divisor)**: `AL = AX / Source` (Quotient), `AH = AX % Source` (Remainder).",
+      "**Word division (16-bit divisor)**: `AX = DX:AX / Source` (Quotient), `DX = DX:AX % Source` (Remainder).",
+      "**Sign Extension Requirement**: For IDIV, 16-bit dividend in AX must be sign-extended into DX using `CWD` prior to 16-bit division."
     ],
     notes: [
-      "1. Register can be any general purpose register.",
-      "2. All status flags are affected.",
-      "3. Divide error (Interrupt 0) triggers if division by zero occurs."
+      "1. Source operand can be a register or memory location, but NOT immediate data.",
+      "2. Divide Error Interrupt (Type 0) is generated if divisor is 0 or if quotient overflows destination register (AL > 255 or AX > 65535).",
+      "3. All status flags are undefined after DIV/IDIV execution."
     ],
-    codeExample: "DIV BL ; Divide AX by BL. Quotient in AL, Remainder in AH\nDIV CX ; Divide DX:AX by CX. Quotient in AX, Remainder in DX"
+    codeExample: "DIV BL   ; Unsigned AX / BL -> Quotient AL, Remainder AH\nIDIV BL  ; Signed AX / BL -> Signed Quotient AL, Remainder AH\nCWD      ; Sign extend AX into DX prior to 16-bit IDIV\nIDIV CX  ; Signed DX:AX / CX -> Quotient AX, Remainder DX"
   },
   {
     title: "11. Flag Manipulation Instructions",
@@ -1910,6 +2082,81 @@ export function getOperandAnalysis(opcode: string): OperandAnalysis {
   };
 }
 
+export function getInstNameInfo(opcode: string): { name: string; full: string } {
+  const clean = opcode.replace(/^LOCK\s+/, '').replace(/^REP\s+/, '');
+  const mnemonic = clean.split(' ')[0].toUpperCase();
+  
+  const map: Record<string, { name: string; full: string }> = {
+    'ADD': { name: 'ADD', full: 'Addition' },
+    'ADC': { name: 'ADC', full: 'Add with Carry' },
+    'SUB': { name: 'SUB', full: 'Subtraction' },
+    'SBB': { name: 'SBB', full: 'Subtract with Borrow' },
+    'INC': { name: 'INC', full: 'Increment by 1' },
+    'DEC': { name: 'DEC', full: 'Decrement by 1' },
+    'MUL': { name: 'MUL', full: 'Unsigned Multiplication' },
+    'IMUL': { name: 'IMUL', full: 'Signed Multiplication (2\'s Complement)' },
+    'DIV': { name: 'DIV', full: 'Unsigned Division' },
+    'IDIV': { name: 'IDIV', full: 'Signed Division (2\'s Complement)' },
+    'CMP': { name: 'CMP', full: 'Compare Operands' },
+    'MOV': { name: 'MOV', full: 'Move / Copy Data' },
+    'XCHG': { name: 'XCHG', full: 'Exchange Operands' },
+    'PUSH': { name: 'PUSH', full: 'Push onto Stack' },
+    'POP': { name: 'POP', full: 'Pop from Stack' },
+    'LEA': { name: 'LEA', full: 'Load Effective Address' },
+    'LDS': { name: 'LDS', full: 'Load Pointer using DS' },
+    'LES': { name: 'LES', full: 'Load Pointer using ES' },
+    'XLAT': { name: 'XLAT', full: 'Translate Byte in AL' },
+    'DAA': { name: 'DAA', full: 'Decimal Adjust AL after Addition' },
+    'DAS': { name: 'DAS', full: 'Decimal Adjust AL after Subtraction' },
+    'AAA': { name: 'AAA', full: 'ASCII Adjust AL after Addition' },
+    'AAS': { name: 'AAS', full: 'ASCII Adjust AL after Subtraction' },
+    'AAM': { name: 'AAM', full: 'ASCII Adjust AX after Multiply' },
+    'AAD': { name: 'AAD', full: 'ASCII Adjust AX before Division' },
+    'AND': { name: 'AND', full: 'Bitwise Logical AND' },
+    'OR': { name: 'OR', full: 'Bitwise Logical OR' },
+    'XOR': { name: 'XOR', full: 'Bitwise Logical XOR' },
+    'NOT': { name: 'NOT', full: 'Bitwise Invert / One\'s Complement' },
+    'NEG': { name: 'NEG', full: 'Two\'s Complement Negation' },
+    'TEST': { name: 'TEST', full: 'Logical Compare (TEST)' },
+    'SHL': { name: 'SHL', full: 'Shift Logical Left' },
+    'SHR': { name: 'SHR', full: 'Shift Logical Right' },
+    'SAR': { name: 'SAR', full: 'Shift Arithmetic Right' },
+    'ROL': { name: 'ROL', full: 'Rotate Left' },
+    'ROR': { name: 'ROR', full: 'Rotate Right' },
+    'STC': { name: 'STC', full: 'Set Carry Flag' },
+    'CLC': { name: 'CLC', full: 'Clear Carry Flag' },
+    'STD': { name: 'STD', full: 'Set Direction Flag' },
+    'CLD': { name: 'CLD', full: 'Clear Direction Flag' },
+    'STI': { name: 'STI', full: 'Set Interrupt Enable Flag' },
+    'CLI': { name: 'CLI', full: 'Clear Interrupt Enable Flag' },
+    'LAHF': { name: 'LAHF', full: 'Load AH from Flags' },
+    'SAHF': { name: 'SAHF', full: 'Store AH into Flags' },
+    'IN': { name: 'IN', full: 'Input Byte/Word from Port' },
+    'OUT': { name: 'OUT', full: 'Output Byte/Word to Port' },
+    'JMP': { name: 'JMP', full: 'Unconditional Jump' },
+    'LOOP': { name: 'LOOP', full: 'Loop According to CX Counter' },
+    'CALL': { name: 'CALL', full: 'Call Subroutine / Procedure' },
+    'RET': { name: 'RET', full: 'Return from Subroutine' },
+    'MOVSB': { name: 'MOVSB', full: 'Move String Byte' },
+    'MOVSW': { name: 'MOVSW', full: 'Move String Word' },
+    'CMPSB': { name: 'CMPSB', full: 'Compare String Bytes' },
+    'SCASB': { name: 'SCASB', full: 'Scan String Byte' },
+    'LODSB': { name: 'LODSB', full: 'Load String Byte' },
+    'STOSB': { name: 'STOSB', full: 'Store String Byte' },
+  };
+
+  if (opcode.startsWith('REP')) {
+    const nextWord = clean.split(' ')[1]?.toUpperCase() || mnemonic;
+    return { name: 'REP ' + nextWord, full: `Repeat ${map[nextWord]?.full || nextWord}` };
+  }
+  if (opcode.startsWith('LOCK')) {
+    const nextWord = clean.split(' ')[1]?.toUpperCase() || mnemonic;
+    return { name: 'LOCK ' + nextWord, full: `Bus Lock ${map[nextWord]?.full || nextWord}` };
+  }
+
+  return map[mnemonic] || { name: mnemonic, full: `${mnemonic} Operation` };
+}
+
 export function getSlideIndexForOpcode(opcode: string): number {
   const op = opcode.trim();
   if (op.startsWith('MOV CX')) return 3; 
@@ -1921,8 +2168,8 @@ export function getSlideIndexForOpcode(opcode: string): number {
   if (op.startsWith('POP')) return 9;    
   if (op.startsWith('ADD') || op.startsWith('ADC')) return 10; 
   if (op.startsWith('SUB') || op.startsWith('SBB')) return 11; 
-  if (op.startsWith('MUL')) return 12;   
-  if (op.startsWith('DIV')) return 13;   
+  if (op.startsWith('MUL') || op.startsWith('IMUL')) return 12;   
+  if (op.startsWith('DIV') || op.startsWith('IDIV')) return 13;   
   if (op.startsWith('STC')) return 14;   
   if (op.startsWith('LAHF')) return 14;  
   if (op.startsWith('IN AL')) return 15; 

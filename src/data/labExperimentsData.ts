@@ -1122,7 +1122,7 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     outcomes: ['Understand MUL vs IMUL.', 'Handle 32-bit results and quotients.'],
     components: [{ name: 'MASM', spec: 'v6.11', purpose: 'Assembly compiler' }, { name: 'DOSBox', spec: 'v0.74', purpose: 'DOS emulation environment' }],
     procedureSteps: ['Load variables.', 'Perform MUL & IMUL.', 'Trace quotient and remainder with DIV & IDIV.', 'Check DX and AX registers.'],
-    theoryText: 'Unsigned arithmetic is handled by MUL and DIV. Signed arithmetic utilizes IMUL and IDIV, requiring AX to be sign-extended to DX using CWD for division.',
+    theoryText: 'Unsigned arithmetic uses MUL and DIV. For 16-bit MUL, product is stored in DX:AX. For DIV, DX:AX is divided by operand, placing Quotient in AX and Remainder in DX (DX must be zeroed first). Signed arithmetic uses IMUL and IDIV with 2\'s complement representation. For signed division, 16-bit AX is sign-extended into DX using CWD (Convert Word to Doubleword) before executing IDIV to preserve sign integrity and prevent Divide Overflow / Type 0 interrupt errors.',
     theoryDiagramType: 'register-pair',
     algorithmSteps: [
       'Initialize Segment Registers (DS = @DATA).',
@@ -1172,7 +1172,7 @@ export const labManualPagesData: Record<string, LabManualPage> = {
     outcomes: ['Develop mathematical computation formulas.', 'Understand cascading multiplication.'],
     components: [{ name: 'MASM', spec: 'v6.11', purpose: 'Compiler' }, { name: 'DOSBox', spec: 'v0.74', purpose: 'DOS emulation' }],
     procedureSteps: ['Input number N.', 'Multiply N by itself for square.', 'Multiply square by N for cube.', 'Execute loop to compute factorial.'],
-    theoryText: 'Square is N*N. Cube is N*N*N. Factorial of N is computed iteratively as N * (N-1) * ... * 1 using CX loop.',
+    theoryText: 'Square (N²) is computed via MUL BX (AX × BX = N × N). Cube (N³) is obtained by multiplying Square by N (MUL BX = N² × N). Factorial (N! = N × (N-1) × ... × 1) uses iterative accumulator multiplication with CX counter (AX = 1, CX = N, loop executing MUL CX). 16-bit AX registers support factorials up to 8! (40,320 / 9D80H); higher values overflow into DX:AX.',
     theoryDiagramType: 'register-pair',
     algorithmSteps: [
       'Initialize Segment Registers.',

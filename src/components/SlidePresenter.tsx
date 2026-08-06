@@ -1,39 +1,67 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Slide, QuizQuestion } from '../types';
-import { ChevronLeft, ChevronRight, CheckCircle, HelpCircle, GraduationCap, RefreshCw, Layers, PanelLeftClose, PanelLeftOpen, Sparkles, BookOpen, X, ZoomIn, Target, Cpu, Maximize2, Minimize2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle, HelpCircle, GraduationCap, RefreshCw, Layers, PanelLeftClose, PanelLeftOpen, Sparkles, BookOpen, X, ZoomIn, Target, Cpu, Maximize2, Minimize2, Video, Play, Film } from 'lucide-react';
 
-// Import simulators
-import EvolutionTimeline from './EvolutionTimeline';
-import PinConfigurationSimulator from './PinConfigurationSimulator';
-import ArchitectureExplorer from './ArchitectureExplorer';
-import FlagRegisterSimulator from './FlagRegisterSimulator';
-import MemoryCalculationSimulator from './MemoryCalculationSimulator';
-import InterruptVectorTableSimulator from './InterruptVectorTableSimulator';
-import IntroInterruptsSimulator from './IntroInterruptsSimulator';
-import TimingDiagramSimulator from './TimingDiagramSimulator';
-import PipeliningSimulator from './PipeliningSimulator';
-import OperatingModeSimulator from './OperatingModeSimulator';
-import MinimumModeHardwareSimulator from './MinimumModeHardwareSimulator';
+function getVideoEmbed(url: string) {
+  if (!url) return null;
+  const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+  if (ytMatch && ytMatch[1]) {
+    return {
+      type: 'iframe',
+      src: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=0&rel=0`
+    };
+  }
+  const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vimeoMatch && vimeoMatch[1]) {
+    return {
+      type: 'iframe',
+      src: `https://player.vimeo.com/video/${vimeoMatch[1]}`
+    };
+  }
+  if (/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url)) {
+    return {
+      type: 'video',
+      src: url
+    };
+  }
+  return {
+    type: 'iframe',
+    src: url
+  };
+}
+
+// Import simulators lazily for code-splitting
+const EvolutionTimeline = React.lazy(() => import('./EvolutionTimeline'));
+const PinConfigurationSimulator = React.lazy(() => import('./PinConfigurationSimulator'));
+const ArchitectureExplorer = React.lazy(() => import('./ArchitectureExplorer'));
+const FlagRegisterSimulator = React.lazy(() => import('./FlagRegisterSimulator'));
+const MemoryCalculationSimulator = React.lazy(() => import('./MemoryCalculationSimulator'));
+const InterruptVectorTableSimulator = React.lazy(() => import('./InterruptVectorTableSimulator'));
+const IntroInterruptsSimulator = React.lazy(() => import('./IntroInterruptsSimulator'));
+const TimingDiagramSimulator = React.lazy(() => import('./TimingDiagramSimulator'));
+const PipeliningSimulator = React.lazy(() => import('./PipeliningSimulator'));
+const OperatingModeSimulator = React.lazy(() => import('./OperatingModeSimulator'));
+const MinimumModeHardwareSimulator = React.lazy(() => import('./MinimumModeHardwareSimulator'));
 
 // Unit II Simulators
-import DevPipelineSimulator from './DevPipelineSimulator';
-import AddressingModesSimulator from './AddressingModesSimulator';
-import InstructionDecoderSimulator from './InstructionDecoderSimulator';
-import { InstructionBuilderSimulator } from './InstructionBuilderSimulator';
-import DirectiveSandboxSimulator from './DirectiveSandboxSimulator';
-import AssemblerPlaygroundSimulator from './AssemblerPlaygroundSimulator';
-import AssemblerPassSimulator from './AssemblerPassSimulator';
-import AssemblerOutputsSimulator from './AssemblerOutputsSimulator';
+const DevPipelineSimulator = React.lazy(() => import('./DevPipelineSimulator'));
+const AddressingModesSimulator = React.lazy(() => import('./AddressingModesSimulator'));
+const InstructionDecoderSimulator = React.lazy(() => import('./InstructionDecoderSimulator'));
+const InstructionBuilderSimulator = React.lazy(() => import('./InstructionBuilderSimulator').then(m => ({ default: m.InstructionBuilderSimulator })));
+const DirectiveSandboxSimulator = React.lazy(() => import('./DirectiveSandboxSimulator'));
+const AssemblerPlaygroundSimulator = React.lazy(() => import('./AssemblerPlaygroundSimulator'));
+const AssemblerPassSimulator = React.lazy(() => import('./AssemblerPassSimulator'));
+const AssemblerOutputsSimulator = React.lazy(() => import('./AssemblerOutputsSimulator'));
 
 // Unit III Simulators
-import MemoryInterfacingSimulator from './MemoryInterfacingSimulator';
-import PPI8255Simulator from './PPI8255Simulator';
-import PeripheralInterfacingSimulator from './PeripheralInterfacingSimulator';
-import AnalogInterfacingSimulator from './AnalogInterfacingSimulator';
-import Interrupt8259Simulator from './Interrupt8259Simulator';
-import USART8251Simulator from './USART8251Simulator';
-import DMA8237Simulator from './DMA8237Simulator';
+const MemoryInterfacingSimulator = React.lazy(() => import('./MemoryInterfacingSimulator'));
+const PPI8255Simulator = React.lazy(() => import('./PPI8255Simulator'));
+const PeripheralInterfacingSimulator = React.lazy(() => import('./PeripheralInterfacingSimulator'));
+const AnalogInterfacingSimulator = React.lazy(() => import('./AnalogInterfacingSimulator'));
+const Interrupt8259Simulator = React.lazy(() => import('./Interrupt8259Simulator'));
+const USART8251Simulator = React.lazy(() => import('./USART8251Simulator'));
+const DMA8237Simulator = React.lazy(() => import('./DMA8237Simulator'));
 
 interface SlidePresenterProps {
   slide: Slide;
@@ -75,6 +103,51 @@ export default function SlidePresenter({
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
+
+  // Video embedding custom overrides state
+  const [customVideoOverrides, setCustomVideoOverrides] = useState<Record<string, { url: string; title: string }>>(() => {
+    try {
+      const saved = localStorage.getItem('applet_slide_video_overrides');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [inputVideoUrl, setInputVideoUrl] = useState('');
+  const [inputVideoTitle, setInputVideoTitle] = useState('');
+
+  const activeVideoUrl = customVideoOverrides[slide.id]?.url ?? slide.videoUrl ?? '';
+  const activeVideoTitle = customVideoOverrides[slide.id]?.title ?? slide.videoTitle ?? 'Embedded Video Resource / Lecture';
+
+  const handleSaveVideo = () => {
+    const updated = {
+      ...customVideoOverrides,
+      [slide.id]: {
+        url: inputVideoUrl.trim(),
+        title: inputVideoTitle.trim() || 'Embedded Video Resource'
+      }
+    };
+    setCustomVideoOverrides(updated);
+    try {
+      localStorage.setItem('applet_slide_video_overrides', JSON.stringify(updated));
+    } catch (err) {
+      console.error(err);
+    }
+    setIsVideoModalOpen(false);
+  };
+
+  const handleRemoveVideo = () => {
+    const updated = { ...customVideoOverrides };
+    delete updated[slide.id];
+    setCustomVideoOverrides(updated);
+    try {
+      localStorage.setItem('applet_slide_video_overrides', JSON.stringify(updated));
+    } catch (err) {
+      console.error(err);
+    }
+    setIsVideoModalOpen(false);
+  };
 
   // Double tap & touch swipe gesture states/refs
   const lastTapRef = useRef<number>(0);
@@ -284,69 +357,109 @@ export default function SlidePresenter({
 
   // Render the appropriate interactive simulator based on type
   const renderInteractive = (type: string) => {
+    let component = null;
     switch (type) {
       case 'evolution':
-        return <EvolutionTimeline defaultTab={slide.id === 'm1-s3' ? 'vs' : 'timeline'} />;
+        component = <EvolutionTimeline defaultTab={slide.id === 'm1-s3' ? 'vs' : 'timeline'} />;
+        break;
       case 'pins':
-        return <PinConfigurationSimulator />;
+        component = <PinConfigurationSimulator />;
+        break;
       case 'architecture':
-        return <ArchitectureExplorer />;
+        component = <ArchitectureExplorer />;
+        break;
       case 'flags':
-        return <FlagRegisterSimulator />;
+        component = <FlagRegisterSimulator />;
+        break;
       case 'memory-calc':
-        return (
+        component = (
           <MemoryCalculationSimulator 
             key={slide.id} 
             defaultTab={
-              slide.id === 'm3-s2' ? 'physical-map' : (slide.id === 'm3-s1' ? 'segmented-structure' : 'calculator')
+              slide.id === 'm3-s4' ? 'physical-map' : ((slide.id === 'm3-s2' || slide.id === 'm3-s3') ? 'segmented-structure' : 'calculator')
             } 
+            onlyDifferenceTable={slide.id === 'm3-s3'}
+            onlyMemoryBanking={slide.id === 'm3-s4'}
           />
         );
+        break;
       case 'intro-interrupts':
-        return <IntroInterruptsSimulator />;
+        component = <IntroInterruptsSimulator />;
+        break;
       case 'interrupts':
-        return <InterruptVectorTableSimulator />;
+        component = <InterruptVectorTableSimulator />;
+        break;
       case 'timing':
-        return <TimingDiagramSimulator />;
+        component = <TimingDiagramSimulator />;
+        break;
       case 'pipelining':
-        return <PipeliningSimulator />;
+        component = <PipeliningSimulator />;
+        break;
       case 'modes':
-        return <OperatingModeSimulator />;
+        component = <OperatingModeSimulator />;
+        break;
       case 'min-mode-hardware':
-        return <MinimumModeHardwareSimulator />;
+        component = <MinimumModeHardwareSimulator />;
+        break;
       case 'dev-pipeline':
-        return <DevPipelineSimulator />;
+        component = <DevPipelineSimulator />;
+        break;
       case 'addressing-modes':
-        return <AddressingModesSimulator />;
+        component = <AddressingModesSimulator />;
+        break;
       case 'instruction-decoder':
-        return <InstructionDecoderSimulator />;
+        component = <InstructionDecoderSimulator />;
+        break;
       case 'instruction-builder':
-        return <InstructionBuilderSimulator />;
+        component = <InstructionBuilderSimulator />;
+        break;
       case 'directive-sandbox':
-        return <DirectiveSandboxSimulator initialLabId={slide.id === 'm20-s1' ? 'multiprecision' : activeLabId} hideExp1a={slide.moduleId === 'm11'} />;
+        component = <DirectiveSandboxSimulator initialLabId={slide.id === 'm20-s1' ? 'multiprecision' : activeLabId} hideExp1a={slide.moduleId === 'm11'} />;
+        break;
       case 'assembler-playground':
-        return <AssemblerPlaygroundSimulator />;
+        component = <AssemblerPlaygroundSimulator />;
+        break;
       case 'assembler-passes':
-        return <AssemblerPassSimulator />;
+        component = <AssemblerPassSimulator />;
+        break;
       case 'assembler-outputs':
-        return <AssemblerOutputsSimulator />;
+        component = <AssemblerOutputsSimulator />;
+        break;
       case 'memory-interfacing':
-        return <MemoryInterfacingSimulator />;
+        component = <MemoryInterfacingSimulator />;
+        break;
       case 'ppi-8255':
-        return <PPI8255Simulator />;
+        component = <PPI8255Simulator />;
+        break;
       case 'peripheral-interfacing':
-        return <PeripheralInterfacingSimulator />;
+        component = <PeripheralInterfacingSimulator />;
+        break;
       case 'analog-interfacing':
-        return <AnalogInterfacingSimulator />;
+        component = <AnalogInterfacingSimulator />;
+        break;
       case 'interrupt-8259':
-        return <Interrupt8259Simulator />;
+        component = <Interrupt8259Simulator />;
+        break;
       case 'usart-8251':
-        return <USART8251Simulator />;
+        component = <USART8251Simulator />;
+        break;
       case 'dma-8237':
-        return <DMA8237Simulator />;
+        component = <DMA8237Simulator />;
+        break;
       default:
         return null;
     }
+
+    return (
+      <React.Suspense fallback={
+        <div className="p-8 text-center text-slate-500 font-mono text-xs flex items-center justify-center gap-2">
+          <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <span>Loading Interactive Simulator...</span>
+        </div>
+      }>
+        {component}
+      </React.Suspense>
+    );
   };
 
   return (
@@ -382,13 +495,6 @@ export default function SlidePresenter({
                     <div className="space-y-4">
                       <div className="flex flex-wrap items-center justify-between gap-2.5">
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-bold font-mono tracking-wider bg-indigo-50 border border-indigo-200 text-indigo-700 uppercase">
-                            <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
-                            Unit IV: Lab Resources & Experiments Manual
-                          </span>
-                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-mono font-bold bg-slate-100 border border-slate-200 text-slate-600 shadow-2xs">
-                            {slide.id}
-                          </span>
                         </div>
                         <span className="px-3 py-1 bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-full text-xs font-bold font-mono">
                           Experiment Aim
@@ -477,14 +583,16 @@ export default function SlidePresenter({
                   <div className="space-y-2 md:space-y-2.5">
                     {!fullScreenMode && (
                       <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider bg-indigo-50 border border-indigo-100 text-indigo-700 uppercase">
-                            <Sparkles className="w-3 h-3 text-indigo-500 animate-pulse" />
-                            {slide.moduleTitle || 'Academic Courseware'}
-                          </span>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-50 border border-slate-200 text-slate-500 shadow-2xs">
-                            Slide ID: {slide.id}
-                          </span>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider bg-indigo-50 border border-indigo-100 text-indigo-700 uppercase">
+                              <Sparkles className="w-3 h-3 text-indigo-500 animate-pulse" />
+                              {slide.moduleTitle || 'Academic Courseware'}
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-50 border border-slate-200 text-slate-500 shadow-2xs">
+                              Slide ID: {slide.id}
+                            </span>
+                          </div>
                         </div>
                         <motion.h2
                           key={slide.title}
@@ -597,7 +705,7 @@ export default function SlidePresenter({
                           </div>
                         </div>
                       ) : (
-                        <div className={`grid grid-cols-1 ${['m2-s3', 'm3-s1', 'm3-s2', 'm4-s1', 'm4-s2', 'm4-s3', 'm8-s1', 'm8-s4', 'm8-s5', 'm9-s1', 'm10-s1', 'm10-s2', 'm10-s3', 'm11-s1', 'm12-s1'].includes(slide.id) || slide.moduleId === 'm1' ? 'grid-cols-1' : 'md:grid-cols-2'} gap-1.5 md:gap-2 pr-1`}>
+                        <div className={`grid grid-cols-1 ${['m2-s3', 'm3-s2', 'm3-s3', 'm3-s4', 'm4-s1', 'm4-s2', 'm4-s3', 'm8-s1', 'm8-s4', 'm8-s5', 'm9-s1', 'm10-s1', 'm10-s2', 'm10-s3', 'm11-s1', 'm12-s1'].includes(slide.id) || slide.moduleId === 'm1' ? 'grid-cols-1' : 'md:grid-cols-2'} gap-1.5 md:gap-2 pr-1`}>
                           {slide.points.map((pt, idx) => {
                             const isRevealed = !incrementalRevealEnabled || idx < revealedPointsCount;
                             if (!isRevealed) return null;
@@ -1104,6 +1212,106 @@ export default function SlidePresenter({
                 >
                   Got it, Resume Lab!
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Embed Custom Video Modal */}
+      <AnimatePresence>
+        {isVideoModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={() => setIsVideoModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4 text-slate-900"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-2 bg-rose-50 border border-rose-200/80 rounded-xl text-rose-600">
+                    <Video className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <h3 className="font-display font-extrabold text-base text-slate-900">
+                      Embed Video for Slide ({slide.id})
+                    </h3>
+                    <p className="text-[12px] text-slate-500">
+                      Supports YouTube links, Vimeo, direct MP4 video URLs, or web embeds.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsVideoModalOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Video Title / Heading
+                  </label>
+                  <input
+                    type="text"
+                    value={inputVideoTitle}
+                    onChange={(e) => setInputVideoTitle(e.target.value)}
+                    placeholder="e.g. 8086 Memory Segmentation Video Lecture"
+                    className="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Video URL / Link
+                  </label>
+                  <input
+                    type="url"
+                    value={inputVideoUrl}
+                    onChange={(e) => setInputVideoUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=... or https://.../video.mp4"
+                    className="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono text-slate-800"
+                  />
+                  <span className="text-[11px] text-slate-400 mt-1 block">
+                    Paste any YouTube, Vimeo, or standard video link.
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                {activeVideoUrl ? (
+                  <button
+                    onClick={handleRemoveVideo}
+                    className="px-3 py-2 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+                  >
+                    Remove Video
+                  </button>
+                ) : <div />}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsVideoModalOpen(false)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveVideo}
+                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-indigo-600/15 cursor-pointer"
+                  >
+                    Save &amp; Embed Video
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>

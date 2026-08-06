@@ -4,6 +4,8 @@ export interface Slide {
   moduleTitle: string;
   moduleId: string;
   points?: string[];
+  videoUrl?: string;
+  videoTitle?: string;
   comparisonTable?: {
     headers: string[];
     rows: string[][];

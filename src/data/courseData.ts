@@ -338,27 +338,43 @@ export const courseData: Module[] = [
     slides: [
       {
         id: 'm3-s2',
-        title: '1. 1 MB Memory Bit & Byte Math',
+        title: '1. What is Memory Segmentation & Need?',
         moduleTitle: 'Module 3: Memory Segmentation',
         moduleId: 'm3',
         points: [
-          'Addressable Locations: With a 20-bit address bus, the 8086 can address 2²⁰ physical locations: 2²⁰ = 1,048,576 locations.',
-          'Byte-Addressable Memory: Each individual location stores exactly 1 Byte (8 bits). Therefore, maximum addressable memory capacity is exactly 1,048,576 Bytes (1 MB).',
-          'Capacity in Bits: Since 1 MB = 1,048,576 Bytes and 1 Byte = 8 bits, the total capacity is 1,048,576 × 8 = 8,388,608 bits.',
-          'Exponentials Formula: Maximum Capacity = 1 MB = 2²⁰ Bytes = 2²³ bits. Understanding these conversions is key for exams!'
+          '• Definition of Memory Segmentation: Memory Segmentation is a technique where the 1 MB physical address space (00000H to FFFFFH) is logically divided into smaller memory blocks called Segments, each up to 64 KB (65,536 bytes) in size.',
+          '• Why Segmentation is Essential: Since internal 8086 registers (IP, SP, BX, SI, DI) are only 16 bits wide (addressing max 64 KB), segmentation allows a 16-bit processor to address 1 MB of physical RAM by pairing a 16-bit Segment Base Register with a 16-bit Offset Register.',
+          '• Primary Architectural Advantages: Provides dynamic program relocation (programs load anywhere in RAM on-the-fly), modular separation of code/data/stack, memory access protection, and efficient multitasking execution.'
         ],
         interactiveType: 'memory-calc'
       },
       {
-        id: 'm3-s1',
-        title: '2. What is Memory Segmentation?',
+        id: 'm3-s3',
+        title: '2. Overlapping vs. Non-Overlapping Segmentation',
         moduleTitle: 'Module 3: Memory Segmentation',
         moduleId: 'm3',
         points: [
-          '• Definition of Memory Segmentation: Memory Segmentation is a memory management technique in the 8086 processor where the complete 1 MB physical address space (00000H to FFFFFH) is divided into smaller logical memory blocks called Segments, each up to 64 KB (65,536 bytes) in capacity.',
-          '• Why Segmentation is Essential: Since internal 8086 registers (IP, SP, BX, SI, DI) are only 16 bits wide (addressing max 64 KB), Memory Segmentation allows a 16-bit processor to address 1 MB of physical RAM by pairing a 16-bit Segment Base Register with a 16-bit Offset Register.',
           '• Four Active Logical Segments: At any given instant, the CPU actively references 4 main segments mapped by 16-bit registers in the BIU: Code Segment (CS), Data Segment (DS), Stack Segment (SS), and Extra Segment (ES).',
-          '• Placement & Key Advantages: All 4 logical segments reside inside User RAM (Transient Program Area: 00500H - 9FFFFH). Segmentation provides code relocation, modular code/data separation, program memory protection, and efficient multi-tasking memory access.'
+          '• Paragraph Boundary & Addressing Formula: Segment base addresses must start at a 16-byte Paragraph Boundary (ending in 0H). The 20-bit Physical Address = (Segment Register × 10H) + Offset Register.',
+          '• Non-Overlapping Segmentation: Each active segment (CS, DS, SS, ES) occupies a completely distinct, isolated 64 KB memory block without sharing physical RAM addresses. This provides maximum security and prevents accidental stack overflow or data corruption.',
+          '• Overlapping Segmentation: Two or more segments share physical RAM addresses partially or fully because segment bases can begin at any 16-byte Paragraph boundary. This conserves physical RAM in memory-constrained systems and lets segments share common data structures.'
+        ],
+        interactiveType: 'memory-calc'
+      },
+      {
+        id: 'm3-s4',
+        title: '3. 8086 Memory Banking (Even & Odd Banks)',
+        moduleTitle: 'Module 3: Memory Segmentation',
+        moduleId: 'm3',
+        points: [
+          '• Why Physical Memory is Divided into Even & Odd Banks: The 8086 CPU features a 16-bit data bus (D0–D15), but physical memory is byte-addressable (8-bit wide). Partitioning 1 MB physical RAM into two parallel 512 KB banks (Even Bank on D0–D7 & Odd Bank on D8–D15) allows the processor to read/write a single 8-bit byte from either bank independently in 1 cycle, or fetch a full 16-bit word from both banks concurrently in 1 single bus cycle.',
+          '• Even Bank (Lower Bank - 512 KB): Contains all even physical memory addresses (00000H, 00002H, ..., FFFFEH). Connected to data bus lines D0–D7 and enabled when address bit A0 = 0.',
+          '• Odd Bank (Upper Bank - 512 KB): Contains all odd physical memory addresses (00001H, 00003H, ..., FFFFFH). Connected to data bus lines D8–D15 and enabled when Bus High Enable BHE# = 0.',
+          '• Memory Access Signal Control Table (BHE# & A0):',
+          '  - BHE# = 0, A0 = 0 → 16-Bit Word Transfer at Even Address (1 cycle across D0–D15).',
+          '  - BHE# = 1, A0 = 0 → 8-Bit Byte Transfer at Even Address (1 cycle across D0–D7).',
+          '  - BHE# = 0, A0 = 1 → 8-Bit Byte Transfer at Odd Address (1 cycle across D8–D15).',
+          '  - BHE# = 0, A0 = 1 (Misaligned 16-Bit Word at Odd Address) → Requires 2 memory cycles (Cycle 1: Odd byte on D8–D15; Cycle 2: Even byte on D0–D7).'
         ],
         interactiveType: 'memory-calc'
       },
@@ -1053,8 +1069,8 @@ export const courseData: Module[] = [
         moduleId: 'm10',
         points: [
           'Data Transfer Instructions (MOV, PUSH, POP, XCHG, LEA, LDS, LES, XLAT): Copies or transfers data between registers, stack, and memory segments.',
-          'Arithmetic Instructions (ADD, ADC, SUB, SBB, INC, DEC, MUL, IMUL, DIV, IDIV, CMP): Executes binary math, 2\'s complement operations, and updates status flags.',
-          'Logical & Bitwise Instructions (AND, OR, XOR, NOT, TEST, SHL, SHR, SAR, ROL, ROR): Performs bit masking, logic operations, and bit shift/rotations.',
+          'Arithmetic Instructions (ADD, ADC, SUB, SBB, INC, DEC, MUL, IMUL, DIV, IDIV, CMP): Executes binary math, 2\'s complement operations, signed & unsigned multiplication (MUL/IMUL) and division (DIV/IDIV), updating status flags.',
+          'Logical Instructions (AND, OR, XOR, NOT, TEST) & Bitwise/Shift Instructions (NEG, SHL, SHR, SAR, ROL, ROR): Performs boolean logic masking, 2\'s complement negation, and bit shifts or rotations.',
           '🧵 String Manipulation Instructions (MOVSB/MOVSW, CMPSB/CMPSW, SCASB/SCASW, LODSB/LODSW, STOSB/STOSW): Hardware-accelerated memory block operations. Source operand is always addressed by DS:SI and destination operand is addressed by ES:DI.',
           '🔁 String Repeat Prefixes & Direction Control (REP, REPE/REPZ, REPNE/REPNZ, CLD, STD): REP repeats string operations CX times. CLD clears Direction Flag (DF=0) to auto-increment SI and DI pointers; STD sets DF=1 to auto-decrement SI and DI pointers.',
           'Control Flow & Branch Instructions (JMP, JZ/JNZ, JC/JNC, JS/JNS, LOOP, CALL, RET): Controls program execution flow, subroutines, and iterative loops.'
@@ -1885,7 +1901,12 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
         moduleId: 'm20',
         points: [
-          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to perform multiplication and division of signed and unsigned hexadecimal numbers using MUL, IMUL, DIV, and IDIV instructions.'
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to perform multiplication and division of signed and unsigned hexadecimal numbers using MUL, IMUL, DIV, and IDIV instructions.',
+          '💡 THEORY & MATHEMATICAL CONCEPT:',
+          '  • Unsigned Multiplication (MUL): Multiplies 8-bit/16-bit unsigned numbers. For 16-bit (MUL SRC), AX × SRC yields a 32-bit product stored in the DX:AX register pair (DX = High Word, AX = Low Word). CF and OF flags are set if DX ≠ 0.',
+          '  • Signed Multiplication (IMUL): Operates on 2\'s complement signed numbers (-32768 to +32767). The product sign is governed by algebraic sign rules (+×+=+, +×-=-). DX:AX contains the signed 32-bit result.',
+          '  • Unsigned Division (DIV): For 32-bit dividend DX:AX divided by 16-bit divisor (DIV SRC), Quotient is stored in AX and Remainder in DX. DX must be zeroed (XOR DX, DX) prior to division to avoid Type 0 Divide Overflow Error.',
+          '  • Signed Division (IDIV): Divides signed 32-bit dividend in DX:AX by signed 16-bit divisor. Before division, the 16-bit dividend in AX MUST be sign-extended into DX using CWD (Convert Word to Doubleword) so that Bit 15 of AX is replicated across all bits of DX.'
         ]
       },
       {
@@ -1894,7 +1915,12 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
         moduleId: 'm20',
         points: [
-          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to calculate the square, cube, and factorial of a given hexadecimal byte value.'
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to calculate the square, cube, and factorial of a given hexadecimal byte value.',
+          '💡 THEORY & MATHEMATICAL CONCEPT:',
+          '  • Square (N²): Computed by loading number N into AX and operand register BX, then executing 16-bit unsigned multiplication MUL BX. The 16-bit product N² resides in AX (DX=0 for N ≤ 255).',
+          '  • Cube (N³): Derived by taking the computed Square (N²) in AX, keeping N in BX, and multiplying again via MUL BX. Result N³ is stored in DX:AX for values where N³ exceeds 16 bits (N ≥ 41).',
+          '  • Factorial (N! = N × (N-1) × ... × 1): Computed iteratively using a decremental loop with counter CX = N and accumulator AX = 1. In each iteration, AX = AX × CX (MUL CX) followed by LOOP instruction, which automatically decrements CX and repeats until CX = 0.',
+          '  • Range & Overflow Constraints: 8086 16-bit registers hold values up to 65,535 (FFFFH). Factorial values up to 8! (40,320 = 9D80H) fit in AX. For N ≥ 9 (9! = 362,880), the product spans DX:AX, requiring 32-bit register pair management.'
         ]
       },
       {
@@ -1903,7 +1929,8 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
         moduleId: 'm20',
         points: [
-          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to check whether a given byte or word data is positive or negative by testing the Most Significant Bit (MSB/Sign Bit).'
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to check whether a given byte or word data is positive or negative by testing the Most Significant Bit (MSB/Sign Bit).',
+          '💡 THEORY & CONCEPT: In signed 8086 binary notation, the Most Significant Bit (MSB, Bit 7 for bytes or Bit 15 for words) serves as the sign indicator (0 = Positive, 1 = Negative). The TEST AL, 80H instruction performs a non-destructive logical AND to isolate the MSB and set the Sign Flag (SF), enabling JS (Jump on Sign) or JNS conditional branching.'
         ]
       },
       {
@@ -1912,7 +1939,8 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
         moduleId: 'm20',
         points: [
-          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to determine whether a given data byte is odd or even by testing the Least Significant Bit (LSB/Parity Bit).'
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to determine whether a given data byte is odd or even by testing the Least Significant Bit (LSB/Parity Bit).',
+          '💡 THEORY & CONCEPT: An integer’s parity is determined by its Least Significant Bit (LSB, Bit 0): an LSB of 0 indicates an Even number, while an LSB of 1 indicates an Odd number. The TEST AL, 01H instruction masks Bit 0 and updates the Zero Flag (ZF), allowing JZ (Jump if Zero/Even) or JNZ (Jump if Not Zero/Odd) branching.'
         ]
       },
       {
@@ -1921,7 +1949,8 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
         moduleId: 'm20',
         points: [
-          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to count the total number of logical 1s and logical 0s in a given data byte.'
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to count the total number of logical 1s and logical 0s in a given data byte.',
+          '💡 THEORY & CONCEPT: Individual bits of a data byte are inspected sequentially using logical right shift instructions (SHR AL, 1). Each shift pushes the LSB into the Carry Flag (CF). A conditional JC (Jump if Carry) branch increments the 1s counter (BL) if CF=1, or the 0s counter (BH) if CF=0, repeating across an 8-iteration CX loop.'
         ]
       },
       {
@@ -1930,7 +1959,8 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
         moduleId: 'm20',
         points: [
-          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to calculate the cumulative sum and progressive difference of an array containing N hexadecimal numbers.'
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to calculate the cumulative sum and progressive difference of an array containing N hexadecimal numbers.',
+          '💡 THEORY & CONCEPT: Processing an array of N numbers involves initializing an index pointer register (SI or DI) to the starting RAM address and a loop counter (CX = N). Accumulation takes place in AL or AX via ADD AL, [SI] or SUB AL, [SI] commands, with SI incremented (INC SI) on each loop pass.'
         ]
       },
       {
@@ -1939,7 +1969,8 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
         moduleId: 'm20',
         points: [
-          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to find the largest (maximum) and smallest (minimum) numbers from an array of N hexadecimal elements.'
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to find the largest (maximum) and smallest (minimum) numbers from an array of N hexadecimal elements.',
+          '💡 THEORY & CONCEPT: Array extrema are determined by initializing AL with the candidate Maximum ([SI]) and AH with the candidate Minimum ([SI]). Iterating through the remaining N-1 elements with CMP AL, [SI+1] triggers conditional jumps (JA/JAE for unsigned max, JB/JBE for unsigned min) to selectively update the extrema candidate registers.'
         ]
       },
       {
@@ -1948,7 +1979,8 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
         moduleId: 'm20',
         points: [
-          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to sort an array of N numbers in ascending and descending order using the Bubble Sort algorithm.'
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to sort an array of N numbers in ascending and descending order using the Bubble Sort algorithm.',
+          '💡 THEORY & CONCEPT: Sorting an array of N elements is implemented via the Bubble Sort algorithm using nested loops (Outer counter DX = N-1, Inner counter CX = DX). Adjacent bytes ([SI] and [SI+1]) are compared using CMP. If out of order, memory values are swapped using XCHG or register AH, bubbling the largest/smallest element to the end.'
         ]
       },
       {
@@ -1957,7 +1989,8 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
         moduleId: 'm20',
         points: [
-          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to calculate the total length of a given character string using string manipulation instructions.'
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to calculate the total length of a given character string using string manipulation instructions.',
+          '💡 THEORY & CONCEPT: String length is calculated using the SCASB (Scan String Byte) instruction with the REPNE (Repeat while Not Equal) prefix. With AL initialized to the string terminator ("$"), DI set to the string offset, and CX set to FFFFH, REPNE SCASB decrements CX on every byte scan. Applying NOT CX followed by DEC CX yields the exact character length.'
         ]
       },
       {
@@ -1966,7 +1999,8 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
         moduleId: 'm20',
         points: [
-          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to display a character string on the console screen using MS-DOS Interrupt 21H Function 09H.'
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to display a character string on the console screen using MS-DOS Interrupt 21H Function 09H.',
+          '💡 THEORY & CONCEPT: Text rendering in MS-DOS is handled via MS-DOS Function Request INT 21H with Service 09H (Display String). The starting memory offset of the string must be loaded into register DX (LEA DX, STRING), and the string in Data Segment RAM must conclude with the ASCII "$" character terminator.'
         ]
       },
       {
@@ -1975,7 +2009,8 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
         moduleId: 'm20',
         points: [
-          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to compare two character strings for equality using the CMPSB string instruction.'
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to compare two character strings for equality using the CMPSB string instruction.',
+          '💡 THEORY & CONCEPT: Two character strings are compared byte-by-byte using the CMPSB instruction paired with the REPE (Repeat while Equal) prefix. Pointing SI to String 1, DI to String 2, and loading CX with string length, REPE CMPSB decrements CX while characters match. If ZF=1 upon loop completion, the strings are identical.'
         ]
       },
       {
@@ -1984,7 +2019,8 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
         moduleId: 'm20',
         points: [
-          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to reverse a character string and verify whether the string is a palindrome.'
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to reverse a character string and verify whether the string is a palindrome.',
+          '💡 THEORY & CONCEPT: A string is reversed by copying characters from the source end pointer (SI = end) to a target buffer (DI = start) in a decremental loop. Palindrome validation is then executed by comparing the original string with the reversed buffer using REPE CMPSB; equal strings satisfy the palindrome symmetry condition (ZF=1).'
         ]
       },
       {
@@ -1993,7 +2029,8 @@ export const courseData: Module[] = [
         moduleTitle: 'Module 20: Lab Resources & Experiments Manual',
         moduleId: 'm20',
         points: [
-          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to perform block data transfer of N bytes from a source memory offset to a destination memory offset.'
+          '🎯 AIM & OBJECTIVE: Write an 8086 ALP to perform block data transfer of N bytes from a source memory offset to a destination memory offset.',
+          '💡 THEORY & CONCEPT: High-speed block memory replication is performed using the MOVSB (Move String Byte) instruction with the REP prefix. Setting SI to the source offset, DI to the destination offset, CX to byte count, and clearing DF (CLD), REP MOVSB automatically transfers memory bytes from DS:SI to ES:DI in a single hardware cycle per byte.'
         ]
       }
     ]

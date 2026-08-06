@@ -32,13 +32,14 @@ import {
   getSlideIndexForOpcode,
   getInstructionFormat,
   getOperandAnalysis,
+  getInstNameInfo,
   EceSlide,
   InstructionFormatInfo
 } from '../data/instructionDecoderData';
 
 export default function InstructionDecoderSimulator() {
   const [activeMainTab, setActiveMainTab] = useState<'lab' | 'groups' | 'comparison' | 'remember'>('lab');
-  const [categoryTab, setCategoryTab] = useState<'All' | 'Data Transfer' | 'Arithmetic' | 'BCD & ASCII Adjust' | 'Logical & Bitwise' | 'Control, Flag & IO' | 'String Operations'>('All');
+  const [categoryTab, setCategoryTab] = useState<'All' | 'Data Transfer' | 'Arithmetic' | 'BCD & ASCII Adjust' | 'Logical' | 'Bitwise' | 'Control' | 'Flag' | 'I/O' | 'String Operations'>('All');
   const [selectedIdx, setSelectedIdx] = useState<number>(0);
   
   // Simulated hardware state
@@ -640,6 +641,7 @@ export default function InstructionDecoderSimulator() {
   const stateDetails = getActiveStateLabel();
   const formatInfo = getInstructionFormat(activeInstruction.opcode);
   const operandAnalysis = getOperandAnalysis(activeInstruction.opcode);
+  const instNameInfo = getInstNameInfo(activeInstruction.opcode);
 
   return (
     <div id="instruction-decoder-simulator" className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-6 text-slate-800 flex flex-col justify-between shadow-xs max-w-7xl mx-auto w-full space-y-6">
@@ -744,8 +746,8 @@ export default function InstructionDecoderSimulator() {
             </div>
 
             {/* Categories Tab Switcher */}
-            <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80 overflow-x-auto max-w-full">
-              {(['All', 'Data Transfer', 'Arithmetic', 'BCD & ASCII Adjust', 'Logical & Bitwise', 'Control, Flag & IO', 'String Operations'] as const).map(tab => {
+            <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80 overflow-x-auto max-w-full scrollbar-thin scrollbar-thumb-slate-300/80">
+              {(['All', 'Data Transfer', 'Arithmetic', 'BCD & ASCII Adjust', 'Logical', 'Bitwise', 'Control', 'Flag', 'I/O', 'String Operations'] as const).map(tab => {
                 const isSel = categoryTab === tab;
                 return (
                   <button
@@ -780,9 +782,10 @@ export default function InstructionDecoderSimulator() {
                 <Terminal className="w-4 h-4 text-indigo-600 animate-pulse" />
                 Instruction Stream:
               </span>
-              <div className="space-y-1.5 overflow-y-auto max-h-[300px] pr-1.5 scrollbar-thin scrollbar-thumb-sky-200/50">
+              <div className="space-y-1.5 pr-1.5 max-h-[210px] overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-200/60">
                 {filteredInstructions.map(({ inst, index }) => {
                   const isSelected = selectedIdx === index;
+                  const itemInfo = getInstNameInfo(inst.opcode);
                   return (
                     <button
                       key={index}
@@ -798,9 +801,14 @@ export default function InstructionDecoderSimulator() {
                         <span className="absolute left-0 top-0 bottom-0 w-1 bg-white" />
                       )}
                       <div>
-                        <p className={`font-mono text-xs tracking-wide ${isSelected ? 'text-white' : 'text-slate-800 font-semibold'}`}>{inst.opcode}</p>
-                        <p className={`text-[9px] mt-1 font-sans font-semibold uppercase tracking-wider ${isSelected ? 'text-indigo-200' : 'text-slate-500'}`}>
-                          {inst.category}
+                        <div className="flex items-center gap-2">
+                          <p className={`font-mono text-xs tracking-wide ${isSelected ? 'text-white font-bold' : 'text-slate-800 font-semibold'}`}>{inst.opcode}</p>
+                          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${isSelected ? 'bg-indigo-500 text-indigo-100 border border-indigo-400/40' : 'bg-slate-200/80 text-slate-600'}`}>
+                            {itemInfo.name}
+                          </span>
+                        </div>
+                        <p className={`text-[9.5px] mt-1 font-sans font-medium line-clamp-1 ${isSelected ? 'text-indigo-200' : 'text-slate-500'}`}>
+                          {inst.desc}
                         </p>
                       </div>
                       {isSelected ? (
@@ -814,16 +822,49 @@ export default function InstructionDecoderSimulator() {
               </div>
             </div>
 
-            {/* Instruction Context & Micro-code Details */}
-            <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl space-y-3">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-700 uppercase font-mono tracking-wider border-b border-slate-150 pb-2">
-                <Sliders className="w-4 h-4 text-indigo-600" />
-                Setup parameters:
+            {/* Instruction Context, Name & Operation Details Card */}
+            <div className="bg-gradient-to-br from-indigo-50/80 via-slate-50 to-sky-50/50 border border-indigo-200 p-4 rounded-xl space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-indigo-200/80 pb-2">
+                <span className="text-[11px] font-bold text-indigo-950 uppercase font-mono tracking-wider flex items-center gap-1.5">
+                  <Sliders className="w-4 h-4 text-indigo-600" />
+                  Selected Instruction & Operation:
+                </span>
+                <span className="text-[10px] font-mono font-extrabold bg-indigo-600 text-white px-2.5 py-0.5 rounded-full shadow-2xs">
+                  {instNameInfo.name}
+                </span>
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed font-sans">
-                {activeInstruction.setupDesc}
-              </p>
-              <div className="text-[11px] text-slate-500 leading-normal border-t border-slate-150 pt-2 flex flex-col gap-1.5 font-mono">
+
+              {/* Instruction Name & Operation Details */}
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-mono font-extrabold text-slate-900 bg-white border border-indigo-200 px-2.5 py-1 rounded-lg shadow-2xs">
+                    {activeInstruction.opcode}
+                  </span>
+                  <span className="text-xs font-bold text-indigo-800 font-sans">
+                    ({instNameInfo.full})
+                  </span>
+                </div>
+
+                <div className="bg-white p-2.5 rounded-lg border border-indigo-150 shadow-2xs space-y-1">
+                  <span className="text-[9.5px] font-bold text-indigo-900/70 uppercase font-mono block">
+                    Operation Logic:
+                  </span>
+                  <p className="text-xs text-slate-800 font-sans font-medium leading-relaxed">
+                    <strong className="text-indigo-700 font-bold">{instNameInfo.name}: </strong>
+                    {activeInstruction.desc}
+                  </p>
+                </div>
+              </div>
+
+              {/* Setup Parameters */}
+              <div className="space-y-1 pt-1 border-t border-slate-200/80">
+                <span className="text-[9.5px] font-bold text-slate-400 uppercase font-mono block">Setup Parameters:</span>
+                <p className="text-xs text-slate-600 leading-relaxed font-sans">
+                  {activeInstruction.setupDesc}
+                </p>
+              </div>
+
+              <div className="text-[11px] text-slate-500 leading-normal border-t border-slate-200/80 pt-2 flex flex-col gap-1.5 font-mono">
                 <div><span className="font-bold text-slate-400">Addressing Mode: </span><span className="text-slate-700">{formatInfo.addressing}</span></div>
                 <div><span className="font-bold text-slate-400">Assembly Syntax: </span><span className="text-indigo-700 font-semibold">{formatInfo.syntax}</span></div>
               </div>
@@ -1941,15 +1982,22 @@ POP DX         ; Reads 1234H into DX, SP ← SP + 2 (FFFE)`}
                   title: '2. Arithmetic Instructions',
                   opcodes: 'ADD, ADC, SUB, SBB, INC, DEC, MUL, IMUL, DIV, IDIV, CMP',
                   desc: 'Executes binary, 2\'s complement, signed/unsigned math, and updates status flags (CF, ZF, SF, OF, AF, PF).',
-                  example: 'ADD AX, 1234H | CMP AL, 0FH',
+                  example: 'ADD AX, 1234H | IMUL BL | IDIV BL | CMP AL, 0FH',
                   color: 'border-emerald-200 bg-white text-emerald-950'
                 },
                 {
-                  title: '3. Logical & Bitwise Instructions',
-                  opcodes: 'AND, OR, XOR, NOT, TEST, SHL, SHR, SAR, ROL, ROR',
-                  desc: 'Performs bitwise logic masking, bit shifts, and rotations. Clears CF & OF, sets ZF, SF, PF based on result.',
-                  example: 'AND AL, 0FH | SHL AX, 1',
+                  title: '3. Logical Instructions',
+                  opcodes: 'AND, OR, XOR, NOT, TEST',
+                  desc: 'Performs boolean bitwise logic operations and masking. Clears CF & OF, sets ZF, SF, PF based on result.',
+                  example: 'AND AL, 0FH | XOR AX, AX',
                   color: 'border-sky-200 bg-white text-sky-950'
+                },
+                {
+                  title: '4. Bitwise & Shift Instructions',
+                  opcodes: 'NEG, SHL, SHR, SAR, ROL, ROR, RCL, RCR',
+                  desc: 'Executes bit shifts, bit rotations, and 2\'s complement negation. Shifted bits enter Carry Flag (CF).',
+                  example: 'NEG BL | SHL CX, 1 | ROL AL, 1',
+                  color: 'border-cyan-200 bg-white text-cyan-950'
                 },
                 {
                   title: '4. BCD & ASCII Adjust Instructions',
@@ -2025,19 +2073,27 @@ POP DX         ; Reads 1234H into DX, SP ← SP + 2 (FFFE)`}
                     },
                     {
                       grp: 'Arithmetic',
-                      op: 'ADD, SUB, INC, DEC, MUL, CMP',
-                      func: 'Binary / 2\'s complement math & comparison',
-                      rules: 'Updates destination; MUL/DIV use AX/DX implicitly',
+                      op: 'ADD, ADC, SUB, SBB, INC, DEC, MUL, IMUL, DIV, IDIV, CMP',
+                      func: 'Binary, 2\'s complement, signed & unsigned math (MUL/IMUL, DIV/IDIV) & comparison',
+                      rules: 'Updates destination; MUL/IMUL/DIV/IDIV use AL/AX/DX implicitly',
                       flags: 'CF, ZF, SF, OF, AF, PF',
-                      ex: 'ADD AX, 1000H'
+                      ex: 'ADD AX, 1000H | IMUL BL'
                     },
                     {
-                      grp: 'Logical & Bitwise',
-                      op: 'AND, OR, XOR, NOT, TEST, SHL',
-                      func: 'Bit manipulation, logic masks, & bit shifts',
-                      rules: 'Target must be register or memory location',
+                      grp: 'Logical',
+                      op: 'AND, OR, XOR, NOT, TEST',
+                      func: 'Boolean logic operations, bit masking, & testing',
+                      rules: 'Logical ops force CF = 0 and OF = 0; NOT leaves flags unchanged',
                       flags: 'Clears CF/OF, updates ZF/SF/PF',
-                      ex: 'AND AL, 0FH'
+                      ex: 'AND AL, 0FH | XOR AX, AX'
+                    },
+                    {
+                      grp: 'Bitwise / Shifts',
+                      op: 'NEG, SHL, SHR, SAR, ROL, ROR',
+                      func: 'Bit shifts, bit rotations, and 2\'s complement negation',
+                      rules: 'Shifts use immediate 1 or CL register for count > 1',
+                      flags: 'CF receives last shifted bit; OF updated for single shift',
+                      ex: 'SHL CX, 1 | NEG BL'
                     },
                     {
                       grp: 'BCD / ASCII',
@@ -2056,12 +2112,28 @@ POP DX         ; Reads 1234H into DX, SP ← SP + 2 (FFFE)`}
                       ex: 'REP MOVSB'
                     },
                     {
-                      grp: 'Control Flow',
-                      op: 'JMP, JZ, JNZ, LOOP, CALL, RET',
-                      func: 'Program control, branching, loops, & procedures',
+                      grp: 'Control',
+                      op: 'JMP, JZ, JNZ, LOOP, CALL, RET, LOCK',
+                      func: 'Program control, branching, loops, procedures, & synchronization',
                       rules: 'Target is label, offset, or register address',
                       flags: 'Reads flags (ZF, CF, SF) for jumps',
-                      ex: 'LOOP BACK'
+                      ex: 'JMP 0150H | LOOP 0100H'
+                    },
+                    {
+                      grp: 'Flag',
+                      op: 'STC, CLC, CMC, LAHF, SAHF, STD, CLD',
+                      func: 'Direct flag manipulation & flag-register transfer',
+                      rules: 'Implied operands; operates directly on flags / AH',
+                      flags: 'Modifies targeted flags (CF, DF, SF, ZF, etc.)',
+                      ex: 'STC | LAHF | SAHF'
+                    },
+                    {
+                      grp: 'I/O',
+                      op: 'IN, OUT',
+                      func: 'Transfers data between accumulator (AL/AX) and I/O ports',
+                      rules: 'Fixed port (8-bit) or DX register (16-bit port)',
+                      flags: 'Does not affect flags',
+                      ex: 'IN AL, 0C8H | OUT DX, AL'
                     }
                   ].map((row, idx) => (
                     <tr key={idx} className="hover:bg-indigo-50/40 transition-colors">

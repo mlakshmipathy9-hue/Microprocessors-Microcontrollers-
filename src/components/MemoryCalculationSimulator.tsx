@@ -234,11 +234,13 @@ const mapRegions: MapRegion[] = [
 ];
 
 interface MemoryCalculationSimulatorProps {
-  key?: string | number;
+  key?: string;
   defaultTab?: 'calculator' | 'segmented-structure' | 'physical-map';
+  onlyDifferenceTable?: boolean;
+  onlyMemoryBanking?: boolean;
 }
 
-export default function MemoryCalculationSimulator({ defaultTab = 'segmented-structure' }: MemoryCalculationSimulatorProps) {
+export default function MemoryCalculationSimulator({ defaultTab = 'segmented-structure', onlyDifferenceTable = false, onlyMemoryBanking = false }: MemoryCalculationSimulatorProps) {
   const [activeTab, setActiveTab] = useState<'calculator' | 'segmented-structure' | 'physical-map'>(defaultTab);
 
   useEffect(() => {
@@ -259,6 +261,355 @@ export default function MemoryCalculationSimulator({ defaultTab = 'segmented-str
   // 1MB Physical Memory Map states
   const [selectedMapBlock, setSelectedMapBlock] = useState<string>('ivt');
   const [bankOp, setBankOp] = useState<'read-byte-even' | 'read-byte-odd' | 'read-word-even' | 'read-word-odd' | 'read-ivt-vector'>('read-word-even');
+
+  if (onlyDifferenceTable) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-6 shadow-sm space-y-4">
+        <div className="flex items-center gap-2.5 pb-2 border-b border-slate-150">
+          <Layers className="w-5 h-5 text-indigo-600 shrink-0" />
+          <h3 className="text-[16px] font-bold text-slate-900 font-display">
+            Difference Between Overlapping &amp; Non-Overlapping Segmentation
+          </h3>
+        </div>
+
+        <div className="border border-indigo-150 rounded-xl overflow-hidden text-[13px] bg-white shadow-2xs">
+          <div className="grid grid-cols-3 bg-indigo-950 text-white font-bold p-3 text-[13px]">
+            <div>Feature / Property</div>
+            <div className="text-indigo-200">Non-Overlapping Segmentation</div>
+            <div className="text-purple-200">Overlapping Segmentation</div>
+          </div>
+          
+          <div className="grid grid-cols-3 p-3 border-b border-slate-150 items-center">
+            <span className="font-semibold text-slate-900">Memory Placement</span>
+            <span className="text-slate-700">Each segment occupies a completely separate, distinct 64 KB physical block.</span>
+            <span className="text-slate-700">Two or more segments share physical memory addresses partially or fully.</span>
+          </div>
+
+          <div className="grid grid-cols-3 p-3 border-b border-slate-150 items-center bg-slate-50/50">
+            <span className="font-semibold text-slate-900">Base Addressing</span>
+            <span className="text-slate-700">Segment starting bases are placed at least 64 KB apart (or non-intersecting).</span>
+            <span className="text-slate-700">Segment bases can start at any 16-byte Paragraph boundary (ending in 0H).</span>
+          </div>
+
+          <div className="grid grid-cols-3 p-3 border-b border-slate-150 items-center">
+            <span className="font-semibold text-slate-900">Primary Advantage</span>
+            <span className="text-indigo-700 font-medium">Maximum security &amp; isolation; stack overflow cannot corrupt code/data.</span>
+            <span className="text-purple-700 font-medium">Conserves physical RAM; allows segments to share common data buffers.</span>
+          </div>
+
+          <div className="grid grid-cols-3 p-3 border-b border-slate-150 items-center bg-slate-50/50">
+            <span className="font-semibold text-slate-900">Memory Efficiency</span>
+            <span className="text-slate-700">May waste unused memory gaps if code or data is much smaller than 64 KB.</span>
+            <span className="text-slate-700">Eliminates wasted memory gaps for small footprint programs.</span>
+          </div>
+
+          <div className="grid grid-cols-3 p-3 items-center">
+            <span className="font-semibold text-slate-900">Typical Applications</span>
+            <span className="text-slate-700">Multi-user software and large modular programs requiring strict segment protection.</span>
+            <span className="text-slate-700">RAM-constrained systems and routines sharing common memory buffers (e.g. CS &amp; DS sharing memory).</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (onlyMemoryBanking) {
+    const isEvenActive = bankOp === 'read-byte-even' || bankOp === 'read-word-even' || bankOp === 'read-word-odd' || bankOp === 'read-ivt-vector';
+    const isOddActive = bankOp === 'read-byte-odd' || bankOp === 'read-word-even' || bankOp === 'read-word-odd' || bankOp === 'read-ivt-vector';
+    
+    let cycles = 1;
+    let bheSignal = '1 (HIGH)';
+    let a0Signal = '0 (LOW)';
+    let dataBusStatus = 'D0 - D7 Lower Data Bus';
+    let designVibe = 'border-indigo-500 bg-indigo-50/20';
+
+    if (bankOp === 'read-byte-even') {
+      cycles = 1;
+      bheSignal = '1 (HIGH)';
+      a0Signal = '0 (LOW)';
+      dataBusStatus = 'D0 - D7 Lower Data Bus';
+      designVibe = 'border-indigo-500 bg-indigo-50/20';
+    } else if (bankOp === 'read-byte-odd') {
+      cycles = 1;
+      bheSignal = '0 (LOW)';
+      a0Signal = '1 (HIGH)';
+      dataBusStatus = 'D8 - D15 Upper Data Bus';
+      designVibe = 'border-indigo-500 bg-indigo-50/20';
+    } else if (bankOp === 'read-word-even') {
+      cycles = 1;
+      bheSignal = '0 (LOW)';
+      a0Signal = '0 (LOW)';
+      dataBusStatus = 'D0 - D15 Full 16-bit wide bus';
+      designVibe = 'border-emerald-500 bg-emerald-50/20';
+    } else if (bankOp === 'read-word-odd') {
+      cycles = 2;
+      bheSignal = 'Cycle 1: 0 (LOW) | Cycle 2: 1 (HIGH)';
+      a0Signal = 'Cycle 1: 1 (HIGH) | Cycle 2: 0 (LOW)';
+      dataBusStatus = 'Cycle 1: D8-D15 (Lower Byte) | Cycle 2: D0-D7 (Upper Byte)';
+      designVibe = 'border-amber-500 bg-amber-50/20';
+    } else if (bankOp === 'read-ivt-vector') {
+      cycles = 2;
+      bheSignal = 'Cycle 1: 0 (LOW) | Cycle 2: 0 (LOW)';
+      a0Signal = 'Cycle 1: 0 (LOW) | Cycle 2: 0 (LOW)';
+      dataBusStatus = 'Cycle 1: 16-bit IP Offset (00084H) | Cycle 2: 16-bit CS Segment (00086H)';
+      designVibe = 'border-blue-500 bg-blue-50/20';
+    }
+
+    return (
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-150 pb-3">
+          <div className="flex items-center gap-2">
+            <Cpu className="w-5 h-5 text-indigo-700 shrink-0" />
+            <div>
+              <h4 className="font-display font-bold text-[15px] text-slate-950">
+                8086 Physical Memory Bank Simulator (Even vs. Odd Banks)
+              </h4>
+              <p className="text-[12px] text-slate-500">
+                Simulate how the 16-bit CPU communicates with two separate 8-bit memory boards (Lower Bank &amp; Upper Bank).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* TOP HIGHLIGHT CARD: WHY PHYSICAL MEMORY IS DIVIDED INTO EVEN & ODD BANKS */}
+        <div className="bg-indigo-50/80 rounded-xl p-3.5 md:p-4 text-[12.5px] leading-relaxed text-slate-800 shadow-2xs border border-indigo-200/80">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+            <strong className="text-indigo-950 font-display font-bold text-[13.5px] tracking-tight">
+              🎓 Why is Physical Memory Divided into Even &amp; Odd Banks?
+            </strong>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 mt-2 pt-2 border-t border-indigo-200/60 text-[12px]">
+            <div className="bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs">
+              <strong className="text-indigo-900 block font-semibold mb-0.5">1. 16-Bit Data Bus vs. 8-Bit Memory</strong>
+              <span className="text-slate-600 text-[11.5px] leading-tight block">
+                The 8086 CPU has a 16-bit data bus (D0–D15), but physical memory cells store data byte-by-byte (8 bits).
+              </span>
+            </div>
+            <div className="bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs">
+              <strong className="text-emerald-800 block font-semibold mb-0.5">2. Flexible 8-Bit &amp; 16-Bit Access</strong>
+              <span className="text-slate-600 text-[11.5px] leading-tight block">
+                Dividing 1 MB RAM into Even (D0–D7) and Odd (D8–D15) banks allows reading a single 8-bit byte OR a full 16-bit word in 1 bus cycle.
+              </span>
+            </div>
+            <div className="bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs">
+              <strong className="text-amber-800 block font-semibold mb-0.5">3. Maximum Speed &amp; Efficiency</strong>
+              <span className="text-slate-600 text-[11.5px] leading-tight block">
+                Prevents bus contention for single-byte reads and provides peak bandwidth for aligned 16-bit word operations.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Operational Selector */}
+        <div className="space-y-2">
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+            Select Memory Bus Operation Type:
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              onClick={() => setBankOp('read-byte-even')}
+              className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                bankOp === 'read-byte-even'
+                  ? 'bg-indigo-50/80 border-indigo-500 ring-2 ring-indigo-300/40 text-indigo-950 font-bold'
+                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
+              }`}
+            >
+              <span className="font-bold text-[13px] flex items-center justify-between w-full">
+                <span>1. Read Byte at Even Address</span>
+                <span className="font-mono text-[10.5px] bg-slate-200/80 px-1.5 rounded">00040 H</span>
+              </span>
+              <span className="text-[11px] text-slate-500 mt-1 leading-normal">
+                Accesses only the Lower Bank (D0 - D7).
+              </span>
+            </button>
+
+            <button
+              onClick={() => setBankOp('read-byte-odd')}
+              className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                bankOp === 'read-byte-odd'
+                  ? 'bg-indigo-50/80 border-indigo-500 ring-2 ring-indigo-300/40 text-indigo-950 font-bold'
+                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
+              }`}
+            >
+              <span className="font-bold text-[13px] flex items-center justify-between w-full">
+                <span>2. Read Byte at Odd Address</span>
+                <span className="font-mono text-[10.5px] bg-slate-200/80 px-1.5 rounded">00041 H</span>
+              </span>
+              <span className="text-[11px] text-slate-500 mt-1 leading-normal">
+                Accesses only the Upper Bank (D8 - D15).
+              </span>
+            </button>
+
+            <button
+              onClick={() => setBankOp('read-word-even')}
+              className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                bankOp === 'read-word-even'
+                  ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-300/40 text-emerald-950 font-bold'
+                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700 font-semibold'
+              }`}
+            >
+              <span className="font-bold text-[13px] flex items-center justify-between w-full">
+                <span className="flex items-center gap-1.5 text-emerald-900">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>3. Read Aligned Word (Even)</span>
+                </span>
+                <span className="font-mono text-[10.5px] bg-emerald-100 text-emerald-800 px-1.5 rounded">00040 H</span>
+              </span>
+              <span className="text-[11px] text-slate-500 mt-1 leading-normal">
+                Accesses BOTH banks simultaneously in 1 single cycle!
+              </span>
+            </button>
+
+            <button
+              onClick={() => setBankOp('read-word-odd')}
+              className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                bankOp === 'read-word-odd'
+                  ? 'bg-amber-50 border-amber-500 ring-2 ring-amber-300/40 text-amber-950 font-bold'
+                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700 font-semibold'
+              }`}
+            >
+              <span className="font-bold text-[13px] flex items-center justify-between w-full">
+                <span className="text-amber-900 font-bold">4. Read Misaligned Word (Odd)</span>
+                <span className="font-mono text-[10.5px] bg-amber-100 text-amber-800 px-1.5 rounded">00041 H</span>
+              </span>
+              <span className="text-[11px] text-slate-500 mt-1 leading-normal">
+                Requires 2 physical cycles! Splitting transfer.
+              </span>
+            </button>
+
+            <button
+              onClick={() => setBankOp('read-ivt-vector')}
+              className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between sm:col-span-2 ${
+                bankOp === 'read-ivt-vector'
+                  ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-300/40 text-blue-950 font-bold'
+                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700 font-semibold'
+              }`}
+            >
+              <span className="font-bold text-[13px] flex items-center justify-between w-full">
+                <span className="flex items-center gap-1.5 text-blue-900">
+                  <Database className="w-3.5 h-3.5 text-blue-600" />
+                  <span>5. Fetch IVT Vector Pointer</span>
+                </span>
+                <span className="font-mono text-[10.5px] bg-blue-100 text-blue-800 px-1.5 rounded">INT 21H @ 00084 H</span>
+              </span>
+              <span className="text-[11px] text-slate-500 mt-1 leading-normal">
+                Fetches 4-byte CS:IP far pointer across 2 bus cycles!
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Hardware Schematic Visualization */}
+        <div className={`border rounded-xl p-4.5 ${designVibe} transition-all space-y-4`}>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] uppercase font-mono tracking-wider font-bold text-slate-500 block">
+              Active Hardware Pins &amp; Physical Signals
+            </span>
+            <div className="flex gap-2">
+              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                cycles === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800 animate-pulse'
+              }`}>
+                Bus Cycles: {cycles} {cycles === 1 ? 'Cycle' : 'Cycles Required'}
+              </span>
+            </div>
+          </div>
+
+          {/* Dual Bank Architecture layout */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* ODD BANK (UPPER 512 KB) */}
+            <div className={`border-2 rounded-xl p-4 text-center transition-all flex flex-col justify-between h-44 shadow-2xs ${
+              isOddActive 
+                ? 'border-indigo-600 bg-indigo-50/90 text-indigo-950 scale-[1.01] shadow-xs' 
+                : 'border-slate-200 bg-slate-50 text-slate-400'
+            }`}>
+              <div>
+                <span className={`text-[10px] font-mono font-bold block uppercase tracking-wider ${isOddActive ? 'text-indigo-700' : 'text-slate-400'}`}>
+                  Upper Memory Bank (Odd Bank)
+                </span>
+                <strong className={`text-[15px] font-sans block mt-1 ${isOddActive ? 'text-indigo-950' : 'text-slate-500'}`}>512 KB Space</strong>
+                <span className={`text-[11px] block mt-1 font-mono ${isOddActive ? 'text-slate-600' : 'text-slate-400'}`}>Addresses: 00001H, 00003H, ... FFFFFH</span>
+              </div>
+              <div className={`pt-2 border-t border-dashed ${isOddActive ? 'border-indigo-200' : 'border-slate-200'}`}>
+                <span className={`text-[11px] block font-semibold ${isOddActive ? 'text-slate-700' : 'text-slate-400'}`}>Bus Hook: <strong className={`font-mono ${isOddActive ? 'text-indigo-700' : 'text-slate-500'}`}>D8 - D15</strong></span>
+                <span className={`text-[10px] block mt-0.5 ${isOddActive ? 'text-slate-500' : 'text-slate-400'}`}>Enabled by <strong className={`font-mono ${isOddActive ? 'text-indigo-700' : 'text-slate-500'}`}>BHE# = 0</strong></span>
+              </div>
+            </div>
+
+            {/* EVEN BANK (LOWER 512 KB) */}
+            <div className={`border-2 rounded-xl p-4 text-center transition-all flex flex-col justify-between h-44 shadow-2xs ${
+              isEvenActive 
+                ? 'border-emerald-600 bg-emerald-50/90 text-emerald-950 scale-[1.01] shadow-xs' 
+                : 'border-slate-200 bg-slate-50 text-slate-400'
+            }`}>
+              <div>
+                <span className={`text-[10px] font-mono font-bold block uppercase tracking-wider ${isEvenActive ? 'text-emerald-700' : 'text-slate-400'}`}>
+                  Lower Memory Bank (Even Bank)
+                </span>
+                <strong className={`text-[15px] font-sans block mt-1 ${isEvenActive ? 'text-emerald-950' : 'text-slate-500'}`}>512 KB Space</strong>
+                <span className={`text-[11px] block mt-1 font-mono ${isEvenActive ? 'text-slate-600' : 'text-slate-400'}`}>Addresses: 00000H, 00002H, ... FFFFEH</span>
+              </div>
+              <div className={`pt-2 border-t border-dashed ${isEvenActive ? 'border-emerald-200' : 'border-slate-200'}`}>
+                <span className={`text-[11px] block font-semibold ${isEvenActive ? 'text-slate-700' : 'text-slate-400'}`}>Bus Hook: <strong className={`font-mono ${isEvenActive ? 'text-emerald-700' : 'text-slate-500'}`}>D0 - D7</strong></span>
+                <span className={`text-[10px] block mt-0.5 ${isEvenActive ? 'text-slate-500' : 'text-slate-400'}`}>Enabled by <strong className={`font-mono ${isEvenActive ? 'text-emerald-700' : 'text-slate-500'}`}>A0 = 0</strong></span>
+              </div>
+            </div>
+          </div>
+
+          {/* Physical Signal Bus Table */}
+          <div className="bg-white rounded-lg border border-slate-200/60 overflow-hidden text-[12.5px]">
+            <div className="grid grid-cols-4 bg-slate-50 font-bold p-2 border-b border-slate-150 text-slate-700 text-center text-[10.5px] uppercase tracking-wider">
+              <div>BHE# (Bus High Enable)</div>
+              <div>A0 Address Pin</div>
+              <div>Data Bus Lines</div>
+              <div>Memory Performance</div>
+            </div>
+            <div className="grid grid-cols-4 p-2 text-center font-mono text-[12px]">
+              <div className="text-indigo-700 font-bold">{bheSignal}</div>
+              <div className="text-indigo-700 font-bold">{a0Signal}</div>
+              <div className="text-slate-700 font-semibold">{dataBusStatus}</div>
+              <div className={`font-sans font-bold ${
+                bankOp === 'read-word-even' 
+                  ? 'text-emerald-600' 
+                  : bankOp === 'read-word-odd'
+                  ? 'text-amber-600 animate-pulse'
+                  : bankOp === 'read-ivt-vector'
+                  ? 'text-blue-600 font-bold'
+                  : 'text-slate-600'
+              }`}>
+                {bankOp === 'read-word-even' && 'Peak Speed (1 Cycle)'}
+                {bankOp === 'read-word-odd' && 'Split Cycle (Slowdown)'}
+                {bankOp === 'read-byte-even' && 'Standard (1 Cycle)'}
+                {bankOp === 'read-byte-odd' && 'Standard (1 Cycle)'}
+                {bankOp === 'read-ivt-vector' && 'IVT Far Vector (2 Cycles)'}
+              </div>
+            </div>
+          </div>
+
+          {/* Operational Notes */}
+          {(bankOp === 'read-word-odd' || bankOp === 'read-ivt-vector' || bankOp === 'read-word-even') && (
+            <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-3 text-[12.5px] leading-relaxed text-slate-800 space-y-2">
+              {bankOp === 'read-word-even' && (
+                <p className="text-emerald-900 font-sans font-medium">
+                  ⚡ <strong>Aligned Word Access Peak Efficiency:</strong> Reading from even address 00040H triggers A0=0 (Lower Bank on D0–D7) and BHE#=0 (Upper Bank on D8–D15) simultaneously, allowing the 8086 to fetch all 16 bits in a <strong>single memory bus cycle</strong>!
+                </p>
+              )}
+              {bankOp === 'read-word-odd' && (
+                <p className="text-amber-900 font-sans font-medium">
+                  ⚠️ <strong>Misaligned Word Penalty:</strong> Address 00041H is ODD. The lower byte sits in 00041H (Odd Bank), and the upper byte sits in 00042H (Even Bank). The processor cannot activate both banks for two different address alignments at once, forcing the BIU to run <strong>two back-to-back hardware cycles</strong>. Always align variables on even addresses to maximize execution speed!
+                </p>
+              )}
+              {bankOp === 'read-ivt-vector' && (
+                <p className="text-blue-900 font-sans font-medium">
+                  ⚡ <strong>IVT Vector Transfer (32-bit Far Pointer):</strong> Fetching the 4-byte interrupt vector for INT 21H from address 00084H requires reading CS:IP. The BIU performs <strong>Cycle 1</strong> to fetch the 16-bit Offset (IP = 00084H/00085H) from both banks concurrently, followed immediately by <strong>Cycle 2</strong> to fetch the 16-bit Segment (CS = 00086H/00087H).
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     // Validate hex input
@@ -610,6 +961,53 @@ export default function MemoryCalculationSimulator({ defaultTab = 'segmented-str
                     </div>
                   </div>
                 </div>
+
+                {/* 1 MB Memory Bit & Location Math Division in Tab 1 */}
+                <div className="pt-3 border-t border-indigo-200/60 space-y-2">
+                  <div className="flex items-center gap-2 text-indigo-950 font-bold text-[13.5px]">
+                    <Calculator className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>1 MB Memory Bit &amp; Location Math</span>
+                  </div>
+                  <div className="bg-white/90 p-3.5 rounded-lg border border-indigo-200 text-[12.5px] text-slate-800 space-y-2 shadow-2xs">
+                    <p className="leading-relaxed">
+                      In the <strong>8086 Microprocessor</strong>, the physical address bus is <strong>20-bit</strong> wide, enabling direct access to <strong>1 MB</strong> of memory space:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-[11.5px] bg-indigo-50/50 p-2.5 rounded-lg border border-indigo-100">
+                      <div className="space-y-1">
+                        <span className="text-indigo-900 text-[10px] uppercase font-sans font-bold block">Standard Storage Math</span>
+                        <div>• 1 Byte = 8 bits</div>
+                        <div>• 1 KB = 1024 Bytes</div>
+                        <div>• 1 MB = 1024 KB</div>
+                        <div className="pt-1 border-t border-dashed border-indigo-200 text-indigo-950 font-extrabold">
+                          1,048,576 Bytes
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-indigo-900 text-[10px] uppercase font-sans font-bold block">8086 Physical Limits</span>
+                        <div>• 20-bit Bus = 2<sup>20</sup> locations</div>
+                        <div>• 2<sup>20</sup> = 1,048,576 locations</div>
+                        <div>• 1 Location = 1 Byte (8 bits)</div>
+                        <div className="pt-1 border-t border-dashed border-indigo-200 text-indigo-950 font-extrabold">
+                          8,388,608 bits
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-indigo-950 text-indigo-100 rounded-lg p-2 text-center font-mono text-[11.5px] flex justify-around items-center">
+                      <div>
+                        <span className="text-indigo-300 text-[9.5px] block font-sans font-bold">MAX MEMORY (BYTES)</span>
+                        <strong className="text-white text-[13px]">2<sup>20</sup> Bytes = 1 MB</strong>
+                      </div>
+                      <div className="text-indigo-400 font-light">|</div>
+                      <div>
+                        <span className="text-indigo-300 text-[9.5px] block font-sans font-bold">MAX MEMORY (BITS)</span>
+                        <strong className="text-white text-[13px]">2<sup>23</sup> bits = 8.38 Mbits</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
               {/* Top Selector Banner */}
@@ -653,16 +1051,6 @@ export default function MemoryCalculationSimulator({ defaultTab = 'segmented-str
                     }`}
                   >
                     I/O Address Space
-                  </button>
-                  <button
-                    onClick={() => setSelectedSegmentId('ivt')}
-                    className={`px-3.5 py-2 rounded-lg text-[13px] font-bold transition-all cursor-pointer ${
-                      selectedSegmentId === 'ivt'
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    Interrupt Vector Table (IVT)
                   </button>
                 </div>
               </div>
@@ -941,20 +1329,14 @@ export default function MemoryCalculationSimulator({ defaultTab = 'segmented-str
                           </div>
 
                           {/* Reserved Base Memory: Interrupt Vector Table (IVT) */}
-                          <div
-                            onMouseEnter={() => setSelectedSegmentId('ivt')}
-                            onClick={() => setSelectedSegmentId('ivt')}
-                            className={`border-2 rounded-lg p-2 relative cursor-pointer transition-all shadow-xs h-[52px] ${
-                              selectedSegmentId === 'ivt' ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-400/55' : 'bg-slate-50 border-slate-300 hover:border-blue-400'
-                            }`}
-                          >
+                          <div className="border border-slate-300 rounded-lg p-2 relative bg-slate-50 shadow-2xs h-[52px]">
                             <div className="flex justify-between text-[11px] font-mono text-slate-600 font-bold">
-                              <span className="text-blue-800 font-bold flex items-center gap-1">
-                                <Database className="w-3 h-3 text-blue-600" /> Interrupt Vector Table (IVT - 1 KB)
+                              <span className="text-slate-700 font-bold flex items-center gap-1">
+                                <Database className="w-3 h-3 text-slate-500" /> Interrupt Vector Table (IVT - 1 KB)
                               </span>
                               <span>00000H - 003FFH</span>
                             </div>
-                            <p className="text-[11px] text-slate-600 mt-0.5">Holds 256 ISR far pointers (4 bytes each)</p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">Holds 256 ISR far pointers (4 bytes each)</p>
                           </div>
                         </div>
                       )}
@@ -1140,94 +1522,8 @@ export default function MemoryCalculationSimulator({ defaultTab = 'segmented-str
                       </div>
                     )}
 
-                    {selectedSegmentId === 'ivt' && (
-                      <div className="space-y-3">
-                        <strong className="text-blue-950 font-bold text-[14px] block border-b border-blue-100 pb-1 flex items-center justify-between">
-                          <span>Interrupt Vector Table (IVT) Details</span>
-                          <span className="text-[11px] font-mono bg-blue-100 text-blue-800 px-2 py-0.5 rounded">00000H - 003FFH</span>
-                        </strong>
-                        <p className="text-[12.5px] text-slate-700 leading-relaxed">
-                          The <strong>Interrupt Vector Table (IVT)</strong> resides at the lowest 1 KB of physical memory (00000H to 003FFH). It stores 256 vector pointers for interrupts (Type 0 to 255).
-                        </p>
-
-                        <div className="bg-white border border-blue-200 rounded-lg p-3 space-y-2">
-                          <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">
-                            IVT Vector Address Formula:
-                          </span>
-                          <div className="bg-blue-50 p-2 rounded text-center font-mono font-bold text-[13px] text-blue-900 border border-blue-200">
-                            Vector Physical Address = INT Type Number × 4
-                          </div>
-
-                          <div className="space-y-1 pt-1">
-                            <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">
-                              Select Common Interrupt Vector:
-                            </span>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[11px]">
-                              {[
-                                { label: 'INT 00H (Divide Zero)', val: 0, addr: '00000H' },
-                                { label: 'INT 02H (NMI Pin)', val: 2, addr: '00008H' },
-                                { label: 'INT 03H (Breakpoint)', val: 3, addr: '0000CH' },
-                                { label: 'INT 08H (Timer IRQ)', val: 8, addr: '00020H' },
-                                { label: 'INT 10H (Video BIOS)', val: 16, addr: '00040H' },
-                                { label: 'INT 21H (DOS API)', val: 33, addr: '00084H' },
-                              ].map((item) => (
-                                <button
-                                  key={item.val}
-                                  onClick={() => setSelectedIvtType(item.val)}
-                                  className={`p-1.5 rounded border text-left font-mono transition-all cursor-pointer ${
-                                    selectedIvtType === item.val
-                                      ? 'bg-blue-600 text-white font-bold border-blue-700 shadow-2xs'
-                                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                                  }`}
-                                >
-                                  <div className="font-bold">{item.label.split(' ')[0]} {item.label.split(' ')[1]}</div>
-                                  <div className="text-[9.5px] opacity-80">{item.addr}</div>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Selected Vector 4-byte breakdown */}
-                          {(() => {
-                            const baseAddrDec = selectedIvtType * 4;
-                            const hexAddr = baseAddrDec.toString(16).toUpperCase().padStart(5, '0');
-                            const hexAddr1 = (baseAddrDec + 1).toString(16).toUpperCase().padStart(5, '0');
-                            const hexAddr2 = (baseAddrDec + 2).toString(16).toUpperCase().padStart(5, '0');
-                            const hexAddr3 = (baseAddrDec + 3).toString(16).toUpperCase().padStart(5, '0');
-
-                            return (
-                              <div className="bg-slate-900 text-white rounded-lg p-2.5 font-mono text-[11.5px] space-y-1.5 mt-2">
-                                <div className="flex justify-between items-center text-indigo-300 font-bold border-b border-slate-800 pb-1">
-                                  <span>INT {selectedIvtType.toString(16).toUpperCase().padStart(2, '0')}H Far Pointer</span>
-                                  <span>Base Address: {hexAddr}H</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-1 text-[11px]">
-                                  <div className="bg-slate-800 p-1.5 rounded border border-slate-700">
-                                    <span className="text-slate-400 block text-[9.5px]">{hexAddr}H: Offset (IP) Low Byte</span>
-                                    <span className="text-emerald-400 font-bold">IP [7:0]</span>
-                                  </div>
-                                  <div className="bg-slate-800 p-1.5 rounded border border-slate-700">
-                                    <span className="text-slate-400 block text-[9.5px]">{hexAddr1}H: Offset (IP) High Byte</span>
-                                    <span className="text-emerald-400 font-bold">IP [15:8]</span>
-                                  </div>
-                                  <div className="bg-slate-800 p-1.5 rounded border border-slate-700">
-                                    <span className="text-slate-400 block text-[9.5px]">{hexAddr2}H: Segment (CS) Low Byte</span>
-                                    <span className="text-indigo-400 font-bold">CS [7:0]</span>
-                                  </div>
-                                  <div className="bg-slate-800 p-1.5 rounded border border-slate-700">
-                                    <span className="text-slate-400 block text-[9.5px]">{hexAddr3}H: Segment (CS) High Byte</span>
-                                    <span className="text-indigo-400 font-bold">CS [15:8]</span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    )}
-
                     {/* Fallback default */}
-                    {!['cs', 'ds', 'ss', 'es', 'overlap', 'non-overlap', 'io-space', 'ivt'].includes(selectedSegmentId) && (
+                    {!['cs', 'ds', 'ss', 'es', 'overlap', 'non-overlap', 'io-space'].includes(selectedSegmentId) && (
                       <div className="space-y-2">
                         <strong className="text-slate-900 font-bold text-[13px] block">Quick Exam Guide:</strong>
                         <p className="text-[13px] text-slate-700 leading-relaxed">
