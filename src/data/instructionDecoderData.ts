@@ -1780,7 +1780,7 @@ export const eceSlides: EceSlide[] = [
   },
   {
     title: "11. Flag Manipulation Instructions",
-    category: "Control, Flag & IO",
+    category: "Flag",
     points: [
       "Directly modifies or queries the 8086 Status Flags.",
       "• `STC` - Set Carry Flag (CF = 1)",
@@ -1799,7 +1799,7 @@ export const eceSlides: EceSlide[] = [
   },
   {
     title: "12. Input & Output (IN / OUT) Instructions",
-    category: "Control, Flag & IO",
+    category: "I/O",
     points: [
       "Transfers data between the accumulator (AL/AX) and peripheral hardware I/O ports.",
       "**Fixed Port (8-bit port)**: `IN AL, 0C8H` / `OUT 3BH, AL`",

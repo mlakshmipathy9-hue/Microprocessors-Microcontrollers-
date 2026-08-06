@@ -23,7 +23,11 @@ import {
   Code2,
   ArrowDown,
   ArrowUp,
-  Zap
+  Zap,
+  Flag,
+  Radio,
+  Repeat,
+  SlidersHorizontal
 } from 'lucide-react';
 import {
   SimulatorInstruction,
@@ -75,6 +79,30 @@ export default function InstructionDecoderSimulator() {
   // Interactive BCD & ASCII Converter State
   const [bcdVal, setBcdVal] = useState<number>(59);
   const [bcdOpcode, setBcdOpcode] = useState<'DAA' | 'DAS' | 'AAA' | 'AAS' | 'AAM' | 'AAD'>('DAA');
+
+  // Interactive ALU Explorer State
+  const [aluValA, setAluValA] = useState<number>(0x0059);
+  const [aluValB, setAluValB] = useState<number>(0x0035);
+  const [aluOp, setAluOp] = useState<'ADD' | 'SUB' | 'AND' | 'OR' | 'XOR' | 'SHL' | 'SHR'>('ADD');
+
+  // Interactive Flag & Control Explorer State
+  const [interactiveFlags, setInteractiveFlags] = useState<Record<string, number>>({
+    CF: 0, ZF: 1, SF: 0, OF: 0, AF: 0, PF: 1, IF: 1, DF: 0, TF: 0
+  });
+
+  // Interactive I/O Port Explorer State
+  const [ioPort, setIoPort] = useState<number>(0x00C8);
+  const [ioDataByte, setIoDataByte] = useState<number>(0x39);
+  const [ioPortMode, setIoPortMode] = useState<'fixed' | 'variable'>('fixed');
+  const [ioDir, setIoDir] = useState<'IN' | 'OUT'>('IN');
+
+  // Interactive String Ops Explorer State
+  const [stringDf, setStringDf] = useState<number>(0);
+  const [stringCx, setStringCx] = useState<number>(5);
+  const [stringOp, setStringOp] = useState<'MOVSB' | 'MOVSW' | 'CMPSB' | 'SCASB' | 'STOSB'>('MOVSB');
+
+  // Interactive Data Transfer Bus Explorer State
+  const [transferBusMode, setTransferBusMode] = useState<'mov' | 'push' | 'pop' | 'lea' | 'xchg'>('mov');
 
   const bcdGuideMap = {
     DAA: {
@@ -274,6 +302,59 @@ export default function InstructionDecoderSimulator() {
 
 
   const activeInstruction = mockInstructions[selectedIdx];
+  const currentCategory = categoryTab === 'All' ? activeInstruction.category : categoryTab;
+
+  // Computed ALU values for the interactive ALU panel
+  const computeAluRes = () => {
+    const a = aluValA & 0xFF;
+    const b = aluValB & 0xFF;
+    let res = 0;
+    let cf = 0;
+    let af = 0;
+    let of = 0;
+
+    if (aluOp === 'ADD') {
+      res = (a + b) & 0xFF;
+      cf = (a + b) > 0xFF ? 1 : 0;
+      af = ((a & 0x0F) + (b & 0x0F)) > 0x0F ? 1 : 0;
+      const sa = (a >> 7) & 1;
+      const sb = (b >> 7) & 1;
+      const sr = (res >> 7) & 1;
+      of = (sa === sb && sa !== sr) ? 1 : 0;
+    } else if (aluOp === 'SUB') {
+      res = (a - b + 0x100) & 0xFF;
+      cf = a < b ? 1 : 0;
+      af = (a & 0x0F) < (b & 0x0F) ? 1 : 0;
+      const sa = (a >> 7) & 1;
+      const sb = (b >> 7) & 1;
+      const sr = (res >> 7) & 1;
+      of = (sa !== sb && sa !== sr) ? 1 : 0;
+    } else if (aluOp === 'AND') {
+      res = a & b;
+    } else if (aluOp === 'OR') {
+      res = a | b;
+    } else if (aluOp === 'XOR') {
+      res = a ^ b;
+    } else if (aluOp === 'SHL') {
+      res = (a << 1) & 0xFF;
+      cf = (a & 0x80) ? 1 : 0;
+      of = (((a >> 7) & 1) !== ((res >> 7) & 1)) ? 1 : 0;
+    } else if (aluOp === 'SHR') {
+      res = (a >> 1) & 0xFF;
+      cf = (a & 0x01) ? 1 : 0;
+      of = ((a >> 7) & 1) ? 1 : 0;
+    }
+
+    const zf = res === 0 ? 1 : 0;
+    const sf = (res & 0x80) ? 1 : 0;
+    let ones = 0;
+    for (let i = 0; i < 8; i++) {
+      if ((res >> i) & 1) ones++;
+    }
+    const pf = ones % 2 === 0 ? 1 : 0;
+
+    return { res, cf, zf, sf, of, af, pf };
+  };
 
   const filteredInstructions = mockInstructions
     .map((inst, index) => ({ inst, index }))
@@ -782,7 +863,7 @@ export default function InstructionDecoderSimulator() {
                 <Terminal className="w-4 h-4 text-indigo-600 animate-pulse" />
                 Instruction Stream:
               </span>
-              <div className="space-y-1.5 pr-1.5 max-h-[210px] overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-200/60">
+              <div className={`space-y-1.5 pr-1.5 max-h-[210px] scrollbar-thin scrollbar-thumb-indigo-200/60 ${categoryTab === 'All' ? 'overflow-y-auto' : 'overflow-y-hidden'}`}>
                 {filteredInstructions.map(({ inst, index }) => {
                   const isSelected = selectedIdx === index;
                   const itemInfo = getInstNameInfo(inst.opcode);
@@ -1200,12 +1281,12 @@ export default function InstructionDecoderSimulator() {
                   </div>
 
                   {/* Right Column: Physical Stack Memory Diagram (5 cols) */}
-                  <div className="md:col-span-5 bg-slate-900 text-slate-100 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-inner relative overflow-hidden">
-                    <div className="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
-                      <span className="text-[10px] font-bold font-mono uppercase text-indigo-400 tracking-wider">
+                  <div className="md:col-span-5 bg-slate-50 text-slate-800 border border-slate-200 rounded-xl p-4 flex flex-col justify-between shadow-xs relative overflow-hidden">
+                    <div className="flex justify-between items-center border-b border-slate-200 pb-2 mb-3">
+                      <span className="text-[10px] font-bold font-mono uppercase text-indigo-700 tracking-wider">
                         Stack Segment Memory (SS:{hexFormat(regs.SS)})
                       </span>
-                      <span className="text-[9px] font-mono text-emerald-400 font-bold bg-emerald-950 border border-emerald-800 px-2 py-0.5 rounded">
+                      <span className="text-[9px] font-mono text-emerald-800 font-bold bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded">
                         LIFO Stack
                       </span>
                     </div>
@@ -1223,26 +1304,26 @@ export default function InstructionDecoderSimulator() {
                             key={addr}
                             className={`p-2 rounded-lg border transition-all flex items-center justify-between ${
                               isTop 
-                                ? 'bg-indigo-900/90 border-indigo-400 text-white shadow-[0_0_12px_rgba(99,102,241,0.4)] scale-[1.02]' 
+                                ? 'bg-indigo-600 border-indigo-700 text-white shadow-xs scale-[1.02]' 
                                 : frame 
-                                ? 'bg-slate-800/90 border-slate-700 text-slate-200' 
-                                : 'bg-slate-950/60 border-slate-800/80 text-slate-500'
+                                ? 'bg-white border-slate-300 text-slate-800' 
+                                : 'bg-slate-100/70 border-slate-200 text-slate-400'
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold text-indigo-300">
+                              <span className={`text-[10px] font-bold ${isTop ? 'text-indigo-100' : 'text-indigo-600'}`}>
                                 {hexFormat(addr)}H:
                               </span>
                               {frame ? (
-                                <span className="font-extrabold text-emerald-400">
+                                <span className={`font-extrabold ${isTop ? 'text-emerald-200' : 'text-emerald-700'}`}>
                                   {hexFormat(frame.value)}
                                 </span>
                               ) : isBOS ? (
-                                <span className="text-[10px] italic text-slate-400">
+                                <span className={`text-[10px] italic ${isTop ? 'text-indigo-200' : 'text-slate-500'}`}>
                                   [Base of Stack]
                                 </span>
                               ) : (
-                                <span className="text-[10px] italic text-slate-600">
+                                <span className={`text-[10px] italic ${isTop ? 'text-indigo-200' : 'text-slate-400'}`}>
                                   {isBelowSp ? '[ Unallocated ]' : '[ Free Memory ]'}
                                 </span>
                               )}
@@ -1250,12 +1331,12 @@ export default function InstructionDecoderSimulator() {
 
                             <div className="flex items-center gap-1.5">
                               {frame && (
-                                <span className="text-[9px] bg-slate-700 text-indigo-200 px-1.5 py-0.5 rounded font-bold">
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isTop ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-indigo-700 border border-slate-200'}`}>
                                   {frame.label}
                                 </span>
                               )}
                               {isTop && (
-                                <span className="text-[9px] bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-full font-extrabold animate-pulse">
+                                <span className="text-[9px] bg-emerald-400 text-emerald-950 px-2 py-0.5 rounded-full font-extrabold animate-pulse">
                                   👈 TOS (SP)
                                 </span>
                               )}
@@ -1265,9 +1346,9 @@ export default function InstructionDecoderSimulator() {
                       })}
                     </div>
 
-                    <div className="pt-2 border-t border-slate-800 text-[9.5px] font-mono text-slate-400 flex justify-between items-center">
+                    <div className="pt-2 border-t border-slate-200 text-[9.5px] font-mono text-slate-500 flex justify-between items-center">
                       <span>↓ Growth: High → Low Addr</span>
-                      <span className="text-indigo-400 font-bold">SS:[SP] = Top Of Stack</span>
+                      <span className="text-indigo-700 font-bold">SS:[SP] = Top Of Stack</span>
                     </div>
 
                   </div>
@@ -1275,21 +1356,21 @@ export default function InstructionDecoderSimulator() {
                 </div>
 
                 {/* Code Example */}
-                <div className="bg-slate-900 rounded-xl p-3.5 border border-slate-800 text-slate-100 font-mono text-xs">
-                  <div className="flex justify-between items-center pb-2 mb-2 border-b border-slate-800">
-                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 text-slate-800 font-mono text-xs">
+                  <div className="flex justify-between items-center pb-2 mb-2 border-b border-slate-200">
+                    <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
                       <Code2 className="w-3.5 h-3.5" />
                       8086 Assembly Stack Sequence Example
                     </span>
                     <button
                       onClick={() => handleExecute()}
-                      className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+                      className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all shadow-xs"
                     >
                       <Play className="w-3 h-3 fill-current" />
                       Run {activeInstruction.opcode}
                     </button>
                   </div>
-                  <pre className="text-[11px] leading-relaxed text-emerald-300 bg-slate-950/80 p-2.5 rounded-lg overflow-x-auto border border-slate-800 font-mono">
+                  <pre className="text-[11px] leading-relaxed text-slate-800 bg-white p-2.5 rounded-lg overflow-x-auto border border-slate-200 font-mono">
 {`; --- 8086 Stack Memory PUSH & POP Sequence ---
 MOV AX, 1234H  ; Initialize AX with 1234H
 PUSH AX        ; SP ← SP - 2 (FFFC), writes 1234H to SS:FFFCH
@@ -1434,15 +1515,12 @@ POP DX         ; Reads 1234H into DX, SP ← SP + 2 (FFFE)`}
                   </div>
 
                   {/* Right: Tactile Physical Simulator Outlet (4 Cols) */}
-                  <div className="md:col-span-4 bg-slate-900 text-indigo-50 border border-slate-800 rounded-xl p-4 flex flex-col justify-between items-center shadow-inner relative overflow-hidden">
-                    {/* Retro Grid background */}
-                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:10px_10px] opacity-10" />
-                    
+                  <div className="md:col-span-4 bg-slate-50 text-slate-800 border border-slate-200 rounded-xl p-4 flex flex-col justify-between items-center shadow-xs relative overflow-hidden">
                     <div className="w-full text-center relative z-10 shrink-0 mb-2">
-                      <span className="text-[9px] font-bold font-mono uppercase text-indigo-400 tracking-widest block">
+                      <span className="text-[9px] font-bold font-mono uppercase text-indigo-700 tracking-widest block">
                         Hardware Display Unit
                       </span>
-                      <span className="text-[10px] text-slate-300 font-medium font-sans">
+                      <span className="text-[10px] text-slate-500 font-medium font-sans">
                         Real-time Output
                       </span>
                     </div>
@@ -1454,14 +1532,14 @@ POP DX         ; Reads 1234H into DX, SP ← SP + 2 (FFFE)`}
                         <SevenSegmentDisplay hexValue={xlatTable[regs.AX & 0xFF] ?? 0} />
                       ) : xlatScenario === 'ascii_num' || xlatScenario === 'ascii_case' ? (
                         /* Glowing CRT ASCII Character Box */
-                        <div className="flex flex-col items-center justify-center bg-slate-950 border border-emerald-500/30 w-24 h-24 rounded-xl shadow-inner shadow-emerald-900/40">
-                          <span className="text-[9px] font-mono font-bold text-emerald-500/60 uppercase tracking-widest leading-none mb-2">
+                        <div className="flex flex-col items-center justify-center bg-emerald-50 border border-emerald-300 w-24 h-24 rounded-xl shadow-xs">
+                          <span className="text-[9px] font-mono font-bold text-emerald-700 uppercase tracking-widest leading-none mb-2">
                             CRT TERM
                           </span>
-                          <span className="text-3xl font-mono font-extrabold text-emerald-400 animate-pulse drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]">
+                          <span className="text-3xl font-mono font-extrabold text-emerald-800">
                             {String.fromCharCode(xlatTable[regs.AX & 0xFF] ?? 32)}
                           </span>
-                          <span className="text-[9px] font-mono text-emerald-500/60 mt-2">
+                          <span className="text-[9px] font-mono text-emerald-700 mt-2 font-bold">
                             ASCII: {byteHexFormat(xlatTable[regs.AX & 0xFF] ?? 0)}
                           </span>
                         </div>
@@ -1469,23 +1547,23 @@ POP DX         ; Reads 1234H into DX, SP ← SP + 2 (FFFE)`}
                         /* Binary pattern visualizer for Gray Code */
                         <div className="flex flex-col items-center gap-1 w-full px-2">
                           <div className="text-center">
-                            <p className="text-[9px] text-slate-400 font-mono">Index AL Binary:</p>
+                            <p className="text-[9px] text-slate-500 font-mono">Index AL Binary:</p>
                             <div className="flex gap-0.5 justify-center mt-1">
                               {(regs.AX & 0xFF).toString(2).padStart(4, '0').split('').map((bit, idx) => (
-                                <span key={idx} className="w-5 h-5 rounded bg-slate-800 border border-slate-700 flex items-center justify-center font-mono text-[10px] font-bold text-indigo-300">
+                                <span key={idx} className="w-5 h-5 rounded bg-white border border-slate-300 flex items-center justify-center font-mono text-[10px] font-bold text-indigo-700 shadow-2xs">
                                   {bit}
                                 </span>
                               ))}
                             </div>
                           </div>
                           
-                          <div className="my-1.5 text-indigo-500 text-xs font-bold">▼ XLAT ▼</div>
+                          <div className="my-1.5 text-indigo-600 text-xs font-bold">▼ XLAT ▼</div>
 
                           <div className="text-center">
-                            <p className="text-[9px] text-emerald-400 font-mono font-bold">Gray Code Output Binary:</p>
+                            <p className="text-[9px] text-emerald-700 font-mono font-bold">Gray Code Output Binary:</p>
                             <div className="flex gap-0.5 justify-center mt-1">
                               {(xlatTable[regs.AX & 0xFF] ?? 0).toString(2).padStart(4, '0').split('').map((bit, idx) => (
-                                <span key={idx} className="w-5 h-5 rounded bg-emerald-950 border border-emerald-500/40 flex items-center justify-center font-mono text-[10px] font-bold text-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.3)] animate-pulse">
+                                <span key={idx} className="w-5 h-5 rounded bg-emerald-100 border border-emerald-300 flex items-center justify-center font-mono text-[10px] font-bold text-emerald-800 shadow-2xs">
                                   {bit}
                                 </span>
                               ))}
@@ -1497,9 +1575,9 @@ POP DX         ; Reads 1234H into DX, SP ← SP + 2 (FFFE)`}
 
                     {/* Index adjustment helper */}
                     <div className="w-full relative z-10 mt-2">
-                      <div className="flex justify-between items-center text-[10px] font-mono text-indigo-300 mb-1">
+                      <div className="flex justify-between items-center text-[10px] font-mono text-indigo-700 mb-1">
                         <span>Select Input Index (AL):</span>
-                        <span className="font-bold text-white bg-indigo-800/80 px-1.5 py-0.5 rounded">
+                        <span className="font-bold text-white bg-indigo-600 px-1.5 py-0.5 rounded">
                           {regs.AX & 0xFF} ({byteHexFormat(regs.AX & 0xFF)})
                         </span>
                       </div>
@@ -1509,9 +1587,9 @@ POP DX         ; Reads 1234H into DX, SP ← SP + 2 (FFFE)`}
                         max="15"
                         value={regs.AX & 0xFF}
                         onChange={(e) => updateXlatAlVal(parseInt(e.target.value))}
-                        className="w-full accent-indigo-500 bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer"
+                        className="w-full accent-indigo-600 bg-slate-200 h-1.5 rounded-lg appearance-none cursor-pointer"
                       />
-                      <div className="flex justify-between text-[8px] font-mono text-indigo-400 mt-1">
+                      <div className="flex justify-between text-[8px] font-mono text-indigo-600 mt-1">
                         <span>Min (00H)</span>
                         <span>Max (0FH)</span>
                       </div>
@@ -1522,22 +1600,22 @@ POP DX         ; Reads 1234H into DX, SP ← SP + 2 (FFFE)`}
                 </div>
 
                 {/* Assembly Code How-It-Is-Used Demonstration Box */}
-                <div className="mt-4 bg-slate-900 rounded-xl p-4 border border-slate-800 text-slate-100 font-mono text-xs">
-                  <div className="flex justify-between items-center pb-2 mb-2 border-b border-slate-800">
-                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                <div className="mt-4 bg-slate-50 rounded-xl p-4 border border-slate-200 text-slate-800 font-mono text-xs">
+                  <div className="flex justify-between items-center pb-2 mb-2 border-b border-slate-200">
+                    <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
                       <Code2 className="w-3.5 h-3.5" />
                       8086 Assembly Program Code ({xlatScenario === 'ascii_num' ? 'Decimal to ASCII Conversion' : xlatScenario === 'sevensegment' ? 'Hex to 7-Segment LED Conversion' : xlatScenario === 'gray' ? 'Binary to Gray Code Conversion' : 'Lowercase ASCII Mapping'})
                     </span>
                     <button
                       onClick={() => handleExecute()}
-                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-all shadow-xs"
                     >
                       <Play className="w-3 h-3 fill-current" />
                       Execute XLAT Step
                     </button>
                   </div>
 
-                  <pre className="text-[11px] leading-relaxed text-emerald-300 bg-slate-950/80 p-3 rounded-lg overflow-x-auto border border-slate-800 font-mono">
+                  <pre className="text-[11px] leading-relaxed text-slate-800 bg-white p-3 rounded-lg overflow-x-auto border border-slate-200 font-mono">
 {xlatScenario === 'ascii_num' ? `; --- Decimal to ASCII Conversion using XLAT ---
 .DATA
   LOOKUP_TBL DB 30H, 31H, 32H, 33H, 34H, 35H, 36H, 37H, 38H, 39H ; ASCII '0'..'9'
@@ -1591,323 +1669,932 @@ POP DX         ; Reads 1234H into DX, SP ← SP + 2 (FFFE)`}
               </div>
             )}
 
+            {/* DYNAMIC CATEGORY-DRIVEN INTERACTIVE EXPLORER MODULE */}
 
-
-
-
-            {/* Dedicated Interactive BCD & ASCII Format Explorer Card */}
-            <div className="bg-gradient-to-br from-purple-50 via-white to-slate-50 border border-purple-200 rounded-2xl p-5 space-y-5 shadow-xs">
-              <div className="flex flex-wrap justify-between items-center gap-3 border-b border-purple-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-purple-600 text-white rounded-xl shadow-xs">
-                    <Binary className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-black font-mono uppercase tracking-wider text-purple-950">
-                      Packed BCD vs. Unpacked BCD vs. ASCII BCD Interactive Explorer
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-sans">
-                      Visualize how decimal numbers (0–99) are stored in silicon memory and processed by 8086 adjust instructions.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Preset Quick Selectors */}
-                <div className="flex items-center gap-1.5 font-mono text-xs">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold mr-1">Presets:</span>
-                  {[
-                    { label: '59 (Classic DAA)', val: 59 },
-                    { label: '35 (Op 2)', val: 35 },
-                    { label: '94 (Sum)', val: 94 },
-                    { label: '8 (Single Digit)', val: 8 },
-                    { label: '15 (Boundary)', val: 15 }
-                  ].map(p => (
-                    <button
-                      key={p.val}
-                      onClick={() => setBcdVal(p.val)}
-                      className={`px-2.5 py-1 text-[11px] rounded-lg font-bold transition-all cursor-pointer ${
-                        bcdVal === p.val
-                          ? 'bg-purple-700 text-white shadow-xs'
-                          : 'bg-white text-purple-900 border border-purple-200 hover:bg-purple-100'
-                      }`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Interactive Controls & Live Value Display */}
-              <div className="bg-white p-4 rounded-xl border border-purple-100 space-y-3 shadow-xs">
-                <div className="flex flex-wrap justify-between items-center gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono font-bold text-slate-700 uppercase">Input Decimal Number (0–99):</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={99}
-                      value={bcdVal}
-                      onChange={(e) => setBcdVal(Math.max(0, Math.min(99, Number(e.target.value) || 0)))}
-                      className="w-20 px-3 py-1.5 font-mono font-bold text-center text-sm border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-600 bg-purple-50/50 text-purple-950"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-4 text-xs font-mono">
-                    <div className="bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200 text-purple-900 font-bold">
-                      Tens Digit: <span className="text-purple-700 text-sm">{Math.floor((bcdVal % 100) / 10)}</span> ({Math.floor((bcdVal % 100) / 10).toString(2).padStart(4, '0')})
-                    </div>
-                    <div className="bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200 text-indigo-900 font-bold">
-                      Ones Digit: <span className="text-indigo-700 text-sm">{bcdVal % 10}</span> ({(bcdVal % 10).toString(2).padStart(4, '0')})
-                    </div>
-                  </div>
-                </div>
-
-                {/* Slider Control */}
-                <div className="flex items-center gap-3 pt-1">
-                  <span className="text-[10px] font-mono text-slate-400">0</span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={99}
-                    value={bcdVal}
-                    onChange={(e) => setBcdVal(Number(e.target.value))}
-                    className="w-full accent-purple-600 cursor-pointer"
-                  />
-                  <span className="text-[10px] font-mono text-slate-400">99</span>
-                </div>
-              </div>
-
-              {/* Quick Mental Shortcut / Golden Rule Banner */}
-              <div className="bg-gradient-to-r from-purple-900 via-slate-900 to-indigo-900 text-white p-3.5 rounded-xl border border-purple-800 text-xs font-mono shadow-sm">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 block mb-1 flex items-center gap-1.5">
-                  <span className="text-amber-400">💡</span> GOLDEN RULE: How Upper 4 Bits (High Nibble) distinguish the formats
-                </span>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center pt-1">
-                  <div className="bg-purple-950/80 p-2 rounded-lg border border-purple-700/60">
-                    <span className="text-[10px] text-purple-300 block font-bold">PACKED BCD</span>
-                    <span className="text-amber-300 font-black text-xs">High Nibble = Tens Digit</span>
-                    <span className="text-[9px] text-slate-400 block mt-0.5">e.g. 59 → <code className="text-purple-200">0101 1001</code> (59H)</span>
-                  </div>
-                  <div className="bg-indigo-950/80 p-2 rounded-lg border border-indigo-700/60">
-                    <span className="text-[10px] text-indigo-300 block font-bold">UNPACKED BCD</span>
-                    <span className="text-emerald-300 font-black text-xs">High Nibble = 0000 (0H)</span>
-                    <span className="text-[9px] text-slate-400 block mt-0.5">e.g. 59 → <code className="text-indigo-200">00H 09H</code> / <code className="text-indigo-200">05H 09H</code></span>
-                  </div>
-                  <div className="bg-emerald-950/80 p-2 rounded-lg border border-emerald-700/60">
-                    <span className="text-[10px] text-emerald-300 block font-bold">ASCII BCD</span>
-                    <span className="text-sky-300 font-black text-xs">High Nibble = 0011 (3H)</span>
-                    <span className="text-[9px] text-slate-400 block mt-0.5">e.g. 59 → <code className="text-emerald-200">35H 39H</code> ('5' '9')</span>
-                  </div>
-                  <div className="bg-amber-950/80 p-2 rounded-lg border border-amber-700/60">
-                    <span className="text-[10px] text-amber-300 block font-bold">PURE BINARY / HEX</span>
-                    <span className="text-rose-300 font-black text-xs">Base-16 Value</span>
-                    <span className="text-[9px] text-slate-400 block mt-0.5">e.g. 59 → <code className="text-amber-200">3BH</code> (0011 1011)</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 4 Format Comparison Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                
-                {/* 1. Packed BCD Card */}
-                <div className="bg-white p-4 rounded-xl border-2 border-purple-200 space-y-3 shadow-xs flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-black font-mono text-purple-900 uppercase">1. Packed BCD</span>
-                      <span className="text-[9px] font-mono font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-md">1 Byte</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-snug">
-                      Stores <strong>2 decimal digits</strong> in 1 byte. High nibble = tens digit, Low nibble = ones digit.
-                    </p>
-
-                    <div className="bg-purple-50/80 p-2.5 rounded-lg border border-purple-200 text-center font-mono space-y-1">
-                      <div className="text-[10px] text-purple-600 font-bold flex justify-around border-b border-purple-200 pb-1">
-                        <span>Tens ({Math.floor((bcdVal % 100) / 10)})</span>
-                        <span>Ones ({bcdVal % 10})</span>
-                      </div>
-                      <div className="text-xs font-extrabold text-purple-950 flex justify-around pt-1">
-                        <span className="bg-white px-2 py-0.5 rounded border border-purple-300">{Math.floor((bcdVal % 100) / 10).toString(2).padStart(4, '0')}</span>
-                        <span className="bg-white px-2 py-0.5 rounded border border-purple-300">{(bcdVal % 10).toString(2).padStart(4, '0')}</span>
-                      </div>
-                      <div className="text-sm font-black text-purple-700 pt-1">
-                        Hex Byte: <span className="bg-purple-200 text-purple-950 px-2 py-0.5 rounded border border-purple-300">{Math.floor((bcdVal % 100) / 10)}{bcdVal % 10}H</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-[10px] text-purple-800 font-mono bg-purple-50 p-2 rounded-lg border border-purple-200">
-                    💡 <strong>8086 Opcodes:</strong> Uses <code>DAA</code> & <code>DAS</code> to adjust AL after math.
-                  </div>
-                </div>
-
-                {/* 2. Unpacked BCD Card */}
-                <div className="bg-white p-4 rounded-xl border-2 border-indigo-200 space-y-3 shadow-xs flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-black font-mono text-indigo-900 uppercase">2. Unpacked BCD</span>
-                      <span className="text-[9px] font-mono font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-md">2 Bytes</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-snug">
-                      Stores <strong>1 decimal digit</strong> per byte. High nibble is strictly <code>0000</code> (<code>0H</code>).
-                    </p>
-
-                    <div className="bg-indigo-50/80 p-2.5 rounded-lg border border-indigo-200 text-center font-mono space-y-1">
-                      <div className="text-[10px] text-indigo-600 font-bold flex justify-around border-b border-indigo-200 pb-1">
-                        <span>Byte 1 (Tens)</span>
-                        <span>Byte 2 (Ones)</span>
-                      </div>
-                      <div className="text-[11px] font-extrabold text-indigo-950 flex justify-around pt-1">
-                        <span className="bg-white px-1.5 py-0.5 rounded border border-indigo-300">0000 {Math.floor((bcdVal % 100) / 10).toString(2).padStart(4, '0')}</span>
-                        <span className="bg-white px-1.5 py-0.5 rounded border border-indigo-300">0000 {(bcdVal % 10).toString(2).padStart(4, '0')}</span>
-                      </div>
-                      <div className="text-xs font-black text-indigo-700 pt-1">
-                        AH: 0{Math.floor((bcdVal % 100) / 10)}H | AL: 0{bcdVal % 10}H
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-[10px] text-indigo-800 font-mono bg-indigo-50 p-2 rounded-lg border border-indigo-200">
-                    💡 <strong>8086 Opcodes:</strong> Uses <code>AAA</code>, <code>AAS</code>, <code>AAM</code>, <code>AAD</code>.
-                  </div>
-                </div>
-
-                {/* 3. ASCII BCD Card */}
-                <div className="bg-white p-4 rounded-xl border-2 border-emerald-200 space-y-3 shadow-xs flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-black font-mono text-emerald-900 uppercase">3. ASCII BCD</span>
-                      <span className="text-[9px] font-mono font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">2 Bytes</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-snug">
-                      ASCII characters <code>'0'</code>–<code>'9'</code>. High nibble is strictly <code>0011</code> (<code>3H</code>).
-                    </p>
-
-                    <div className="bg-emerald-50/80 p-2.5 rounded-lg border border-emerald-200 text-center font-mono space-y-1">
-                      <div className="text-[10px] text-emerald-600 font-bold flex justify-around border-b border-emerald-200 pb-1">
-                        <span>' {Math.floor((bcdVal % 100) / 10)} '</span>
-                        <span>' {bcdVal % 10} '</span>
-                      </div>
-                      <div className="text-[11px] font-extrabold text-emerald-950 flex justify-around pt-1">
-                        <span className="bg-white px-1.5 py-0.5 rounded border border-emerald-300">0011 {Math.floor((bcdVal % 100) / 10).toString(2).padStart(4, '0')}</span>
-                        <span className="bg-white px-1.5 py-0.5 rounded border border-emerald-300">0011 {(bcdVal % 10).toString(2).padStart(4, '0')}</span>
-                      </div>
-                      <div className="text-xs font-black text-emerald-700 pt-1">
-                        AH: 3{Math.floor((bcdVal % 100) / 10)}H | AL: 3{bcdVal % 10}H
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-[10px] text-emerald-800 font-mono bg-emerald-50 p-2 rounded-lg border border-emerald-200">
-                    💡 <strong>Convert:</strong> Mask with <code>AND AL, 0FH</code> or <code>SUB AL, 30H</code>.
-                  </div>
-                </div>
-
-                {/* 4. Pure Binary Hex Contrast Card */}
-                <div className="bg-white p-4 rounded-xl border-2 border-amber-200 space-y-3 shadow-xs flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-black font-mono text-amber-900 uppercase">4. Pure Binary</span>
-                      <span className="text-[9px] font-mono font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md">Standard Hex</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-snug">
-                      Standard positional binary value (base-16). Computes as <code>(High × 16) + Low</code>.
-                    </p>
-
-                    <div className="bg-amber-50/80 p-2.5 rounded-lg border border-amber-200 text-center font-mono space-y-1">
-                      <div className="text-[10px] text-amber-600 font-bold border-b border-amber-200 pb-1">
-                        Binary Bits (8-bit)
-                      </div>
-                      <div className="text-xs font-extrabold text-amber-950 pt-1">
-                        <span className="bg-white px-2 py-0.5 rounded border border-amber-300">{bcdVal.toString(2).padStart(8, '0')}</span>
-                      </div>
-                      <div className="text-sm font-black text-amber-800 pt-1">
-                        Hex Byte: <span className="bg-amber-200 text-amber-950 px-2 py-0.5 rounded border border-amber-300">{bcdVal.toString(16).toUpperCase().padStart(2, '0')}H</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-[10px] text-amber-900 font-mono bg-amber-50 p-2 rounded-lg border border-amber-200">
-                    ⚡ Notice: Pure Hex <code>{bcdVal.toString(16).toUpperCase().padStart(2, '0')}H</code> differs from Packed BCD <code>{Math.floor((bcdVal % 100) / 10)}{bcdVal % 10}H</code>!
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Real-Life Hardware Adjust Step-by-Step Example */}
-              <div className="bg-slate-900 text-slate-100 p-4 rounded-xl space-y-3 font-mono text-xs border border-slate-800">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+            {/* 1. BCD & ASCII ADJUST EXPLORER */}
+            {categoryTab === 'BCD & ASCII Adjust' && (
+              <div className="bg-gradient-to-br from-purple-50 via-white to-slate-50 border border-purple-200 rounded-2xl p-5 space-y-5 shadow-xs">
+                <div className="flex flex-wrap justify-between items-center gap-3 border-b border-purple-100 pb-3">
                   <div className="flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-amber-400" />
-                    <span className="text-purple-300 font-bold uppercase tracking-wider text-[11px]">
-                      Hardware Execution: {bcdGuideMap[bcdOpcode].title}
-                    </span>
+                    <div className="p-2 bg-purple-600 text-white rounded-xl shadow-xs">
+                      <Binary className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-black font-mono uppercase tracking-wider text-purple-950">
+                        Packed BCD vs. Unpacked BCD vs. ASCII BCD Interactive Explorer
+                      </h3>
+                      <p className="text-[11px] text-slate-500 font-sans">
+                        Visualize how decimal numbers (0–99) are stored in silicon memory and processed by 8086 adjust instructions.
+                      </p>
+                    </div>
                   </div>
 
-                  {/* BCD & ASCII Instruction Switcher Buttons */}
-                  <div className="flex items-center gap-1 font-mono text-[11px]">
-                    <span className="text-[10px] text-slate-400 mr-1 font-bold">Instruction:</span>
-                    {(['DAA', 'DAS', 'AAA', 'AAS', 'AAM', 'AAD'] as const).map(op => (
+                  {/* Preset Quick Selectors */}
+                  <div className="flex items-center gap-1.5 font-mono text-xs">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold mr-1">Presets:</span>
+                    {[
+                      { label: '59 (Classic DAA)', val: 59 },
+                      { label: '35 (Op 2)', val: 35 },
+                      { label: '94 (Sum)', val: 94 },
+                      { label: '8 (Single Digit)', val: 8 },
+                      { label: '15 (Boundary)', val: 15 }
+                    ].map(p => (
                       <button
-                        key={op}
-                        onClick={() => setBcdOpcode(op)}
-                        className={`px-2 py-0.5 rounded text-[11px] font-extrabold transition-all cursor-pointer ${
-                          bcdOpcode === op
-                            ? 'bg-purple-600 text-white shadow-xs'
-                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
+                        key={p.val}
+                        onClick={() => setBcdVal(p.val)}
+                        className={`px-2.5 py-1 text-[11px] rounded-lg font-bold transition-all cursor-pointer ${
+                          bcdVal === p.val
+                            ? 'bg-purple-700 text-white shadow-xs'
+                            : 'bg-white text-purple-900 border border-purple-200 hover:bg-purple-100'
                         }`}
                       >
-                        {op}
+                        {p.label}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800/80 text-[11px]">
-                  <span className="text-purple-300 font-bold">{bcdGuideMap[bcdOpcode].subtitle}</span>
-                  <span className="bg-purple-950 text-purple-200 border border-purple-800 px-2 py-0.5 rounded font-bold">
-                    Example: {bcdGuideMap[bcdOpcode].example}
-                  </span>
+                {/* Interactive Controls & Live Value Display */}
+                <div className="bg-white p-4 rounded-xl border border-purple-100 space-y-3 shadow-xs">
+                  <div className="flex flex-wrap justify-between items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-mono font-bold text-slate-700 uppercase">Input Decimal Number (0–99):</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={99}
+                        value={bcdVal}
+                        onChange={(e) => setBcdVal(Math.max(0, Math.min(99, Number(e.target.value) || 0)))}
+                        className="w-20 px-3 py-1.5 font-mono font-bold text-center text-sm border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-600 bg-purple-50/50 text-purple-950"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-4 text-xs font-mono">
+                      <div className="bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200 text-purple-900 font-bold">
+                        Tens Digit: <span className="text-purple-700 text-sm">{Math.floor((bcdVal % 100) / 10)}</span> ({Math.floor((bcdVal % 100) / 10).toString(2).padStart(4, '0')})
+                      </div>
+                      <div className="bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200 text-indigo-900 font-bold">
+                        Ones Digit: <span className="text-indigo-700 text-sm">{bcdVal % 10}</span> ({(bcdVal % 10).toString(2).padStart(4, '0')})
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Slider Control */}
+                  <div className="flex items-center gap-3 pt-1">
+                    <span className="text-[10px] font-mono text-slate-400">0</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={99}
+                      value={bcdVal}
+                      onChange={(e) => setBcdVal(Number(e.target.value))}
+                      className="w-full accent-purple-600 cursor-pointer"
+                    />
+                    <span className="text-[10px] font-mono text-slate-400">99</span>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px]">
-                  <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700/80 space-y-1">
-                    <span className="text-amber-400 font-bold block text-[10px] uppercase">
-                      {bcdGuideMap[bcdOpcode].step1Title}
-                    </span>
-                    <p className="text-slate-300">
-                      {bcdGuideMap[bcdOpcode].step1Code}
-                    </p>
-                    <span className="text-[10px] text-rose-300 block pt-1 font-bold">
-                      {bcdGuideMap[bcdOpcode].step1Note}
+                {/* Quick Mental Shortcut / Golden Rule Banner */}
+                <div className="bg-gradient-to-r from-purple-900 via-slate-900 to-indigo-900 text-white p-3.5 rounded-xl border border-purple-800 text-xs font-mono shadow-sm">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 block mb-1 flex items-center gap-1.5">
+                    <span className="text-amber-400">💡</span> GOLDEN RULE: How Upper 4 Bits (High Nibble) distinguish the formats
+                  </span>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center pt-1">
+                    <div className="bg-purple-950/80 p-2 rounded-lg border border-purple-700/60">
+                      <span className="text-[10px] text-purple-300 block font-bold">PACKED BCD</span>
+                      <span className="text-amber-300 font-black text-xs">High Nibble = Tens Digit</span>
+                      <span className="text-[9px] text-slate-400 block mt-0.5">e.g. 59 → <code className="text-purple-200">0101 1001</code> (59H)</span>
+                    </div>
+                    <div className="bg-indigo-950/80 p-2 rounded-lg border border-indigo-700/60">
+                      <span className="text-[10px] text-indigo-300 block font-bold">UNPACKED BCD</span>
+                      <span className="text-emerald-300 font-black text-xs">High Nibble = 0000 (0H)</span>
+                      <span className="text-[9px] text-slate-400 block mt-0.5">e.g. 59 → <code className="text-indigo-200">00H 09H</code> / <code className="text-indigo-200">05H 09H</code></span>
+                    </div>
+                    <div className="bg-emerald-950/80 p-2 rounded-lg border border-emerald-700/60">
+                      <span className="text-[10px] text-emerald-300 block font-bold">ASCII BCD</span>
+                      <span className="text-sky-300 font-black text-xs">High Nibble = 0011 (3H)</span>
+                      <span className="text-[9px] text-slate-400 block mt-0.5">e.g. 59 → <code className="text-emerald-200">35H 39H</code> ('5' '9')</span>
+                    </div>
+                    <div className="bg-amber-950/80 p-2 rounded-lg border border-amber-700/60">
+                      <span className="text-[10px] text-amber-300 block font-bold">PURE BINARY / HEX</span>
+                      <span className="text-rose-300 font-black text-xs">Base-16 Value</span>
+                      <span className="text-[9px] text-slate-400 block mt-0.5">e.g. 59 → <code className="text-amber-200">3BH</code> (0011 1011)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4 Format Comparison Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  
+                  {/* 1. Packed BCD Card */}
+                  <div className="bg-white p-4 rounded-xl border-2 border-purple-200 space-y-3 shadow-xs flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-black font-mono text-purple-900 uppercase">1. Packed BCD</span>
+                        <span className="text-[9px] font-mono font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-md">1 Byte</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-snug">
+                        Stores <strong>2 decimal digits</strong> in 1 byte. High nibble = tens digit, Low nibble = ones digit.
+                      </p>
+
+                      <div className="bg-purple-50/80 p-2.5 rounded-lg border border-purple-200 text-center font-mono space-y-1">
+                        <div className="text-[10px] text-purple-600 font-bold flex justify-around border-b border-purple-200 pb-1">
+                          <span>Tens ({Math.floor((bcdVal % 100) / 10)})</span>
+                          <span>Ones ({bcdVal % 10})</span>
+                        </div>
+                        <div className="text-xs font-extrabold text-purple-950 flex justify-around pt-1">
+                          <span className="bg-white px-2 py-0.5 rounded border border-purple-300">{Math.floor((bcdVal % 100) / 10).toString(2).padStart(4, '0')}</span>
+                          <span className="bg-white px-2 py-0.5 rounded border border-purple-300">{(bcdVal % 10).toString(2).padStart(4, '0')}</span>
+                        </div>
+                        <div className="text-sm font-black text-purple-700 pt-1">
+                          Hex Byte: <span className="bg-purple-200 text-purple-950 px-2 py-0.5 rounded border border-purple-300">{Math.floor((bcdVal % 100) / 10)}{bcdVal % 10}H</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-purple-800 font-mono bg-purple-50 p-2 rounded-lg border border-purple-200">
+                      💡 <strong>8086 Opcodes:</strong> Uses <code>DAA</code> & <code>DAS</code> to adjust AL after math.
+                    </div>
+                  </div>
+
+                  {/* 2. Unpacked BCD Card */}
+                  <div className="bg-white p-4 rounded-xl border-2 border-indigo-200 space-y-3 shadow-xs flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-black font-mono text-indigo-900 uppercase">2. Unpacked BCD</span>
+                        <span className="text-[9px] font-mono font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-md">2 Bytes</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-snug">
+                        Stores <strong>1 decimal digit</strong> per byte. High nibble is strictly <code>0000</code> (<code>0H</code>).
+                      </p>
+
+                      <div className="bg-indigo-50/80 p-2.5 rounded-lg border border-indigo-200 text-center font-mono space-y-1">
+                        <div className="text-[10px] text-indigo-600 font-bold flex justify-around border-b border-indigo-200 pb-1">
+                          <span>Byte 1 (Tens)</span>
+                          <span>Byte 2 (Ones)</span>
+                        </div>
+                        <div className="text-[11px] font-extrabold text-indigo-950 flex justify-around pt-1">
+                          <span className="bg-white px-1.5 py-0.5 rounded border border-indigo-300">0000 {Math.floor((bcdVal % 100) / 10).toString(2).padStart(4, '0')}</span>
+                          <span className="bg-white px-1.5 py-0.5 rounded border border-indigo-300">0000 {(bcdVal % 10).toString(2).padStart(4, '0')}</span>
+                        </div>
+                        <div className="text-xs font-black text-indigo-700 pt-1">
+                          AH: 0{Math.floor((bcdVal % 100) / 10)}H | AL: 0{bcdVal % 10}H
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-indigo-800 font-mono bg-indigo-50 p-2 rounded-lg border border-indigo-200">
+                      💡 <strong>8086 Opcodes:</strong> Uses <code>AAA</code>, <code>AAS</code>, <code>AAM</code>, <code>AAD</code>.
+                    </div>
+                  </div>
+
+                  {/* 3. ASCII BCD Card */}
+                  <div className="bg-white p-4 rounded-xl border-2 border-emerald-200 space-y-3 shadow-xs flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-black font-mono text-emerald-900 uppercase">3. ASCII BCD</span>
+                        <span className="text-[9px] font-mono font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">2 Bytes</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-snug">
+                        ASCII characters <code>'0'</code>–<code>'9'</code>. High nibble is strictly <code>0011</code> (<code>3H</code>).
+                      </p>
+
+                      <div className="bg-emerald-50/80 p-2.5 rounded-lg border border-emerald-200 text-center font-mono space-y-1">
+                        <div className="text-[10px] text-emerald-600 font-bold flex justify-around border-b border-emerald-200 pb-1">
+                          <span>' {Math.floor((bcdVal % 100) / 10)} '</span>
+                          <span>' {bcdVal % 10} '</span>
+                        </div>
+                        <div className="text-[11px] font-extrabold text-emerald-950 flex justify-around pt-1">
+                          <span className="bg-white px-1.5 py-0.5 rounded border border-emerald-300">0011 {Math.floor((bcdVal % 100) / 10).toString(2).padStart(4, '0')}</span>
+                          <span className="bg-white px-1.5 py-0.5 rounded border border-emerald-300">0011 {(bcdVal % 10).toString(2).padStart(4, '0')}</span>
+                        </div>
+                        <div className="text-xs font-black text-emerald-700 pt-1">
+                          AH: 3{Math.floor((bcdVal % 100) / 10)}H | AL: 3{bcdVal % 10}H
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-emerald-800 font-mono bg-emerald-50 p-2 rounded-lg border border-emerald-200">
+                      💡 <strong>Convert:</strong> Mask with <code>AND AL, 0FH</code> or <code>SUB AL, 30H</code>.
+                    </div>
+                  </div>
+
+                  {/* 4. Pure Binary Hex Contrast Card */}
+                  <div className="bg-white p-4 rounded-xl border-2 border-amber-200 space-y-3 shadow-xs flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-black font-mono text-amber-900 uppercase">4. Pure Binary</span>
+                        <span className="text-[9px] font-mono font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md">Standard Hex</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-snug">
+                        Standard positional binary value (base-16). Computes as <code>(High × 16) + Low</code>.
+                      </p>
+
+                      <div className="bg-amber-50/80 p-2.5 rounded-lg border border-amber-200 text-center font-mono space-y-1">
+                        <div className="text-[10px] text-amber-600 font-bold border-b border-amber-200 pb-1">
+                          Binary Bits (8-bit)
+                        </div>
+                        <div className="text-xs font-extrabold text-amber-950 pt-1">
+                          <span className="bg-white px-2 py-0.5 rounded border border-amber-300">{bcdVal.toString(2).padStart(8, '0')}</span>
+                        </div>
+                        <div className="text-sm font-black text-amber-800 pt-1">
+                          Hex Byte: <span className="bg-amber-200 text-amber-950 px-2 py-0.5 rounded border border-amber-300">{bcdVal.toString(16).toUpperCase().padStart(2, '0')}H</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-amber-900 font-mono bg-amber-50 p-2 rounded-lg border border-amber-200">
+                      ⚡ Notice: Pure Hex <code>{bcdVal.toString(16).toUpperCase().padStart(2, '0')}H</code> differs from Packed BCD <code>{Math.floor((bcdVal % 100) / 10)}{bcdVal % 10}H</code>!
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Real-Life Hardware Adjust Step-by-Step Example */}
+                <div className="bg-slate-50 text-slate-800 p-4 rounded-xl space-y-3 font-mono text-xs border border-slate-200">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-600" />
+                      <span className="text-purple-800 font-bold uppercase tracking-wider text-[11px]">
+                        Hardware Execution: {bcdGuideMap[bcdOpcode].title}
+                      </span>
+                    </div>
+
+                    {/* BCD & ASCII Instruction Switcher Buttons */}
+                    <div className="flex items-center gap-1 font-mono text-[11px]">
+                      <span className="text-[10px] text-slate-500 mr-1 font-bold">Instruction:</span>
+                      {(['DAA', 'DAS', 'AAA', 'AAS', 'AAM', 'AAD'] as const).map(op => (
+                        <button
+                          key={op}
+                          onClick={() => setBcdOpcode(op)}
+                          className={`px-2 py-0.5 rounded text-[11px] font-extrabold transition-all cursor-pointer ${
+                            bcdOpcode === op
+                              ? 'bg-purple-600 text-white shadow-xs'
+                              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                          }`}
+                        >
+                          {op}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-[11px]">
+                    <span className="text-purple-800 font-bold">{bcdGuideMap[bcdOpcode].subtitle}</span>
+                    <span className="bg-purple-100 text-purple-900 border border-purple-200 px-2 py-0.5 rounded font-bold">
+                      Example: {bcdGuideMap[bcdOpcode].example}
                     </span>
                   </div>
 
-                  <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700/80 space-y-1">
-                    <span className="text-purple-400 font-bold block text-[10px] uppercase">
-                      {bcdGuideMap[bcdOpcode].step2Title}
-                    </span>
-                    <p className="text-slate-300">
-                      {bcdGuideMap[bcdOpcode].step2Code}
-                    </p>
-                    <span className="text-[10px] text-purple-300 block pt-1 font-bold">
-                      {bcdGuideMap[bcdOpcode].step2Note}
-                    </span>
-                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px]">
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1">
+                      <span className="text-amber-700 font-bold block text-[10px] uppercase">
+                        {bcdGuideMap[bcdOpcode].step1Title}
+                      </span>
+                      <p className="text-slate-700">
+                        {bcdGuideMap[bcdOpcode].step1Code}
+                      </p>
+                      <span className="text-[10px] text-rose-700 block pt-1 font-bold">
+                        {bcdGuideMap[bcdOpcode].step1Note}
+                      </span>
+                    </div>
 
-                  <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700/80 space-y-1">
-                    <span className="text-emerald-400 font-bold block text-[10px] uppercase">
-                      {bcdGuideMap[bcdOpcode].step3Title}
-                    </span>
-                    <p className="text-slate-300">
-                      {bcdGuideMap[bcdOpcode].step3Code}
-                    </p>
-                    <span className="text-[10px] text-emerald-300 block pt-1 font-bold">
-                      {bcdGuideMap[bcdOpcode].step3Note}
-                    </span>
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1">
+                      <span className="text-purple-700 font-bold block text-[10px] uppercase">
+                        {bcdGuideMap[bcdOpcode].step2Title}
+                      </span>
+                      <p className="text-slate-700">
+                        {bcdGuideMap[bcdOpcode].step2Code}
+                      </p>
+                      <span className="text-[10px] text-purple-700 block pt-1 font-bold">
+                        {bcdGuideMap[bcdOpcode].step2Note}
+                      </span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1">
+                      <span className="text-emerald-700 font-bold block text-[10px] uppercase">
+                        {bcdGuideMap[bcdOpcode].step3Title}
+                      </span>
+                      <p className="text-slate-700">
+                        {bcdGuideMap[bcdOpcode].step3Code}
+                      </p>
+                      <span className="text-[10px] text-emerald-700 block pt-1 font-bold">
+                        {bcdGuideMap[bcdOpcode].step3Note}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* 2. CONTROL & FLAG EXPLORER */}
+            {(currentCategory === 'Control' || currentCategory === 'Flag') && (
+              <div className="bg-gradient-to-br from-amber-50/70 via-white to-orange-50/40 border border-amber-200 rounded-2xl p-5 space-y-5 shadow-xs">
+                <div className="flex flex-wrap justify-between items-center gap-3 border-b border-amber-200/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-amber-600 text-white rounded-xl shadow-xs">
+                      <Flag className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-black font-mono uppercase tracking-wider text-amber-950">
+                        8086 Flag Register & Control Flow Interactive Explorer
+                      </h3>
+                      <p className="text-[11px] text-slate-500 font-sans">
+                        Simulate the 16-bit status flags register, flag manipulation instructions (STC, CLC, STD, CLD), and program execution control.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Flag Presets */}
+                  <div className="flex items-center gap-1.5 font-mono text-xs flex-wrap">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold mr-1">Quick Actions:</span>
+                    {[
+                      { label: 'STC (CF=1)', act: () => setInteractiveFlags(prev => ({ ...prev, CF: 1 })) },
+                      { label: 'CLC (CF=0)', act: () => setInteractiveFlags(prev => ({ ...prev, CF: 0 })) },
+                      { label: 'STD (DF=1)', act: () => setInteractiveFlags(prev => ({ ...prev, DF: 1 })) },
+                      { label: 'CLD (DF=0)', act: () => setInteractiveFlags(prev => ({ ...prev, DF: 0 })) },
+                      { label: 'Set Zero (ZF=1)', act: () => setInteractiveFlags(prev => ({ ...prev, ZF: 1 })) },
+                      { label: 'Reset Flags', act: () => setInteractiveFlags({ CF: 0, ZF: 1, SF: 0, OF: 0, AF: 0, PF: 1, IF: 1, DF: 0, TF: 0 }) }
+                    ].map((p, i) => (
+                      <button
+                        key={i}
+                        onClick={p.act}
+                        className="px-2 py-1 text-[10px] rounded-lg font-bold bg-white text-amber-900 border border-amber-300 hover:bg-amber-100 transition-all cursor-pointer shadow-2xs"
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 16-Bit Flag Register Bit Grid */}
+                <div className="bg-white p-4 rounded-xl border border-amber-200 space-y-3 shadow-xs">
+                  <div className="flex justify-between items-center text-xs font-mono font-bold text-amber-950 border-b border-amber-100 pb-2">
+                    <span className="flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-amber-600" />
+                      16-BIT FLAG REGISTER STATE:
+                    </span>
+                    <span className="text-[11px] text-slate-500 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                      Hex: 0x{((interactiveFlags.OF<<11)|(interactiveFlags.DF<<10)|(interactiveFlags.IF<<9)|(interactiveFlags.TF<<8)|(interactiveFlags.SF<<7)|(interactiveFlags.ZF<<6)|(interactiveFlags.AF<<4)|(interactiveFlags.PF<<2)|1|interactiveFlags.CF).toString(16).toUpperCase().padStart(4, '0')}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-8 sm:grid-cols-16 gap-1 text-center font-mono text-xs">
+                    {[
+                      { bit: 15, name: '-', active: false },
+                      { bit: 14, name: '-', active: false },
+                      { bit: 13, name: '-', active: false },
+                      { bit: 12, name: '-', active: false },
+                      { bit: 11, name: 'OF', active: true, key: 'OF', desc: 'Overflow Flag' },
+                      { bit: 10, name: 'DF', active: true, key: 'DF', desc: 'Direction Flag (0=Inc, 1=Dec)' },
+                      { bit: 9,  name: 'IF', active: true, key: 'IF', desc: 'Interrupt Enable Flag' },
+                      { bit: 8,  name: 'TF', active: true, key: 'TF', desc: 'Trap Flag (Single Step)' },
+                      { bit: 7,  name: 'SF', active: true, key: 'SF', desc: 'Sign Flag (Negative bit 7)' },
+                      { bit: 6,  name: 'ZF', active: true, key: 'ZF', desc: 'Zero Flag (1 if result is 0)' },
+                      { bit: 5,  name: '-', active: false },
+                      { bit: 4,  name: 'AF', active: true, key: 'AF', desc: 'Auxiliary Carry Flag (Nibble carry)' },
+                      { bit: 3,  name: '-', active: false },
+                      { bit: 2,  name: 'PF', active: true, key: 'PF', desc: 'Parity Flag (Even 1s in low byte)' },
+                      { bit: 1,  name: '1',  active: false, valOverride: 1 },
+                      { bit: 0,  name: 'CF', active: true, key: 'CF', desc: 'Carry Flag (Unsigned math carry)' }
+                    ].map((bInfo, idx) => {
+                      const bitVal = bInfo.valOverride !== undefined
+                        ? bInfo.valOverride
+                        : bInfo.key
+                        ? interactiveFlags[bInfo.key]
+                        : 0;
+
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => {
+                            if (bInfo.key) {
+                              setInteractiveFlags(prev => ({
+                                ...prev,
+                                [bInfo.key]: prev[bInfo.key] ? 0 : 1
+                              }));
+                            }
+                          }}
+                          className={`p-1.5 rounded-lg border flex flex-col justify-between transition-all select-none ${
+                            bInfo.active
+                              ? bitVal
+                                ? 'bg-amber-600 text-white border-amber-700 shadow-xs cursor-pointer scale-102 font-bold'
+                                : 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100 cursor-pointer font-semibold'
+                              : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+                          }`}
+                          title={bInfo.desc || `Bit ${bInfo.bit} Reserved`}
+                        >
+                          <span className="text-[8px] font-mono opacity-80 block">{bInfo.bit}</span>
+                          <span className="text-[10px] font-extrabold block my-0.5">{bInfo.name}</span>
+                          <span className={`text-[10px] font-mono font-black rounded px-1 ${bitVal ? 'bg-amber-950/80 text-amber-200' : 'text-slate-500'}`}>
+                            {bitVal}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Control Flow Branching & Subroutine Visualizer */}
+                <div className="bg-slate-50 text-slate-800 p-4 rounded-xl space-y-3 font-mono text-xs border border-slate-200">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <span className="text-amber-700 font-bold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-amber-600" />
+                      Control Flow Branching & Jump Condition Matrix
+                    </span>
+                    <span className="text-[10px] text-slate-500">Current Flags: CF={interactiveFlags.CF}, ZF={interactiveFlags.ZF}, SF={interactiveFlags.SF}</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1.5">
+                      <div className="flex justify-between items-center text-amber-800 font-bold text-[11px]">
+                        <span>Conditional Jumps (JZ / JNZ)</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${interactiveFlags.ZF ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}`}>
+                          {interactiveFlags.ZF ? 'JZ TAKEN' : 'JNZ TAKEN'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-600 leading-normal">
+                        <code>JZ target</code> branches if <strong>ZF = 1</strong>. Currently ZF = {interactiveFlags.ZF}.
+                      </p>
+                      <div className="bg-slate-50 p-2 rounded text-[10px] text-emerald-700 font-bold border border-slate-200">
+                        {interactiveFlags.ZF ? '✅ Jump Taken: IP ← IP + Offset' : '❌ Jump Not Taken: Fallthrough to next instruction'}
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1.5">
+                      <div className="flex justify-between items-center text-amber-800 font-bold text-[11px]">
+                        <span>Procedure Call (CALL / RET)</span>
+                        <span className="bg-indigo-100 text-indigo-800 border border-indigo-200 px-2 py-0.5 rounded text-[10px] font-extrabold">
+                          Stack Frame
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-600 leading-normal">
+                        <code>CALL proc</code> pushes return offset onto stack (<code>SS:SP</code>) and jumps to target offset.
+                      </p>
+                      <div className="bg-slate-50 p-2 rounded text-[10px] text-indigo-700 font-bold border border-slate-200">
+                        <code>RET</code> pops offset back into IP to resume caller execution seamlessly.
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1.5">
+                      <div className="flex justify-between items-center text-amber-800 font-bold text-[11px]">
+                        <span>Hardware Loops (LOOP)</span>
+                        <span className="bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded text-[10px] font-extrabold">
+                          CX Counter
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-600 leading-normal">
+                        <code>LOOP label</code> automatically decrements <code>CX ← CX - 1</code> and branches if <code>CX ≠ 0</code>.
+                      </p>
+                      <div className="bg-slate-50 p-2 rounded text-[10px] text-purple-700 font-bold border border-slate-200">
+                        Zero Flags unaffected; depends purely on register CX value.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 3. ARITHMETIC / LOGICAL / BITWISE EXPLORER */}
+            {(currentCategory === 'Arithmetic' || currentCategory === 'Logical' || currentCategory === 'Bitwise') && (() => {
+              const aluRes = computeAluRes();
+              return (
+                <div className="bg-gradient-to-br from-indigo-50/70 via-white to-sky-50/40 border border-indigo-200 rounded-2xl p-5 space-y-5 shadow-xs">
+                  <div className="flex flex-wrap justify-between items-center gap-3 border-b border-indigo-200/80 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-xs">
+                        <Cpu className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-black font-mono uppercase tracking-wider text-indigo-950">
+                          8086 ALU Bitwise & Mathematical Logic Interactive Explorer
+                        </h3>
+                        <p className="text-[11px] text-slate-500 font-sans">
+                          Simulate bitwise logic, binary arithmetic, two's complement math, bit shifts, and live status flags computation.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* ALU Op Switcher */}
+                    <div className="flex items-center gap-1 font-mono text-xs flex-wrap">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold mr-1">Operation:</span>
+                      {(['ADD', 'SUB', 'AND', 'OR', 'XOR', 'SHL', 'SHR'] as const).map(op => (
+                        <button
+                          key={op}
+                          onClick={() => setAluOp(op)}
+                          className={`px-2.5 py-1 text-[10px] rounded-lg font-bold transition-all cursor-pointer ${
+                            aluOp === op
+                              ? 'bg-indigo-700 text-white shadow-xs font-black'
+                              : 'bg-white text-indigo-900 border border-indigo-200 hover:bg-indigo-100'
+                          }`}
+                        >
+                          {op}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Interactive Input Sliders */}
+                  <div className="bg-white p-4 rounded-xl border border-indigo-100 space-y-3 shadow-xs font-mono text-xs">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Operand A */}
+                      <div className="space-y-1.5 bg-indigo-50/50 p-3 rounded-xl border border-indigo-150">
+                        <div className="flex justify-between items-center text-indigo-950 font-bold">
+                          <span>Operand A (AL / Reg):</span>
+                          <span className="text-indigo-700 font-extrabold bg-white px-2 py-0.5 rounded border border-indigo-200">
+                            {byteHexFormat(aluValA)} ({aluValA & 0xFF})
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={255}
+                          value={aluValA & 0xFF}
+                          onChange={(e) => setAluValA(Number(e.target.value))}
+                          className="w-full accent-indigo-600 cursor-pointer"
+                        />
+                        <div className="text-[10px] text-slate-500 font-bold flex justify-between">
+                          <span>Binary: {(aluValA & 0xFF).toString(2).padStart(8, '0')}</span>
+                          <span>Signed: {((aluValA & 0xFF) > 127 ? (aluValA & 0xFF) - 256 : (aluValA & 0xFF))}</span>
+                        </div>
+                      </div>
+
+                      {/* Operand B */}
+                      <div className="space-y-1.5 bg-sky-50/50 p-3 rounded-xl border border-sky-150">
+                        <div className="flex justify-between items-center text-sky-950 font-bold">
+                          <span>Operand B (BL / Imm):</span>
+                          <span className="text-sky-700 font-extrabold bg-white px-2 py-0.5 rounded border border-sky-200">
+                            {byteHexFormat(aluValB)} ({aluValB & 0xFF})
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={255}
+                          value={aluValB & 0xFF}
+                          onChange={(e) => setAluValB(Number(e.target.value))}
+                          className="w-full accent-sky-600 cursor-pointer"
+                        />
+                        <div className="text-[10px] text-slate-500 font-bold flex justify-between">
+                          <span>Binary: {(aluValB & 0xFF).toString(2).padStart(8, '0')}</span>
+                          <span>Signed: {((aluValB & 0xFF) > 127 ? (aluValB & 0xFF) - 256 : (aluValB & 0xFF))}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live Bitwise Pipeline Display */}
+                  <div className="bg-slate-50 text-slate-800 p-4 rounded-xl space-y-3 font-mono text-xs border border-slate-200">
+                    <span className="text-indigo-700 font-bold uppercase tracking-wider text-[11px] block border-b border-slate-200 pb-2">
+                      ⚡ Hardware Silicon ALU Bit Pipeline Execution
+                    </span>
+
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1 text-center font-mono shadow-2xs">
+                      <div className="flex justify-between items-center text-slate-600 text-[11px]">
+                        <span>Operand A:</span>
+                        <span className="text-indigo-700 font-extrabold">{(aluValA & 0xFF).toString(2).padStart(8, '0')}</span>
+                        <span className="text-slate-700 font-bold">{byteHexFormat(aluValA)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-600 text-[11px]">
+                        <span>Op ({aluOp}):</span>
+                        <span className="text-amber-700 font-extrabold">{aluOp === 'ADD' ? '+' : aluOp === 'SUB' ? '-' : aluOp === 'AND' ? '&' : aluOp === 'OR' ? '|' : aluOp === 'XOR' ? '^' : aluOp === 'SHL' ? '<< 1' : '>> 1'}</span>
+                        <span className="text-slate-700 font-bold">{(aluValB & 0xFF).toString(2).padStart(8, '0')}</span>
+                      </div>
+                      <div className="w-full h-[1px] bg-slate-200 my-1" />
+                      <div className="flex justify-between items-center text-emerald-800 font-bold text-xs pt-0.5">
+                        <span>ALU Result:</span>
+                        <span className="text-emerald-800 text-sm font-black bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                          {aluRes.res.toString(2).padStart(8, '0')}
+                        </span>
+                        <span className="text-amber-800 font-black">{byteHexFormat(aluRes.res)} ({aluRes.res})</span>
+                      </div>
+                    </div>
+
+                    {/* Flags Evaluated */}
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center pt-1">
+                      {[
+                        { flag: 'CF', val: aluRes.cf, label: 'Carry' },
+                        { flag: 'ZF', val: aluRes.zf, label: 'Zero' },
+                        { flag: 'SF', val: aluRes.sf, label: 'Sign' },
+                        { flag: 'OF', val: aluRes.of, label: 'Overflow' },
+                        { flag: 'AF', val: aluRes.af, label: 'Aux Carry' },
+                        { flag: 'PF', val: aluRes.pf, label: 'Parity' }
+                      ].map((item, i) => (
+                        <div key={i} className={`p-2 rounded-lg border font-mono ${item.val ? 'bg-indigo-600 text-white border-indigo-700 font-bold shadow-2xs' : 'bg-white text-slate-400 border-slate-200'}`}>
+                          <span className={`text-[9px] uppercase block ${item.val ? 'text-indigo-100' : 'text-slate-400'}`}>{item.label} ({item.flag})</span>
+                          <span className="text-xs font-black">{item.val}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 4. DATA TRANSFER EXPLORER */}
+            {currentCategory === 'Data Transfer' && (
+              <div className="bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40 border border-emerald-200 rounded-2xl p-5 space-y-5 shadow-xs">
+                <div className="flex flex-wrap justify-between items-center gap-3 border-b border-emerald-200/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-emerald-600 text-white rounded-xl shadow-xs">
+                      <ArrowRightLeft className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-black font-mono uppercase tracking-wider text-emerald-950">
+                        8086 Data Bus & Register / Memory Bus Transfer Explorer
+                      </h3>
+                      <p className="text-[11px] text-slate-500 font-sans">
+                        Visualize data transfers between general registers, stack memory (SS:SP), and memory offsets via the internal data bus.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Transfer Mode Switcher */}
+                  <div className="flex items-center gap-1 font-mono text-xs flex-wrap">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold mr-1">Mode:</span>
+                    {(['mov', 'push', 'pop', 'lea', 'xchg'] as const).map(m => (
+                      <button
+                        key={m}
+                        onClick={() => setTransferBusMode(m)}
+                        className={`px-2.5 py-1 text-[10px] rounded-lg font-bold uppercase transition-all cursor-pointer ${
+                          transferBusMode === m
+                            ? 'bg-emerald-700 text-white shadow-xs font-extrabold'
+                            : 'bg-white text-emerald-900 border border-emerald-200 hover:bg-emerald-100'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Bus Transfer Visualizer Graphic */}
+                <div className="bg-white p-4 rounded-xl border border-emerald-200 space-y-3 shadow-xs font-mono text-xs">
+                  <div className="flex justify-between items-center border-b border-emerald-100 pb-2">
+                    <span className="font-bold text-emerald-950 flex items-center gap-1.5">
+                      <Code2 className="w-3.5 h-3.5 text-emerald-600" />
+                      Assembly Instruction:
+                    </span>
+                    <span className="bg-emerald-50 text-emerald-800 font-mono font-extrabold px-3 py-1 rounded-lg border border-emerald-200 text-xs">
+                      {transferBusMode === 'mov' && 'MOV AX, BX  ; AX ← BX'}
+                      {transferBusMode === 'push' && 'PUSH AX     ; SP ← SP - 2, SS:[SP] ← AX'}
+                      {transferBusMode === 'pop' && 'POP DX      ; DX ← SS:[SP], SP ← SP + 2'}
+                      {transferBusMode === 'lea' && 'LEA BX, [SI + 0100H] ; Load Effective Address into BX'}
+                      {transferBusMode === 'xchg' && 'XCHG AX, BX ; Atomic swap contents of AX and BX'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center py-2 text-center">
+                    {/* Source Unit */}
+                    <div className="bg-emerald-50/80 p-3 rounded-xl border border-emerald-200 space-y-1">
+                      <span className="text-[10px] text-emerald-700 uppercase font-bold block">SOURCE ELEMENT</span>
+                      <span className="text-sm font-black text-emerald-950 block">
+                        {transferBusMode === 'mov' && 'Register BX (5678H)'}
+                        {transferBusMode === 'push' && 'Register AX (1234H)'}
+                        {transferBusMode === 'pop' && 'Stack RAM SS:FFFCH (1234H)'}
+                        {transferBusMode === 'lea' && 'Address Computation SI+0100H'}
+                        {transferBusMode === 'xchg' && 'Register AX (1234H)'}
+                      </span>
+                    </div>
+
+                    {/* Bus Line */}
+                    <div className="bg-slate-50 text-emerald-800 p-2.5 rounded-xl border border-slate-200 text-[10px] space-y-1 font-mono shadow-xs">
+                      <span className="text-amber-700 font-bold block uppercase">16-BIT SYSTEM DATA BUS</span>
+                      <div className="flex justify-center items-center gap-1 text-emerald-700 font-extrabold animate-pulse">
+                        <span>◀━━━</span>
+                        <span>[ DATA: 1234H ]</span>
+                        <span>━━━▶</span>
+                      </div>
+                    </div>
+
+                    {/* Destination Unit */}
+                    <div className="bg-teal-50/80 p-3 rounded-xl border border-teal-200 space-y-1">
+                      <span className="text-[10px] text-teal-700 uppercase font-bold block">DESTINATION ELEMENT</span>
+                      <span className="text-sm font-black text-teal-950 block">
+                        {transferBusMode === 'mov' && 'Register AX'}
+                        {transferBusMode === 'push' && 'Stack RAM SS:FFFCH'}
+                        {transferBusMode === 'pop' && 'Register DX'}
+                        {transferBusMode === 'lea' && 'Register BX (Address Offset)'}
+                        {transferBusMode === 'xchg' && 'Register BX'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 text-slate-800 p-3.5 rounded-xl text-xs font-mono border border-slate-200 flex justify-between items-center">
+                  <span className="text-emerald-700 font-bold">💡 Architectural Note:</span>
+                  <span className="text-slate-600 text-[11px]">
+                    Data Transfer instructions in the 8086 <strong>never affect status flags</strong> (except SAHF/POPF which directly write the flag register).
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* 5. I/O PORT EXPLORER */}
+            {currentCategory === 'I/O' && (
+              <div className="bg-gradient-to-br from-rose-50/70 via-white to-orange-50/40 border border-rose-200 rounded-2xl p-5 space-y-5 shadow-xs">
+                <div className="flex flex-wrap justify-between items-center gap-3 border-b border-rose-200/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-rose-600 text-white rounded-xl shadow-xs">
+                      <Radio className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-black font-mono uppercase tracking-wider text-rose-950">
+                        8086 Peripheral I/O Port Bus Interfacing Explorer
+                      </h3>
+                      <p className="text-[11px] text-slate-500 font-sans">
+                        Simulate I/O port address decoding (8-bit Fixed Port 00H-FFH vs 16-bit DX Variable Port) and peripheral hardware transfers.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Direction Switcher */}
+                  <div className="flex items-center gap-1.5 font-mono text-xs">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold mr-1">Direction:</span>
+                    {(['IN', 'OUT'] as const).map(dir => (
+                      <button
+                        key={dir}
+                        onClick={() => setIoDir(dir)}
+                        className={`px-3 py-1 text-[11px] rounded-lg font-black transition-all cursor-pointer ${
+                          ioDir === dir
+                            ? 'bg-rose-700 text-white shadow-xs'
+                            : 'bg-white text-rose-900 border border-rose-200 hover:bg-rose-100'
+                        }`}
+                      >
+                        {dir} {dir === 'IN' ? 'AL, Port' : 'Port, AL'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Interactive Controls */}
+                <div className="bg-white p-4 rounded-xl border border-rose-100 space-y-3 shadow-xs font-mono text-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2 bg-rose-50/50 p-3 rounded-xl border border-rose-200">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-rose-950">Port Address:</span>
+                        <span className="bg-white px-2 py-0.5 rounded border border-rose-300 font-extrabold text-rose-900">
+                          0x{ioPort.toString(16).toUpperCase().padStart(2, '0')}H
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={255}
+                        value={ioPort & 0xFF}
+                        onChange={(e) => setIoPort(Number(e.target.value))}
+                        className="w-full accent-rose-600 cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="space-y-2 bg-orange-50/50 p-3 rounded-xl border border-orange-200">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-orange-950">Data Byte Transferred:</span>
+                        <span className="bg-white px-2 py-0.5 rounded border border-orange-300 font-extrabold text-orange-900">
+                          0x{ioDataByte.toString(16).toUpperCase().padStart(2, '0')}H ({ioDataByte & 0xFF})
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={255}
+                        value={ioDataByte & 0xFF}
+                        onChange={(e) => setIoDataByte(Number(e.target.value))}
+                        className="w-full accent-orange-600 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hardware Bus Line Status */}
+                <div className="bg-slate-50 text-slate-800 p-4 rounded-xl space-y-2 font-mono text-xs border border-slate-200">
+                  <span className="text-rose-700 font-bold uppercase tracking-wider text-[11px] block border-b border-slate-200 pb-2">
+                    ⚡ Hardware Bus Signal Analyzer Output
+                  </span>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center pt-1">
+                    <div className="bg-white p-2 rounded border border-slate-200 shadow-2xs">
+                      <span className="text-[9px] text-slate-500 block uppercase font-bold">M/IO# Signal</span>
+                      <span className="text-rose-700 font-black text-xs">0 (LOW = I/O Mode)</span>
+                    </div>
+                    <div className="bg-white p-2 rounded border border-slate-200 shadow-2xs">
+                      <span className="text-[9px] text-slate-500 block uppercase font-bold">Strobe Line</span>
+                      <span className="text-amber-800 font-black text-xs">{ioDir === 'IN' ? 'RD# Active Low' : 'WR# Active Low'}</span>
+                    </div>
+                    <div className="bg-white p-2 rounded border border-slate-200 shadow-2xs">
+                      <span className="text-[9px] text-slate-500 block uppercase font-bold">Address Bus A0–A7</span>
+                      <span className="text-emerald-800 font-black text-xs">0x{ioPort.toString(16).toUpperCase().padStart(2, '0')}H</span>
+                    </div>
+                    <div className="bg-white p-2 rounded border border-slate-200 shadow-2xs">
+                      <span className="text-[9px] text-slate-500 block uppercase font-bold">Data Bus D0–D7</span>
+                      <span className="text-sky-700 font-black text-xs">0x{ioDataByte.toString(16).toUpperCase().padStart(2, '0')}H</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 6. STRING OPERATIONS EXPLORER */}
+            {currentCategory === 'String Operations' && (
+              <div className="bg-gradient-to-br from-sky-50/70 via-white to-blue-50/40 border border-sky-200 rounded-2xl p-5 space-y-5 shadow-xs">
+                <div className="flex flex-wrap justify-between items-center gap-3 border-b border-sky-200/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-sky-600 text-white rounded-xl shadow-xs">
+                      <Repeat className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-black font-mono uppercase tracking-wider text-sky-950">
+                        8086 Hardware String Auto-Indexing & Pointer Explorer
+                      </h3>
+                      <p className="text-[11px] text-slate-500 font-sans">
+                        Simulate block memory string transfers using DS:SI (Source) and ES:DI (Destination) with Direction Flag (DF) step.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Direction Flag DF Switch */}
+                  <div className="flex items-center gap-2 font-mono text-xs">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold">Direction Flag (DF):</span>
+                    <button
+                      onClick={() => setStringDf(stringDf === 0 ? 1 : 0)}
+                      className={`px-3 py-1 rounded-lg font-black transition-all cursor-pointer ${
+                        stringDf === 0
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-rose-600 text-white shadow-xs'
+                      }`}
+                    >
+                      {stringDf === 0 ? 'CLD (DF=0 Auto-Increment +1/+2)' : 'STD (DF=1 Auto-Decrement -1/-2)'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Interactive Controls */}
+                <div className="bg-white p-4 rounded-xl border border-sky-100 space-y-3 shadow-xs font-mono text-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2 bg-sky-50/50 p-3 rounded-xl border border-sky-200">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-sky-950">Hardware Repeat Count (CX):</span>
+                        <span className="bg-white px-2 py-0.5 rounded border border-sky-300 font-extrabold text-sky-900">
+                          CX = {stringCx}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={1}
+                        max={10}
+                        value={stringCx}
+                        onChange={(e) => setStringCx(Number(e.target.value))}
+                        className="w-full accent-sky-600 cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="space-y-2 bg-blue-50/50 p-3 rounded-xl border border-blue-200">
+                      <span className="font-bold text-blue-950 block">String Instruction:</span>
+                      <div className="flex items-center gap-1 font-mono text-xs">
+                        {(['MOVSB', 'MOVSW', 'CMPSB', 'SCASB', 'STOSB'] as const).map(op => (
+                          <button
+                            key={op}
+                            onClick={() => setStringOp(op)}
+                            className={`px-2 py-1 text-[10px] rounded font-bold transition-all cursor-pointer ${
+                              stringOp === op
+                                ? 'bg-sky-700 text-white shadow-xs'
+                                : 'bg-white text-sky-900 border border-sky-200 hover:bg-sky-100'
+                            }`}
+                          >
+                            {op}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pointer Progression Map */}
+                <div className="bg-slate-50 text-slate-800 p-4 rounded-xl space-y-3 font-mono text-xs border border-slate-200">
+                  <span className="text-sky-700 font-bold uppercase tracking-wider text-[11px] block border-b border-slate-200 pb-2">
+                    ⚡ Real-Time Hardware Pointer Auto-Step Stream
+                  </span>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-center">
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1 shadow-2xs">
+                      <span className="text-[10px] text-sky-700 block uppercase font-bold">Source Segment Pointer (DS:SI)</span>
+                      <span className="text-sm text-slate-900 font-extrabold">DS:[0100H]</span>
+                      <span className="text-[10px] text-emerald-700 block pt-1 font-mono font-bold">
+                        {stringDf === 0 ? `Step: 0100H ➔ 0101H ➔ ... ➔ 010${stringCx}H` : `Step: 0100H ➔ 00FFH ➔ ...`}
+                      </span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1 shadow-2xs">
+                      <span className="text-[10px] text-sky-700 block uppercase font-bold">Destination Segment Pointer (ES:DI)</span>
+                      <span className="text-sm text-slate-900 font-extrabold">ES:[0200H]</span>
+                      <span className="text-[10px] text-emerald-700 block pt-1 font-mono font-bold">
+                        {stringDf === 0 ? `Step: 0200H ➔ 0201H ➔ ... ➔ 020${stringCx}H` : `Step: 0200H ➔ 01FFH ➔ ...`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Live Logs Terminal & Math Explanation Section */}
             <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs">
@@ -2195,24 +2882,24 @@ POP DX         ; Reads 1234H into DX, SP ← SP + 2 (FFFE)`}
             </div>
 
             {/* Execution Pipeline Flow Diagram */}
-            <div className="bg-slate-900 text-slate-100 p-4 rounded-xl font-mono text-xs text-center border border-slate-800 space-y-2">
-              <span className="text-[10px] uppercase font-bold text-amber-400 block tracking-wider">
+            <div className="bg-slate-50 text-slate-800 p-4 rounded-xl font-mono text-xs text-center border border-slate-200 space-y-2">
+              <span className="text-[10px] uppercase font-bold text-amber-800 block tracking-wider">
                 Microprocessor Hardware Execution Flow
               </span>
               <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold pt-1">
-                <span className="px-3 py-1 bg-indigo-900/90 text-indigo-200 rounded-lg border border-indigo-700">
+                <span className="px-3 py-1 bg-indigo-100 text-indigo-900 rounded-lg border border-indigo-200 shadow-2xs">
                   Assembly Opcode
                 </span>
-                <span className="text-amber-400">→</span>
-                <span className="px-3 py-1 bg-emerald-900/90 text-emerald-200 rounded-lg border border-emerald-700">
+                <span className="text-amber-700">→</span>
+                <span className="px-3 py-1 bg-emerald-100 text-emerald-900 rounded-lg border border-emerald-200 shadow-2xs">
                   Fetch Byte(s)
                 </span>
-                <span className="text-amber-400">→</span>
-                <span className="px-3 py-1 bg-sky-900/90 text-sky-200 rounded-lg border border-sky-700">
+                <span className="text-amber-700">→</span>
+                <span className="px-3 py-1 bg-sky-100 text-sky-900 rounded-lg border border-sky-200 shadow-2xs">
                   Calculate Effective Address
                 </span>
-                <span className="text-amber-400">→</span>
-                <span className="px-3 py-1 bg-amber-900/90 text-amber-200 rounded-lg border border-amber-700">
+                <span className="text-amber-700">→</span>
+                <span className="px-3 py-1 bg-amber-100 text-amber-900 rounded-lg border border-amber-200 shadow-2xs">
                   ALU Operation & Flags Update
                 </span>
               </div>

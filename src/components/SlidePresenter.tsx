@@ -151,7 +151,32 @@ export default function SlidePresenter({
 
   // Double tap & touch swipe gesture states/refs
   const lastTapRef = useRef<number>(0);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number; isScrollable: boolean } | null>(null);
+
+  // Helper to detect if a touch originated inside a horizontally scrollable container or interactive control
+  const isHorizontallyScrollableOrInput = (target: HTMLElement | null, container: HTMLElement | null): boolean => {
+    let el = target;
+    while (el && el !== container && el !== document.body) {
+      const tagName = el.tagName ? el.tagName.toLowerCase() : '';
+      if (['input', 'textarea', 'select', 'button'].includes(tagName)) {
+        return true;
+      }
+      if (el.hasAttribute && (el.hasAttribute('data-no-swipe') || el.classList?.contains('no-swipe'))) {
+        return true;
+      }
+      try {
+        const style = window.getComputedStyle(el);
+        const overflowX = style.overflowX;
+        if ((overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'overlay') && el.scrollWidth > el.clientWidth + 2) {
+          return true;
+        }
+      } catch (err) {
+        // Fallback if computed style fails
+      }
+      el = el.parentElement;
+    }
+    return false;
+  };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     // Exit full screen mode on double click
@@ -162,9 +187,11 @@ export default function SlidePresenter({
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
+      const isScrollable = isHorizontallyScrollableOrInput(e.target as HTMLElement, e.currentTarget as HTMLElement);
       touchStartRef.current = {
         x: e.touches[0].clientX,
         y: e.touches[0].clientY,
+        isScrollable,
       };
     }
   };
@@ -179,23 +206,26 @@ export default function SlidePresenter({
     }
     lastTapRef.current = now;
 
-    // Swipe gesture detection
-    if (touchStartRef.current && e.changedTouches.length > 0) {
-      const touchEnd = {
-        x: e.changedTouches[0].clientX,
-        y: e.changedTouches[0].clientY,
-      };
-      const deltaX = touchEnd.x - touchStartRef.current.x;
-      const deltaY = touchEnd.y - touchStartRef.current.y;
+    // Swipe gesture detection (skip if touch originated or ended inside a horizontally scrollable element or input)
+    if (touchStartRef.current && !touchStartRef.current.isScrollable && e.changedTouches.length > 0) {
+      const isEndTargetScrollable = isHorizontallyScrollableOrInput(e.target as HTMLElement, e.currentTarget as HTMLElement);
+      if (!isEndTargetScrollable) {
+        const touchEnd = {
+          x: e.changedTouches[0].clientX,
+          y: e.changedTouches[0].clientY,
+        };
+        const deltaX = touchEnd.x - touchStartRef.current.x;
+        const deltaY = touchEnd.y - touchStartRef.current.y;
 
-      // Ensure horizontal swipe is dominant and above 50px threshold
-      if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
-        if (deltaX < 0) {
-          // Swipe Left -> Go to Next slide
-          if (!isLast) onNext();
-        } else {
-          // Swipe Right -> Go to Previous slide
-          if (!isFirst) onPrev();
+        // Ensure horizontal swipe is dominant and above 50px threshold
+        if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+          if (deltaX < 0) {
+            // Swipe Left -> Go to Next slide
+            if (!isLast) onNext();
+          } else {
+            // Swipe Right -> Go to Previous slide
+            if (!isFirst) onPrev();
+          }
         }
       }
     }
